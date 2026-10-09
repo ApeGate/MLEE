@@ -272,13 +272,14 @@ function SetupPanel({
             <Stat label="Trail" value={`${strategy.exit.trailingStopPct}%`} />
           </dl>
         </div>
-        <Button
-          size="lg"
+        <button
+          type="button"
+          data-testid="start-desk"
           onClick={onStart}
-          className="w-full bg-signal text-signal-foreground hover:bg-signal/90 sm:w-auto"
+          className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-signal px-4 text-sm font-medium text-signal-foreground transition-colors hover:bg-signal/90 sm:w-auto"
         >
           Start the desk
-        </Button>
+        </button>
       </div>
     </div>
   );
