@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useEffectEvent, useState, startTransition } from "react";
+import { useEffect, useRef, useState, startTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
@@ -45,16 +45,15 @@ export function DeskApp() {
   const [strategy, setStrategy] = useState<Strategy>(() => createStrategy("clips"));
   const [state, setState] = useState<SimState>(() => createInitialState());
   const [started, setStarted] = useState(false);
-
-  const onTick = useEffectEvent(() => {
-    setState((prev) => simTick(prev, strategy));
-  });
+  const strategyRef = useRef(strategy);
+  strategyRef.current = strategy;
 
   useEffect(() => {
     if (!state.running) return;
-    const id = window.setInterval(() => onTick(), 1100);
+    const id = window.setInterval(() => {
+      setState((prev) => simTick(prev, strategyRef.current));
+    }, 1100);
     return () => window.clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- onTick is useEffectEvent
   }, [state.running]);
 
   function updateStyle(style: StrategyStyle) {
