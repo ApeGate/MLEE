@@ -71,9 +71,9 @@ const SERVICES = [
   },
   {
     name: "Real trading and Vault",
-    state: "Manual sign live",
+    state: "Canary gated",
     detail:
-      "Privy browser buys require a fresh PASS and timing clearance; PumpSwap canaries decode mint, spend, tip, token, and compute limits before signing; Vault automation stays off",
+      "PumpSwap buys decode actual bytes in the server and browser before a wallet prompt; bonding-curve sends and Vault automation stay locked until equivalent decoders pass canaries",
   },
 ] as const;
 

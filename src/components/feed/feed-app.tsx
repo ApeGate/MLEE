@@ -31,7 +31,6 @@ import { useWallets as useSolanaWallets } from "@privy-io/react-auth/solana";
 import { VersionedTransaction } from "@solana/web3.js";
 import bs58 from "bs58";
 import {
-  assertManualBuyTransactionSafe,
   estimateFees,
   evaluateGate,
   indexSessionLaunches,
@@ -44,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { useLaunchFeed, type FeedLaunch } from "@/lib/use-launch-feed";
 import { useReceipts } from "@/lib/use-receipts";
 import { TokenLogo } from "@/components/token/token-logo";
+import { inspectManualBuyTransaction } from "@/lib/manual-buy-transaction";
 
 type RiskPayload = {
   mintAuthority?: string | null;
@@ -81,6 +81,9 @@ const FILTERS = ["ALL", "PASS", "WARN", "BLOCK", "WAIT"] as const;
 const PROFILES: Profile[] = ["strict", "standard", "loose"];
 const OFFICIAL_APEGATE_MINT =
   process.env.NEXT_PUBLIC_APEGATE_TOKEN_MINT ?? null;
+const MANUAL_BUY_SLIPPAGE_PCT = 8;
+const MANUAL_BUY_PRIORITY_FEE_SOL = 0.0005;
+const MANUAL_BUY_MAX_TIP_LAMPORTS = 100_000;
 
 export function FeedApp() {
   const { launches, status, lastMessageAt, retry, updateLaunch } =
@@ -322,17 +325,17 @@ export function FeedApp() {
           publicKey: activeWallet.address,
           mint: launch.facts.mint,
           amountSol,
-          slippagePct: 8,
+          slippagePct: MANUAL_BUY_SLIPPAGE_PCT,
         }),
       });
       const payload = (await response.json()) as
         | {
             transaction: string;
-            summary: {
-              feePayer: string;
-              requiredSigners: string[];
-              addressLookupTableCount: number;
-              programIds: string[];
+            firewall: {
+              decodedSwap: string;
+              fundedLamports: number;
+              tippedLamports: number;
+              priorityFeeLamports: number;
             };
             expiresAt: number;
           }
@@ -347,7 +350,6 @@ export function FeedApp() {
       if (Date.now() > payload.expiresAt) {
         throw new Error("The prepared transaction expired before approval");
       }
-      assertManualBuyTransactionSafe(payload.summary);
       const bytes = Uint8Array.from(
         window.atob(payload.transaction),
         (character) => character.charCodeAt(0),
@@ -355,6 +357,23 @@ export function FeedApp() {
       const transaction = VersionedTransaction.deserialize(bytes);
       if (transaction.message.recentBlockhash.length === 0) {
         throw new Error("Prepared transaction has no recent blockhash");
+      }
+      const inspection = inspectManualBuyTransaction(transaction, {
+        expectedSigner: activeWallet.address,
+        expectedMint: launch.facts.mint,
+        amountSol,
+        slippagePct: MANUAL_BUY_SLIPPAGE_PCT,
+        priorityFeeSol: MANUAL_BUY_PRIORITY_FEE_SOL,
+        maxTipLamports: MANUAL_BUY_MAX_TIP_LAMPORTS,
+      });
+      if (
+        inspection.decodedSwap !== payload.firewall.decodedSwap ||
+        inspection.fundedLamports !== payload.firewall.fundedLamports ||
+        inspection.tippedLamports !== payload.firewall.tippedLamports ||
+        inspection.priorityFeeLamports !==
+          payload.firewall.priorityFeeLamports
+      ) {
+        throw new Error("Browser and server firewall summaries do not match");
       }
 
       setTradeState("signing");
@@ -718,9 +737,17 @@ function CoinPanel({
 }) {
   const { facts, verdict, source } = launch;
   const [tradeSize, setTradeSize] = useState(0.02);
-  const feePreview = estimateFees(tradeSize, 125, 0.0005);
+  const feePreview = estimateFees(
+    tradeSize,
+    125,
+    MANUAL_BUY_PRIORITY_FEE_SOL,
+  );
+  const manualRouteSupported =
+    facts.pool === "pump-amm" || facts.pool === "pumpswap";
   const tradeCleared =
-    verdict.kind === "PASS" && verdict.timing.entryAllowed;
+    manualRouteSupported &&
+    verdict.kind === "PASS" &&
+    verdict.timing.entryAllowed;
   const tradePending =
     tradeState === "preparing" || tradeState === "signing";
   return (
@@ -952,7 +979,9 @@ function CoinPanel({
               : tradeState === "signing"
                 ? "Approve in your wallet…"
                 : !tradeCleared
-                  ? `${verdict.kind} · ${verdict.timing.label}`
+                  ? !manualRouteSupported
+                    ? "Curve signing locked · use PAPER"
+                    : `${verdict.kind} · ${verdict.timing.label}`
                   : walletAddress
                     ? `Review & sign ${tradeSize} SOL`
                     : "Connect wallet to sign"}
@@ -968,8 +997,8 @@ function CoinPanel({
             </p>
           ) : null}
           <p className="mt-2 text-[7px] leading-relaxed text-[#4f4941]">
-            Fresh PASS + entry timing required. Transaction programs and fee
-            payer are checked before Privy opens your wallet.
+            Fresh PASS + entry timing required. PumpSwap bytes are decoded in
+            the server and browser before Privy opens your wallet.
           </p>
         </div>
         <div className="p-4 sm:p-5">
@@ -980,9 +1009,9 @@ function CoinPanel({
             {walletAddress ? "Wallet connected" : "Your wallet keeps custody"}
           </h3>
           <p className="mt-2 text-[10px] leading-relaxed text-[#766f65]">
-            Manual signing is the default. Apegate prepares a bounded
-            transaction; only your external Solana wallet can approve and send
-            it.
+            Manual signing is the default. PumpSwap signing is bounded and
+            decoded; bonding-curve signing stays locked until its v3 decoder
+            passes canaries.
           </p>
           <button
             type="button"

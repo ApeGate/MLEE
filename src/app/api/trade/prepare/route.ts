@@ -1,12 +1,14 @@
 import { Buffer } from "node:buffer";
 import { NextResponse } from "next/server";
 import { VersionedTransaction } from "@solana/web3.js";
-import { assertManualBuyTransactionSafe } from "../../../../../packages/core/src";
+import { inspectManualBuyTransaction } from "@/lib/manual-buy-transaction";
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const TRADE_ENDPOINT = "https://pumpportal.fun/api/trade-local";
 const MIN_BUY_SOL = 0.01;
 const MAX_BUY_SOL = 0.25;
+const PRIORITY_FEE_SOL = 0.0005;
+const MAX_TIP_LAMPORTS = 100_000;
 const MAX_TRANSACTION_BYTES = 64 * 1024;
 
 type PrepareBody = {
@@ -99,37 +101,31 @@ export async function POST(request: Request) {
         amount: amountSol,
         denominatedInSol: "true",
         slippage: slippagePct,
-        priorityFee: 0.0005,
+        priorityFee: PRIORITY_FEE_SOL,
         pool: "auto",
       }),
       signal: AbortSignal.timeout(8_000),
     });
     const bytes = await readBoundedBytes(tradeResponse);
     const transaction = VersionedTransaction.deserialize(bytes);
-    const message = transaction.message;
-    const accountKeys = message.getAccountKeys({
-      addressLookupTableAccounts: [],
+    const inspection = inspectManualBuyTransaction(transaction, {
+      expectedSigner: publicKey,
+      expectedMint: mint,
+      amountSol,
+      slippagePct,
+      priorityFeeSol: PRIORITY_FEE_SOL,
+      maxTipLamports: MAX_TIP_LAMPORTS,
     });
-    const summary = assertManualBuyTransactionSafe({
-      feePayer: message.staticAccountKeys[0]?.toBase58() ?? "",
-      requiredSigners: message.staticAccountKeys
-        .slice(0, message.header.numRequiredSignatures)
-        .map((key) => key.toBase58()),
-      addressLookupTableCount: message.addressTableLookups.length,
-      programIds: message.compiledInstructions.map((instruction) => {
-        const key = accountKeys.get(instruction.programIdIndex);
-        if (!key) throw new Error("Transaction contains an unresolved program");
-        return key.toBase58();
-      }),
-    });
-    if (summary.feePayer !== publicKey) {
-      throw new Error("Prepared transaction has the wrong fee payer");
-    }
 
     return NextResponse.json(
       {
         transaction: Buffer.from(bytes).toString("base64"),
-        summary,
+        firewall: {
+          decodedSwap: inspection.decodedSwap,
+          fundedLamports: inspection.fundedLamports,
+          tippedLamports: inspection.tippedLamports,
+          priorityFeeLamports: inspection.priorityFeeLamports,
+        },
         expiresAt: Date.now() + 45_000,
       },
       { headers: { "cache-control": "no-store" } },
