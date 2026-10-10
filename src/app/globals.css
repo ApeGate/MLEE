@@ -2,23 +2,42 @@
 @import "tw-animate-css";
 
 @theme inline {
+  --color-bg: #090806;
   --color-background: #090806;
+  --color-fg: #f4efe5;
   --color-foreground: #f4efe5;
+  --color-fg-2: #cfc7b8;
   --color-muted: #a79f92;
+  --color-faint: #6f685d;
   --color-surface: #12100c;
   --color-surface-2: #1b1711;
+  --color-surface-3: #242019;
   --color-line: #302a20;
+  --color-line-strong: #453c2e;
+  --color-signal: #ff4f1f;
+  --color-signal-fg: #0b0906;
   --color-accent: #ff4f1f;
   --color-accent-foreground: #0b0906;
-  --color-lime: #c7ff45;
-  --color-warn: #ffb13c;
-  --color-danger: #ff655f;
-  --color-good: #c7ff45;
+  --color-ape-kong: #ff4f1f;
+  --color-ape-cheeta: #ffb13c;
+  --color-ape-caesar: #c7ff45;
+  --color-ape-cornelius: #5cc8ff;
+  --color-ape-rafiki: #a47bff;
+  --color-ape-zira: #ff7ad9;
+  --color-pass: #3ddc97;
+  --color-warn: #f5d90a;
+  --color-block: #ff3b5c;
+  --color-wait: #a79f92;
+  --color-up: #3ddc97;
+  --color-down: #ff3b5c;
+  --font-display: var(--font-display);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 1rem;
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.625rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.25rem;
+  --radius-pill: 999px;
 }
 
 @layer base {
@@ -38,6 +57,12 @@
       radial-gradient(720px 460px at -12% 30%, rgb(199 255 69 / 7%), transparent 58%),
       linear-gradient(180deg, #0b0a07 0%, #080705 100%);
     background-attachment: fixed;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display), var(--font-sans), ui-sans-serif, system-ui,
+      sans-serif;
   }
   ::selection {
     background: #ff4f1f;

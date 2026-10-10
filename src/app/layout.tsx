@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Archivo, Plus_Jakarta_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+
+const display = Archivo({
+  variable: "--font-display",
+  subsets: ["latin"],
+  axes: ["wdth"],
+});
 
 const sans = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -56,7 +62,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" data-scroll-behavior="smooth">
-      <body className={`${sans.variable} ${mono.variable} antialiased`}>
+      <body
+        className={`${display.variable} ${sans.variable} ${mono.variable} antialiased`}
+      >
         {children}
       </body>
     </html>

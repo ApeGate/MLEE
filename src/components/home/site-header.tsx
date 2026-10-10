@@ -43,7 +43,7 @@ export function SiteHeader() {
           </Link>
           <Link
             href="/feed"
-            className="rounded-full bg-[#ff4f1f] px-4 py-2.5 font-bold text-[#0b0906] transition-transform hover:-translate-y-0.5 hover:bg-[#ff6438]"
+            className="rounded-full bg-fg px-4 py-2.5 font-bold text-[#0b0906] transition-transform hover:-translate-y-0.5 hover:bg-fg-2"
           >
             Open Apegate
           </Link>

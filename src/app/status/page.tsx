@@ -52,7 +52,7 @@ export default function StatusPage() {
           </Link>
           <Link
             href="/feed"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#ff7250]"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-signal"
           >
             <ArrowLeft className="size-3" />
             Back to the Gate
@@ -60,7 +60,7 @@ export default function StatusPage() {
         </div>
 
         <div className="mt-16">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#c7ff45]">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-signal">
             Honest status
           </p>
           <h1 className="mt-3 text-5xl font-extrabold tracking-[-0.06em]">
@@ -75,7 +75,7 @@ export default function StatusPage() {
 
         <section className="mt-10 overflow-hidden rounded-2xl border border-[#31291f] bg-[#0d0b09]">
           <div className="flex items-center gap-3 border-b border-[#31291f] p-4">
-            <ServerCog className="size-4 text-[#ff7250]" />
+            <ServerCog className="size-4 text-signal" />
             <h2 className="text-sm font-bold">Phase 1 capability status</h2>
           </div>
           <div className="divide-y divide-[#272119]">
@@ -94,7 +94,7 @@ export default function StatusPage() {
                   className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 font-mono text-[7px] font-bold uppercase ${
                     service.state === "Disabled"
                       ? "border-[#6f685f]/25 text-[#6f685f]"
-                      : "border-[#c7ff45]/25 bg-[#c7ff45]/6 text-[#c7ff45]"
+                      : "border-pass/25 bg-pass/6 text-pass"
                   }`}
                 >
                   {service.state === "Disabled" ? (

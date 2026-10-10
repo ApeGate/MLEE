@@ -225,9 +225,9 @@ export function FeedApp() {
             <button
               type="button"
               onClick={() => setWalletOpen(true)}
-              className="inline-flex h-9 items-center gap-2 rounded-full border border-[#3a3328] bg-[#12100c] px-3 text-xs font-bold hover:border-[#ff7250]/60"
+              className="inline-flex h-9 items-center gap-2 rounded-full border border-[#3a3328] bg-[#12100c] px-3 text-xs font-bold hover:border-ape-cornelius/60"
             >
-              <WalletCards className="size-3.5 text-[#ff7250]" />
+              <WalletCards className="size-3.5 text-ape-cornelius" />
               <span className="hidden sm:inline">
                 {walletAddress ? short(walletAddress) : "Connect wallet"}
               </span>
@@ -243,10 +243,10 @@ export function FeedApp() {
               className={cn(
                 "size-1.5 rounded-full",
                 status === "live"
-                  ? "live-dot bg-[#c7ff45] text-[#c7ff45]"
+                  ? "live-dot bg-pass text-pass"
                   : status === "connecting"
-                    ? "animate-pulse bg-[#ffb13c]"
-                    : "bg-[#ff7250]",
+                    ? "animate-pulse bg-wait"
+                    : "bg-block",
               )}
             />
             <span>{statusCopy}</span>
@@ -260,7 +260,7 @@ export function FeedApp() {
             <button
               type="button"
               onClick={retry}
-              className="inline-flex items-center gap-1.5 text-[10px] font-bold text-[#ff7250] hover:text-[#ff9b7d]"
+              className="inline-flex items-center gap-1.5 text-[10px] font-bold text-signal hover:text-[#ff9b7d]"
             >
               <RefreshCw className="size-3" /> Retry live
             </button>
@@ -304,7 +304,7 @@ export function FeedApp() {
             <div className="border-b border-[#31291f] p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-[#ff7250]">
+                  <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-ape-cheeta">
                     Cheeta · Fresh lane
                   </p>
                   <h1 className="mt-1 text-xl font-extrabold tracking-[-0.035em]">
@@ -317,7 +317,7 @@ export function FeedApp() {
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Ticker, name, or mint"
-                    className="h-9 w-full rounded-lg border border-[#31291f] bg-[#090806] pl-9 pr-3 text-xs placeholder:text-[#554f47] focus:border-[#ff7250]"
+                    className="h-9 w-full rounded-lg border border-[#31291f] bg-[#090806] pl-9 pr-3 text-xs placeholder:text-[#554f47] focus:border-signal"
                   />
                 </div>
               </div>
@@ -386,7 +386,7 @@ export function FeedApp() {
             ) : (
               <div className="flex min-h-[560px] items-center justify-center p-8 text-center">
                 <div>
-                  <Activity className="mx-auto size-6 text-[#ff7250]" />
+                  <Activity className="mx-auto size-6 text-ape-cheeta" />
                   <p className="mt-3 text-sm font-bold">
                     Cheeta&apos;s waking up the firehose…
                   </p>
@@ -501,7 +501,7 @@ function CoinPanel({
                 </h2>
                 <SourceBadge source={source.toUpperCase()} />
                 {facts.isMayhem ? (
-                  <span className="rounded border border-[#ffb13c]/25 bg-[#ffb13c]/8 px-1.5 py-0.5 font-mono text-[8px] font-bold text-[#ffb13c]">
+                  <span className="rounded border border-warn/25 bg-warn/8 px-1.5 py-0.5 font-mono text-[8px] font-bold text-warn">
                     MAYHEM
                   </span>
                 ) : null}
@@ -585,7 +585,7 @@ function CoinPanel({
             <button
               type="button"
               onClick={onRefresh}
-              className="ml-1 rounded-md p-1.5 text-[#6f685f] hover:bg-[#19150f] hover:text-[#ff7250]"
+              className="ml-1 rounded-md p-1.5 text-[#6f685f] hover:bg-[#19150f] hover:text-signal"
               aria-label="Refresh risk checks"
             >
               <RefreshCw
@@ -599,7 +599,7 @@ function CoinPanel({
         </div>
 
         {riskState === "error" ? (
-          <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#ffb13c]/25 bg-[#ffb13c]/8 p-3 text-[10px] leading-relaxed text-[#d9b374]">
+          <div className="mt-3 flex items-start gap-2 rounded-lg border border-warn/25 bg-warn/8 p-3 text-[10px] leading-relaxed text-warn">
             <AlertTriangle className="mt-0.5 size-3 shrink-0" />
             Live risk sources timed out. Kong kept the on-chain creation facts
             and will not turn missing data into a PASS.
@@ -634,7 +634,7 @@ function CoinPanel({
 
       <div className="grid md:grid-cols-2">
         <div className="border-b border-[#31291f] p-4 sm:p-5 md:border-b-0 md:border-r">
-          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-[#c7ff45]">
+          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-ape-caesar">
             Caesar · manual sign
           </p>
           <h3 className="mt-1 text-sm font-bold">0.25 SOL preview</h3>
@@ -652,7 +652,7 @@ function CoinPanel({
           </button>
         </div>
         <div className="p-4 sm:p-5">
-          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-[#9ab7ff]">
+          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-ape-cornelius">
             Cornelius · limits
           </p>
           <h3 className="mt-1 text-sm font-bold">
@@ -665,9 +665,9 @@ function CoinPanel({
           <button
             type="button"
             onClick={onWallet}
-            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#3a3328] px-3 py-2.5 text-xs font-bold hover:border-[#9ab7ff]/50"
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#3a3328] px-3 py-2.5 text-xs font-bold hover:border-ape-cornelius/50"
           >
-            <WalletCards className="size-3.5 text-[#9ab7ff]" />
+            <WalletCards className="size-3.5 text-ape-cornelius" />
             {walletAddress ? short(walletAddress) : "Connect for manual signing"}
           </button>
         </div>
@@ -699,7 +699,7 @@ function WalletPanel({
       <section className="relative w-full max-w-lg rounded-t-3xl border border-[#3a3328] bg-[#0d0b09] p-5 shadow-2xl sm:rounded-3xl sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-[#ff7250]">
+            <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-ape-cornelius">
               Wallet control
             </p>
             <h2 className="mt-1 text-2xl font-extrabold tracking-[-0.04em]">
@@ -715,9 +715,9 @@ function WalletPanel({
           </button>
         </div>
 
-        <div className="mt-6 rounded-2xl border border-[#ff7250]/30 bg-[#ff4f1f]/7 p-4">
+        <div className="mt-6 rounded-2xl border border-ape-cornelius/30 bg-ape-cornelius/7 p-4">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-[#ff4f1f] text-[#090806]">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-ape-cornelius text-[#090806]">
               <WalletCards className="size-5" />
             </div>
             <div>
@@ -735,7 +735,7 @@ function WalletPanel({
             {address ? `Connected · ${short(address)}` : "Connect Solana wallet"}
           </button>
           {error ? (
-            <p className="mt-3 text-[10px] leading-relaxed text-[#ff817c]">
+            <p className="mt-3 text-[10px] leading-relaxed text-block">
               {error}
             </p>
           ) : null}
@@ -747,7 +747,7 @@ function WalletPanel({
 
         <div className="mt-3 rounded-2xl border border-[#31291f] bg-[#090806] p-4">
           <div className="flex items-start gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[#9ab7ff]/25 bg-[#9ab7ff]/8 text-[#9ab7ff]">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-ape-cornelius/25 bg-ape-cornelius/8 text-ape-cornelius">
               <LockKeyhole className="size-5" />
             </div>
             <div>
@@ -792,7 +792,7 @@ function ReceiptTape({
     <section className="mt-4 overflow-hidden rounded-2xl border border-[#31291f] bg-[#0d0b09]">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#31291f] px-4 py-3.5">
         <div>
-          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-[#ff7250]">
+          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-signal">
             Decision receipts · local tape
           </p>
           <p className="mt-1 text-xs text-[#91897e]">
@@ -803,7 +803,7 @@ function ReceiptTape({
           <span
             className={cn(
               "inline-flex items-center gap-1.5 font-mono text-[8px] font-bold uppercase",
-              verified ? "text-[#c7ff45]" : "text-[#ff655f]",
+              verified ? "text-pass" : "text-block",
             )}
           >
             {verified ? (
@@ -817,7 +817,7 @@ function ReceiptTape({
             <button
               type="button"
               onClick={onClear}
-              className="text-[9px] font-bold text-[#6f685f] hover:text-[#ff7250]"
+              className="text-[9px] font-bold text-[#6f685f] hover:text-signal"
             >
               Clear local tape
             </button>
@@ -832,7 +832,7 @@ function ReceiptTape({
             .map((receipt) => (
               <article key={receipt.hash} className="min-w-0 p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-[8px] font-bold uppercase tracking-[0.14em] text-[#ff7250]">
+                  <span className="font-mono text-[8px] font-bold uppercase tracking-[0.14em] text-signal">
                     {receipt.actor} · {receipt.kind}
                   </span>
                   <SourceBadge source={receipt.source.toUpperCase()} compact />
@@ -883,7 +883,7 @@ function Metric({
   return (
     <article className="rounded-2xl border border-[#31291f] bg-[linear-gradient(135deg,rgb(255_255_255_/_3%),transparent_45%),#0d0b09] p-4">
       <div className="flex items-start justify-between">
-        <span className="text-[#ff7250]">{icon}</span>
+        <span className="text-signal">{icon}</span>
         <SourceBadge source={source} compact />
       </div>
       <p className="mt-4 text-2xl font-extrabold tracking-[-0.04em]">{value}</p>
@@ -948,8 +948,8 @@ function TokenMark({
         "relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl border text-xs font-black",
         large ? "size-12 text-sm" : "size-9",
         mayhem
-          ? "border-[#ffb13c]/35 bg-[#2a1b08] text-[#ffb13c]"
-          : "border-[#ff7250]/25 bg-[#1f110c] text-[#ff7250]",
+          ? "border-warn/35 bg-warn/8 text-warn"
+          : "border-signal/25 bg-signal/8 text-signal",
       )}
     >
       <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgb(255_255_255_/_14%),transparent_45%)]" />
@@ -966,10 +966,10 @@ function VerdictStamp({
   compact?: boolean;
 }) {
   const colors = {
-    PASS: "border-[#c7ff45]/35 bg-[#c7ff45]/8 text-[#c7ff45]",
-    WARN: "border-[#ffb13c]/35 bg-[#ffb13c]/8 text-[#ffb13c]",
-    BLOCK: "border-[#ff655f]/35 bg-[#ff655f]/8 text-[#ff817c]",
-    WAIT: "border-[#9ab7ff]/35 bg-[#9ab7ff]/8 text-[#9ab7ff]",
+    PASS: "border-pass/35 bg-pass/8 text-pass",
+    WARN: "border-warn/35 bg-warn/8 text-warn",
+    BLOCK: "border-block/35 bg-block/8 text-block",
+    WAIT: "border-wait/35 bg-wait/8 text-wait",
   };
   return (
     <div
@@ -990,27 +990,27 @@ function VerdictStamp({
 function CheckIcon({ outcome }: { outcome: string }) {
   if (outcome === "pass") {
     return (
-      <span className="flex size-5 items-center justify-center rounded-full bg-[#c7ff45]/10 text-[#c7ff45]">
+      <span className="flex size-5 items-center justify-center rounded-full bg-pass/10 text-pass">
         <Check className="size-3" />
       </span>
     );
   }
   if (outcome === "fail") {
     return (
-      <span className="flex size-5 items-center justify-center rounded-full bg-[#ff655f]/10 text-[#ff817c]">
+      <span className="flex size-5 items-center justify-center rounded-full bg-block/10 text-block">
         <X className="size-3" />
       </span>
     );
   }
   if (outcome === "warn") {
     return (
-      <span className="flex size-5 items-center justify-center rounded-full bg-[#ffb13c]/10 text-[#ffb13c]">
+      <span className="flex size-5 items-center justify-center rounded-full bg-warn/10 text-warn">
         <AlertTriangle className="size-3" />
       </span>
     );
   }
   return (
-    <span className="flex size-5 items-center justify-center rounded-full bg-[#9ab7ff]/10 text-[#9ab7ff]">
+    <span className="flex size-5 items-center justify-center rounded-full bg-wait/10 text-wait">
       <CircleDot className="size-3" />
     </span>
   );
@@ -1031,8 +1031,8 @@ function SourceBadge({
       className={cn(
         "inline-flex shrink-0 items-center rounded border font-mono font-bold uppercase tracking-[0.1em]",
         live
-          ? "border-[#c7ff45]/25 bg-[#c7ff45]/8 text-[#c7ff45]"
-          : "border-[#ff7250]/25 bg-[#ff4f1f]/7 text-[#ff8a64]",
+          ? "border-pass/25 bg-pass/8 text-pass"
+          : "border-signal/25 bg-signal/7 text-[#ff8a64]",
         micro
           ? "px-1 py-px text-[6px]"
           : compact

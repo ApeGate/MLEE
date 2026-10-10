@@ -40,7 +40,7 @@ export function GateHero() {
             Recorded Pump launches at the gate
             <SourcePill>REPLAY</SourcePill>
           </div>
-          <p className="mt-7 font-mono text-xs font-semibold uppercase tracking-[0.2em] text-[#c7ff45]">
+          <p className="mt-7 font-mono text-xs font-semibold uppercase tracking-[0.2em] text-ape-kong">
             Kong checks. You decide.
           </p>
           <h1 className="mt-3 text-[3.35rem] font-extrabold leading-[0.91] tracking-[-0.07em] text-[#f4efe5] sm:text-7xl lg:text-[5.8rem] text-balance">
@@ -63,7 +63,7 @@ export function GateHero() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/feed"
-              className="group inline-flex items-center gap-2 rounded-full bg-[#ff4f1f] px-5 py-3.5 text-sm font-extrabold text-[#0b0906] transition-transform hover:-translate-y-0.5 hover:bg-[#ff6438]"
+              className="group inline-flex items-center gap-2 rounded-full bg-fg px-5 py-3.5 text-sm font-extrabold text-[#0b0906] transition-transform hover:-translate-y-0.5 hover:bg-fg-2"
             >
               Open the live gate
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
@@ -107,7 +107,7 @@ export function GateHero() {
               <div className="relative overflow-hidden border-b border-[#302a20] p-4 sm:border-b-0 sm:border-r sm:p-5">
                 <div className="absolute inset-0 opacity-45 [background-image:linear-gradient(rgb(255_255_255_/_4%)_1px,transparent_1px),linear-gradient(90deg,rgb(255_255_255_/_4%)_1px,transparent_1px)] [background-size:36px_36px]" />
                 <div className="relative">
-                  <p className="font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-[#ffb13c]">
+                  <p className="font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-ape-cheeta">
                     Cheeta · incoming
                   </p>
                   <div className="mt-4 space-y-2.5">
@@ -118,7 +118,7 @@ export function GateHero() {
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex min-w-0 items-center gap-2.5">
-                            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[#ff7250]/25 bg-[#21110b] text-[10px] font-black text-[#ff7250]">
+                            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-ape-kong/25 bg-signal/10 text-[10px] font-black text-ape-kong">
                               {ticket.symbol.slice(0, 2)}
                             </span>
                             <div className="min-w-0">
@@ -130,7 +130,7 @@ export function GateHero() {
                               </p>
                             </div>
                           </div>
-                          <span className="rounded border border-[#9ab7ff]/25 bg-[#9ab7ff]/8 px-1.5 py-1 font-mono text-[7px] font-bold text-[#9ab7ff]">
+                          <span className="rounded border border-wait/30 bg-wait/8 px-1.5 py-1 font-mono text-[7px] font-bold text-wait">
                             WAIT
                           </span>
                         </div>
@@ -139,7 +139,7 @@ export function GateHero() {
                             {ticket.reason}
                           </p>
                           {ticket.mayhem ? (
-                            <span className="font-mono text-[6px] font-bold text-[#ffb13c]">
+                            <span className="font-mono text-[6px] font-bold text-warn">
                               MAYHEM
                             </span>
                           ) : null}
@@ -151,7 +151,7 @@ export function GateHero() {
               </div>
 
               <div className="relative flex flex-col p-4 sm:p-5">
-                <div className="scan-line absolute inset-x-[12%] top-[24%] h-px bg-gradient-to-r from-transparent via-[#ff7250] to-transparent shadow-[0_0_18px_#ff4f1f]" />
+                <div className="scan-line absolute inset-x-[12%] top-[24%] h-px bg-gradient-to-r from-transparent via-ape-kong to-transparent shadow-[0_0_18px_#ff4f1f]" />
                 <div className="relative mx-auto w-[74%] overflow-hidden rounded-[1.4rem] border border-[#ff4f1f]/30 bg-[#090806] shadow-[0_22px_70px_rgb(0_0_0_/_60%)]">
                   <div className="relative aspect-[1.2/1]">
                     <Image
@@ -164,7 +164,7 @@ export function GateHero() {
                     />
                     <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#090806] to-transparent" />
                     <div className="absolute inset-x-0 bottom-0 p-3">
-                      <p className="font-mono text-[7px] font-bold uppercase tracking-[0.16em] text-[#ff7250]">
+                      <p className="font-mono text-[7px] font-bold uppercase tracking-[0.16em] text-ape-kong">
                         Gate keeper
                       </p>
                       <p className="mt-0.5 text-lg font-extrabold">Kong</p>
@@ -175,7 +175,7 @@ export function GateHero() {
                 <div className="mt-5 rounded-xl border border-[#302a20] bg-[#12100c] p-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[10px] font-bold">Latest receipt</p>
-                    <span className="font-mono text-[7px] text-[#c7ff45]">
+                    <span className="font-mono text-[7px] text-pass">
                       SHA-256 ✓
                     </span>
                   </div>
@@ -206,7 +206,7 @@ export function GateHero() {
             <span key={set}>
               <strong className="text-[#ff4f1f]">Fresh facts in</strong>
               {"  ◆  "}Kong checks{"  ◆  "}
-              <strong className="text-[#c7ff45]">Receipt out</strong>
+              <strong className="text-pass">Receipt out</strong>
               {"  ◆  "}Limits stay armed{"  ◆  "}Your wallet signs{"  ◆  "}
             </span>
           ))}
@@ -219,7 +219,7 @@ export function GateHero() {
 function Trust({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <span className="flex items-center gap-2">
-      <span className="text-[#c7ff45]">{icon}</span>
+      <span className="text-pass">{icon}</span>
       {children}
     </span>
   );
@@ -235,11 +235,11 @@ function ReceiptLine({
   return (
     <div className="flex items-center gap-2">
       {done ? (
-        <CheckCircle2 className="size-3 text-[#c7ff45]" />
+        <CheckCircle2 className="size-3 text-pass" />
       ) : (
-        <span className="ml-0.5 size-2 animate-pulse rounded-full bg-[#9ab7ff]" />
+        <span className="ml-0.5 size-2 animate-pulse rounded-full bg-wait" />
       )}
-      <span className={done ? "text-[#91897e]" : "text-[#9ab7ff]"}>
+      <span className={done ? "text-[#91897e]" : "text-wait"}>
         {children}
       </span>
     </div>
@@ -259,7 +259,7 @@ function GateCounter({ label, value }: { label: string; value: string }) {
 
 function SourcePill({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded border border-[#ff7250]/25 bg-[#ff4f1f]/8 px-1.5 py-0.5 font-mono text-[7px] font-bold tracking-[0.1em] text-[#ff8a64]">
+    <span className="rounded border border-signal/25 bg-signal/8 px-1.5 py-0.5 font-mono text-[7px] font-bold tracking-[0.1em] text-[#ff8a64]">
       {children}
     </span>
   );

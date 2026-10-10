@@ -23,7 +23,7 @@ const CREW = [
     job: "Turns chain facts into PASS, WARN, BLOCK, or WAIT—with evidence.",
     can: "Decide the Gate",
     cannot: "Sign a trade",
-    color: "#ff7250",
+    color: "var(--color-ape-kong)",
     image: "/agents/kong.jpg",
     icon: ScanSearch,
   },
@@ -33,7 +33,7 @@ const CREW = [
     job: "Finds fresh launches and keeps lifecycle lanes moving.",
     can: "Watch the firehose",
     cannot: "Chase an entry",
-    color: "#ffb13c",
+    color: "var(--color-ape-cheeta)",
     image: "/agents/cheeta.jpg",
     icon: Binoculars,
   },
@@ -43,7 +43,7 @@ const CREW = [
     job: "Builds the trade preview and asks before a manual send.",
     can: "Prepare a trade",
     cannot: "Bust your caps",
-    color: "#c7ff45",
+    color: "var(--color-ape-caesar)",
     image: "/agents/caesar.jpg",
     icon: Crosshair,
   },
@@ -53,7 +53,7 @@ const CREW = [
     job: "Guards spend limits, open bags, and every planned exit.",
     can: "Enforce limits",
     cannot: "Loosen exits",
-    color: "#9ab7ff",
+    color: "var(--color-ape-cornelius)",
     image: "/agents/cornelius.jpg",
     icon: ShieldCheck,
   },
@@ -63,7 +63,7 @@ const CREW = [
     job: "Explains receipts and drafts plain-English plans for review.",
     can: "Explain the facts",
     cannot: "Trade or size",
-    color: "#a47bff",
+    color: "var(--color-ape-rafiki)",
     image: null,
     icon: BrainCircuit,
   },
@@ -73,7 +73,7 @@ const CREW = [
     job: "Replays plans on real tape and grades Kong without spin.",
     can: "Measure the record",
     cannot: "Promise tomorrow",
-    color: "#ff7ad9",
+    color: "var(--color-ape-zira)",
     image: null,
     icon: FlaskConical,
   },
@@ -86,7 +86,7 @@ export function GateSections() {
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:items-end">
             <div>
-              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#ff7250]">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-signal">
                 Real utility · right now
               </p>
               <h2 className="mt-3 text-4xl font-extrabold leading-[0.96] tracking-[-0.06em] sm:text-6xl">
@@ -145,7 +145,7 @@ export function GateSections() {
       >
         <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
           <div>
-            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#c7ff45]">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-pass">
               Say no with receipts
             </p>
             <h2 className="mt-3 text-4xl font-extrabold leading-[0.96] tracking-[-0.06em] sm:text-6xl">
@@ -184,7 +184,7 @@ export function GateSections() {
                     alt=""
                     width={40}
                     height={40}
-                    className="size-10 rounded-xl border border-[#ff7250]/25 object-cover"
+                    className="size-10 rounded-xl border border-ape-kong/25 object-cover"
                   />
                   <div>
                     <p className="text-sm font-extrabold">Kong · verdict</p>
@@ -193,13 +193,13 @@ export function GateSections() {
                     </p>
                   </div>
                 </div>
-                <span className="rotate-[-3deg] rounded-md border-2 border-[#9ab7ff] px-3 py-1 font-mono text-xs font-black tracking-[0.12em] text-[#9ab7ff]">
+                <span className="rotate-[-3deg] rounded-md border-2 border-wait px-3 py-1 font-mono text-xs font-black tracking-[0.12em] text-wait">
                   WAIT
                 </span>
               </div>
               <div className="grid md:grid-cols-[1fr_0.8fr]">
                 <div className="border-b border-[#302a20] p-5 md:border-b-0 md:border-r">
-                  <p className="font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-[#ff7250]">
+                  <p className="font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-ape-kong">
                     Checklist
                   </p>
                   <div className="mt-4 space-y-2">
@@ -211,7 +211,7 @@ export function GateSections() {
                   </div>
                 </div>
                 <div className="p-5">
-                  <p className="font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-[#c7ff45]">
+                  <p className="font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-pass">
                     Receipt chain
                   </p>
                   <div className="mt-4 space-y-4">
@@ -219,7 +219,7 @@ export function GateSections() {
                     <HashBlock label="Receipt" value="47e9a19d…c4b0" hot />
                     <HashBlock label="Previous" value="8b210cb2…06fa" />
                   </div>
-                  <div className="mt-5 flex items-center gap-2 rounded-lg border border-[#c7ff45]/20 bg-[#c7ff45]/6 p-2.5 text-[9px] text-[#c7ff45]">
+                  <div className="mt-5 flex items-center gap-2 rounded-lg border border-pass/20 bg-pass/6 p-2.5 text-[9px] text-pass">
                     <ShieldCheck className="size-3.5" />
                     Local chain verified
                   </div>
@@ -236,14 +236,14 @@ export function GateSections() {
             <div className="overflow-hidden rounded-[1.7rem] border border-[#3a3328] bg-[#0d0b09] p-5 sm:p-7">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-[#9ab7ff]">
+                  <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-ape-cornelius">
                     Cornelius · wallet policy
                   </p>
                   <h3 className="mt-1 text-xl font-extrabold">
                     Limits before speed.
                   </h3>
                 </div>
-                <span className="rounded-full border border-[#c7ff45]/25 bg-[#c7ff45]/7 px-2.5 py-1 font-mono text-[8px] font-bold text-[#c7ff45]">
+                <span className="rounded-full border border-fg-2/20 bg-fg-2/5 px-2.5 py-1 font-mono text-[8px] font-bold text-fg-2">
                   MANUAL DEFAULT
                 </span>
               </div>
@@ -277,14 +277,14 @@ export function GateSections() {
                     Itemized before any future signature
                   </p>
                 </div>
-                <span className="text-2xl font-extrabold tracking-[-0.04em] text-[#ff7250]">
+                <span className="text-2xl font-extrabold tracking-[-0.04em] text-signal">
                   0.5%
                 </span>
               </div>
             </div>
 
             <div>
-              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#9ab7ff]">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-ape-cornelius">
                 The wallet is the hard stop
               </p>
               <h2 className="mt-3 text-4xl font-extrabold leading-[0.96] tracking-[-0.06em] sm:text-6xl">
@@ -312,7 +312,7 @@ export function GateSections() {
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#ff7250]">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-signal">
                 Six apes · one gate
               </p>
               <h2 className="mt-3 text-4xl font-extrabold leading-[0.96] tracking-[-0.06em] sm:text-6xl">
@@ -369,7 +369,7 @@ export function GateSections() {
                         {ape.job}
                       </p>
                       <div className="mt-auto space-y-1.5 pt-4 font-mono text-[7px] uppercase tracking-wider">
-                        <p className="flex items-center gap-1.5 text-[#c7ff45]">
+                        <p className="flex items-center gap-1.5 text-pass">
                           <Check className="size-2.5" /> {ape.can}
                         </p>
                         <p className="flex items-center gap-1.5 text-[#6f685f]">
@@ -389,7 +389,7 @@ export function GateSections() {
         <div className="mx-auto max-w-7xl overflow-hidden rounded-[1.9rem] border border-[#3a3328] bg-[#12100c]">
           <div className="grid lg:grid-cols-[1fr_0.62fr]">
             <div className="p-7 sm:p-10 lg:p-14">
-              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#ff7250]">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-signal">
                 The gate is open
               </p>
               <h2 className="mt-3 max-w-2xl text-4xl font-extrabold leading-[0.96] tracking-[-0.06em] sm:text-6xl">
@@ -404,7 +404,7 @@ export function GateSections() {
               </p>
               <Link
                 href="/feed"
-                className="group mt-8 inline-flex items-center gap-2 rounded-full bg-[#c7ff45] px-5 py-3.5 text-sm font-extrabold text-[#090806] transition-transform hover:-translate-y-0.5"
+                className="group mt-8 inline-flex items-center gap-2 rounded-full bg-fg px-5 py-3.5 text-sm font-extrabold text-[#090806] transition-transform hover:-translate-y-0.5 hover:bg-fg-2"
               >
                 Ape through the gate
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
@@ -460,10 +460,10 @@ function UtilityCard({
   return (
     <article className="ape-card rounded-2xl border border-[#302a20] p-5">
       <div className="flex items-start justify-between gap-4">
-        <span className="flex size-10 items-center justify-center rounded-xl border border-[#ff7250]/25 bg-[#ff4f1f]/8 text-[#ff7250]">
+        <span className="flex size-10 items-center justify-center rounded-xl border border-signal/25 bg-signal/8 text-signal">
           {icon}
         </span>
-        <span className="rounded border border-[#ff7250]/20 px-1.5 py-0.5 font-mono text-[7px] font-bold tracking-wider text-[#ff8a64]">
+        <span className="rounded border border-signal/20 px-1.5 py-0.5 font-mono text-[7px] font-bold tracking-wider text-[#ff8a64]">
           {source}
         </span>
       </div>
@@ -479,7 +479,7 @@ function UtilityCard({
 function ProofLine({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#c7ff45]/10 text-[#c7ff45]">
+      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-pass/10 text-pass">
         <Check className="size-3" />
       </span>
       <p className="text-sm leading-relaxed text-[#b6aea1]">{children}</p>
@@ -502,8 +502,8 @@ function ReceiptCheck({
         <span
           className={`size-1.5 rounded-full ${
             state === "pass"
-              ? "bg-[#c7ff45]"
-              : "animate-pulse bg-[#9ab7ff]"
+              ? "bg-pass"
+              : "animate-pulse bg-wait"
           }`}
         />
         {label}
@@ -531,7 +531,7 @@ function HashBlock({
       </p>
       <p
         className={`mt-1 truncate font-mono text-[10px] ${
-          hot ? "text-[#c7ff45]" : "text-[#91897e]"
+          hot ? "text-signal" : "text-[#91897e]"
         }`}
       >
         {value}
@@ -555,11 +555,11 @@ function WalletNode({
     <div
       className={`rounded-xl border p-4 ${
         active
-          ? "border-[#c7ff45]/30 bg-[#c7ff45]/6"
+          ? "border-ape-cornelius/30 bg-ape-cornelius/6"
           : "border-[#31291f] bg-[#090806]"
       }`}
     >
-      <span className={active ? "text-[#c7ff45]" : "text-[#9ab7ff]"}>
+      <span className={active ? "text-ape-cornelius" : "text-wait"}>
         {icon}
       </span>
       <p className="mt-4 text-xs font-bold">{title}</p>
@@ -571,7 +571,7 @@ function WalletNode({
 function LimitChip({ children }: { children: React.ReactNode }) {
   return (
     <span className="flex items-center gap-1.5 rounded-lg border border-[#272119] bg-[#090806] px-2.5 py-2 text-[#91897e]">
-      <Ban className="size-2.5 text-[#9ab7ff]" />
+      <Ban className="size-2.5 text-ape-cornelius" />
       {children}
     </span>
   );
