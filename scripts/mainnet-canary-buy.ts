@@ -292,11 +292,12 @@ async function main() {
   const holderFacts = concentration(report);
   const currentMarketCapSol = marketCapSol(pair);
   const recentTrades = countRecentTrades(pair);
+  const creatorTokens = report.creatorTokens;
   const launchFlowResolved =
     report.graphInsidersDetected === 0 &&
     (report.insiderNetworks?.length ?? 0) === 0;
   const creatorHistoryResolved =
-    report.creatorTokens === null || Array.isArray(report.creatorTokens);
+    creatorTokens === null || Array.isArray(creatorTokens);
   const canonicalMarketResolved =
     pair.dexId === "pumpswap" &&
     (pair.liquidity?.usd ?? 0) >= 50_000 &&
@@ -323,7 +324,7 @@ async function main() {
     launchSecondBuyout: launchFlowResolved ? false : null,
     deployerPulledPool:
       creatorHistoryResolved &&
-      (report.creatorTokens === null || report.creatorTokens.length === 0)
+      (creatorTokens === null || creatorTokens?.length === 0)
         ? false
         : null,
     manufacturedCap: canonicalMarketResolved ? false : null,
