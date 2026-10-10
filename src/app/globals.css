@@ -2,48 +2,75 @@
 @import "tw-animate-css";
 
 @theme inline {
-  --color-background: #0b1220;
-  --color-foreground: #e8eef7;
-  --color-muted: #8b9bb0;
-  --color-surface: #121a2a;
-  --color-surface-2: #182235;
-  --color-line: #243044;
-  --color-accent: #3dd6c6;
-  --color-accent-foreground: #041016;
-  --color-warn: #f5a524;
-  --color-danger: #ff6b6b;
-  --color-good: #7dffb3;
+  --color-background: #090806;
+  --color-foreground: #f4efe5;
+  --color-muted: #a79f92;
+  --color-surface: #12100c;
+  --color-surface-2: #1b1711;
+  --color-line: #302a20;
+  --color-accent: #ff4f1f;
+  --color-accent-foreground: #0b0906;
+  --color-lime: #c7ff45;
+  --color-warn: #ffb13c;
+  --color-danger: #ff655f;
+  --color-good: #c7ff45;
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
+  --radius-lg: 1rem;
 }
 
 @layer base {
+  * {
+    border-color: #302a20;
+  }
   html {
     scroll-behavior: smooth;
   }
   body {
     min-height: 100svh;
-    background: #0b1220;
-    color: #e8eef7;
+    background: #090806;
+    color: #f4efe5;
     font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
     background-image:
-      radial-gradient(1000px 600px at 90% -10%, rgb(61 214 198 / 14%), transparent 55%),
-      radial-gradient(800px 500px at -15% 40%, rgb(80 120 200 / 10%), transparent 50%),
-      linear-gradient(180deg, #0b1220 0%, #090f1a 100%);
+      radial-gradient(900px 520px at 90% -10%, rgb(255 79 31 / 17%), transparent 58%),
+      radial-gradient(720px 460px at -12% 30%, rgb(199 255 69 / 7%), transparent 58%),
+      linear-gradient(180deg, #0b0a07 0%, #080705 100%);
     background-attachment: fixed;
   }
   ::selection {
-    background: #3dd6c6;
-    color: #041016;
+    background: #ff4f1f;
+    color: #090806;
+  }
+  button,
+  a,
+  input {
+    outline-color: #ff4f1f;
   }
 }
 
 @layer utilities {
   .font-mono {
     font-family: var(--font-mono), ui-monospace, monospace;
+  }
+  .ape-grid {
+    background-image:
+      linear-gradient(rgb(244 239 229 / 3.5%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(244 239 229 / 3.5%) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+  .ape-card {
+    background:
+      linear-gradient(135deg, rgb(255 255 255 / 3.5%), transparent 42%),
+      #12100c;
+  }
+  .text-stroke {
+    color: transparent;
+    -webkit-text-stroke: 1px rgb(244 239 229 / 35%);
+  }
+  .ticker {
+    animation: ticker 24s linear infinite;
   }
   .rise {
     animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -53,6 +80,15 @@
   }
   .rise-delay-2 {
     animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
+  }
+}
+
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
   }
 }
 

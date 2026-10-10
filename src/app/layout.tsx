@@ -15,9 +15,22 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Blotter — Pump.fun strategy runner",
+  title: {
+    default: "Apegate — Your ape crew for Pump.fun",
+    template: "%s · Apegate",
+  },
   description:
-    "Blotter checks new Pump.fun coins against your rules, waits for entries, and logs every skip, watch, buy, and exit — so you decide with a clear record.",
+    "Apegate puts four ape agents on your Pump.fun plan: scout launches, watch entries, line up trades, and guard every exit.",
+  icons: {
+    icon: "/apegate-logo.jpg",
+    apple: "/apegate-logo.jpg",
+  },
+  openGraph: {
+    title: "Apegate — Your ape crew for Pump.fun",
+    description:
+      "Scout launches, watch entries, line up trades, and guard every exit with a readable decision tape.",
+    images: ["/apegate-logo.jpg"],
+  },
 };
 
 export default function RootLayout({

@@ -80,24 +80,24 @@ export type SimState = {
 };
 
 const TICKERS = [
-  ["WISP", "Willow Whisper"],
-  ["GLINT", "Glass Glint"],
-  ["MOOR", "Night Moor"],
-  ["FATHOM", "Fathom Deep"],
-  ["SKIFF", "Skiff Line"],
-  ["EMBER", "Ember Drift"],
-  ["QUILL", "Quill Mark"],
-  ["RIME", "Rime Coast"],
-  ["LUMEN", "Lumen Pack"],
-  ["TOR", "Tor Ridge"],
-  ["VAULT", "Soft Vault"],
-  ["NEX", "Nex Current"],
-  ["BRINE", "Brine Cap"],
-  ["HALO", "Halo Wire"],
-  ["KITE", "Kite Signal"],
-  ["ORBIT", "Orbit Dust"],
-  ["PULSE", "Pulse Fen"],
-  ["REED", "Reed Channel"],
+  ["BANANA", "Banana Signal"],
+  ["APE", "Ape on Chain"],
+  ["TRENCH", "Trench Club"],
+  ["SEND", "Full Send"],
+  ["VINE", "Vine Protocol"],
+  ["PEEL", "Peel Season"],
+  ["FREN", "Fren Circle"],
+  ["FERAL", "Feral Finance"],
+  ["MOON", "Moon Receipt"],
+  ["ROCK", "Pet Rock"],
+  ["WAGMI", "Wagmi Works"],
+  ["CHAD", "Chad Terminal"],
+  ["BASED", "Based Banana"],
+  ["PRIME", "Prime Primate"],
+  ["HOWL", "Howler Club"],
+  ["CANOPY", "Canopy Coin"],
+  ["GORILLA", "Gorilla Mode"],
+  ["JUNGLE", "Jungle Juice"],
 ];
 
 function rand(min: number, max: number) {
@@ -240,7 +240,7 @@ function manageExits(state: SimState, strategy: Strategy): SimState {
 
     if (hardStop || trailHit) {
       next = pushEvent(next, {
-        specialist: "desk",
+        specialist: "system",
         kind: "sell",
         ticker: pos.ticker,
         title: hardStop
@@ -265,7 +265,7 @@ function manageExits(state: SimState, strategy: Strategy): SimState {
       const soldPct = strategy.exit.partialSellPct;
       const remaining = Math.max(0, pos.remainingPct - soldPct);
       next = pushEvent(next, {
-        specialist: "desk",
+        specialist: "system",
         kind: "sell",
         ticker: pos.ticker,
         title: `TP $${pos.ticker} +${pos.pnlPct.toFixed(1)}%`,
@@ -298,19 +298,19 @@ function resolvePhase(state: SimState): Phase {
 export function nextStepLabel(state: SimState): string {
   switch (state.phase) {
     case "idle":
-      return "Choose a style, then start the simulated run";
+      return "Pick a play style, brief the crew, then open the simulated gate";
     case "paused":
-      return "Resume scanning, or reset to change rules";
+      return "Resume the crew, or reset to change the orders";
     case "scouting":
-      return "Checking new coins against your filters…";
+      return "Kong is checking fresh launches against your rules…";
     case "watching":
-      return "Waiting for an entry on coins that already passed";
+      return "Cheeta is stalking an entry on coins Kong passed";
     case "awaiting_approval":
-      return "A buy is ready — approve or skip it";
+      return "Caesar has a buy ready — send it or close the gate";
     case "managing":
-      return "Managing open bags · still checking new coins";
+      return "Cornelius is guarding open bags · Kong keeps scanning";
     case "blocked":
-      return `Paused by limits: ${state.lastError ?? "raise budget or wait for exits"}`;
+      return `Cornelius blocked the gate: ${state.lastError ?? "raise budget or wait for exits"}`;
     default:
       return "—";
   }
@@ -363,7 +363,7 @@ export function rejectPending(state: SimState): SimState {
     kind: "note",
     ticker,
     title: `SKIPPED BUY $${ticker}`,
-    detail: "you passed · Scout continues",
+    detail: "you closed the gate · Kong keeps scanning",
   });
   next = { ...next, phase: resolvePhase(next) };
   return next;
@@ -408,7 +408,7 @@ export function simTick(state: SimState, strategy: Strategy): SimState {
       specialist: "scout",
       kind: "scan",
       ticker: token.ticker,
-      title: `SCAN $${token.ticker}`,
+      title: `CHECK $${token.ticker}`,
       detail: `${token.ageMinutes}m · liq ${token.liquiditySol} · top ${token.topHolderPct}% · vel ${token.velocity.toFixed(2)}×`,
     });
 
@@ -422,7 +422,7 @@ export function simTick(state: SimState, strategy: Strategy): SimState {
         specialist: "scout",
         kind: "skip",
         ticker: token.ticker,
-        title: `SKIP $${token.ticker}`,
+        title: `BLOCK $${token.ticker}`,
         detail: check.reason,
       });
     } else {
@@ -435,14 +435,14 @@ export function simTick(state: SimState, strategy: Strategy): SimState {
         specialist: "scout",
         kind: "pass",
         ticker: token.ticker,
-        title: `PASS → WATCH $${token.ticker}`,
+        title: `PASS → CHEETA $${token.ticker}`,
         detail: check.reason,
       });
       next = pushEvent(next, {
         specialist: "watch",
         kind: "watching",
         ticker: token.ticker,
-        title: `WATCH $${token.ticker}`,
+        title: `STALK $${token.ticker}`,
         detail: `need vel ≥ ${strategy.filters.minVelocity.toFixed(1)}× · now ${token.velocity.toFixed(2)}×`,
       });
     }
@@ -481,10 +481,10 @@ export function simTick(state: SimState, strategy: Strategy): SimState {
         watched: next.watched.filter((id) => id !== token.id),
       };
       next = pushEvent(next, {
-        specialist: "watch",
+        specialist: "desk",
         kind: "pending",
         ticker: token.ticker,
-        title: `ENTRY READY $${token.ticker}`,
+        title: `PITCH $${token.ticker}`,
         detail: `${reason} · ${sizeSol.toFixed(2)} SOL · awaiting APPROVE`,
       });
       break;
