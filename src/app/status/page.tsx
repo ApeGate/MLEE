@@ -17,7 +17,7 @@ const SERVICES = [
     name: "Web application",
     state: "Operational",
     detail:
-      "Homepage, live feed, public coin dossiers, crew roster, local receipts, and wallet connect path",
+      "Homepage, live feed, token metadata images, public dossiers, crew roster, receipts, and wallet signing path",
   },
   {
     name: "Launch discovery",
@@ -71,9 +71,9 @@ const SERVICES = [
   },
   {
     name: "Real trading and Vault",
-    state: "Canary gated",
+    state: "Manual sign live",
     detail:
-      "An operator-only manual buy canary enforces fresh Gate and timing checks, one expected signer, program allowlists, and simulation; browser sends and Vault automation stay off",
+      "Privy browser buys require a fresh PASS, entry timing, one user signer, no lookup tables, and approved programs; automated Vault signing stays off",
   },
 ] as const;
 

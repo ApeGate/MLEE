@@ -22,6 +22,7 @@ import {
   isOfficialApegateMint,
   resemblesApegateIdentity,
 } from "../../../packages/core/src";
+import { TokenLogo } from "@/components/token/token-logo";
 
 type RiskPayload = {
   mintAuthority?: string | null;
@@ -190,7 +191,14 @@ export function CoinDossier({
           <div className="grid lg:grid-cols-[1fr_auto] lg:items-start">
             <div className="p-5 sm:p-7">
               <div className="flex items-start gap-4">
-                <TokenMark symbol={symbol} />
+                <TokenLogo
+                  mint={mint}
+                  symbol={symbol}
+                  imageUrl={data?.metadata?.image}
+                  uri={data?.metadata?.uri}
+                  size="xl"
+                  eager
+                />
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="text-3xl font-extrabold tracking-[-0.05em]">
@@ -739,15 +747,6 @@ function EmptyLine({ copy, compact }: { copy: string; compact?: boolean }) {
       <p className="rounded-xl border border-[#272119] bg-[#090806] p-3 text-[9px] leading-relaxed text-[#6f685f]">
         {copy}
       </p>
-    </div>
-  );
-}
-
-function TokenMark({ symbol }: { symbol: string }) {
-  return (
-    <div className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#ff7250]/25 bg-[#ff4f1f]/8 font-mono text-sm font-black text-[#ff7250]">
-      <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgb(255_255_255_/_16%),transparent_45%)]" />
-      <span className="relative">{symbol === "—" ? "?" : symbol.slice(0, 2)}</span>
     </div>
   );
 }

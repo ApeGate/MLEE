@@ -9,13 +9,15 @@ import {
   Eraser,
   Fingerprint,
   FlaskConical,
+  GripVertical,
   ReceiptText,
   RotateCcw,
+  ShieldCheck,
   TrendingDown,
   TrendingUp,
   WalletCards,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   paperPositionValue,
   quotePaperBuy,
@@ -27,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { useLaunchFeed, type FeedLaunch } from "@/lib/use-launch-feed";
 import { usePaperPortfolio } from "@/lib/use-paper-portfolio";
 import { useReceipts } from "@/lib/use-receipts";
+import { TokenLogo } from "@/components/token/token-logo";
 
 const SIZE_PRESETS = [0.05, 0.1, 0.25, 0.5] as const;
 
@@ -302,32 +305,79 @@ function LaunchLane({
   selectedMint: string | null;
   onSelect: (mint: string) => void;
 }) {
+  const [order, setOrder] = useState<string[]>([]);
+  const [dragging, setDragging] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOrder((current) => {
+      const available = new Set(launches.map((launch) => launch.facts.mint));
+      const kept = current.filter((mint) => available.has(mint));
+      const added = launches
+        .map((launch) => launch.facts.mint)
+        .filter((mint) => !kept.includes(mint));
+      return [...kept, ...added];
+    });
+  }, [launches]);
+
+  const ordered = useMemo(
+    () =>
+      order
+        .map((mint) => launches.find((launch) => launch.facts.mint === mint))
+        .filter((launch): launch is FeedLaunch => Boolean(launch)),
+    [launches, order],
+  );
+
+  function dropOn(target: string) {
+    if (!dragging || dragging === target) return;
+    setOrder((current) => {
+      const next = current.filter((mint) => mint !== dragging);
+      const targetIndex = next.indexOf(target);
+      next.splice(targetIndex < 0 ? next.length : targetIndex, 0, dragging);
+      return next;
+    });
+    setDragging(null);
+  }
+
   return (
     <section className="overflow-hidden rounded-2xl border border-[#31291f] bg-[#0d0b09]">
       <div className="border-b border-[#31291f] p-4">
         <p className="font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-[#ffb13c]">
-          Cheeta · practice lane
+          Cheeta · paper watchlist
         </p>
-        <h1 className="mt-1 text-lg font-extrabold">Pick a launch.</h1>
+        <div className="mt-1 flex items-end justify-between gap-3">
+          <h1 className="text-lg font-extrabold">Pick a launch.</h1>
+          <p className="hidden font-mono text-[7px] uppercase text-[#4f4941] sm:block">
+            Drag to reorder
+          </p>
+        </div>
       </div>
       <div className="max-h-[640px] overflow-y-auto">
         {launches.length ? (
-          launches.slice(0, 24).map((launch) => (
+          ordered.slice(0, 24).map((launch) => (
             <button
               key={`${launch.source}-${launch.facts.mint}`}
               type="button"
+              draggable
+              onDragStart={() => setDragging(launch.facts.mint)}
+              onDragEnd={() => setDragging(null)}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={() => dropOn(launch.facts.mint)}
               onClick={() => onSelect(launch.facts.mint)}
               className={cn(
                 "flex w-full items-center justify-between gap-3 border-b border-[#272119] p-3 text-left last:border-0",
                 selectedMint === launch.facts.mint
                   ? "bg-[#c7ff45]/6"
                   : "hover:bg-[#15120e]",
+                dragging === launch.facts.mint && "opacity-45",
               )}
             >
               <div className="flex min-w-0 items-center gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-[#ffb13c]/25 bg-[#ffb13c]/7 text-[10px] font-black text-[#ffb13c]">
-                  {launch.facts.symbol.slice(0, 2)}
-                </span>
+                <GripVertical className="hidden size-3 shrink-0 cursor-grab text-[#4f4941] sm:block" />
+                <TokenLogo
+                  mint={launch.facts.mint}
+                  symbol={launch.facts.symbol}
+                  uri={launch.facts.uri}
+                />
                 <div className="min-w-0">
                   <p className="truncate text-xs font-extrabold">
                     ${launch.facts.symbol}
@@ -335,6 +385,9 @@ function LaunchLane({
                   <p className="truncate text-[8px] text-[#6f685f]">
                     {launch.facts.marketCapSol.toFixed(1)} SOL mcap ·{" "}
                     {launch.source.toUpperCase()}
+                  </p>
+                  <p className="mt-1 truncate font-mono text-[7px] uppercase text-[#ffca72]">
+                    {launch.verdict.timing.label}
                   </p>
                 </div>
               </div>
@@ -391,13 +444,26 @@ function OrderTicket({
   return (
     <section className="overflow-hidden rounded-2xl border border-[#31291f] bg-[#0d0b09]">
       <div className="flex items-start justify-between gap-3 border-b border-[#31291f] p-4">
-        <div>
-          <p className="font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-[#c7ff45]">
-            Caesar · order preview
-          </p>
-          <h2 className="mt-1 text-lg font-extrabold">
-            PAPER buy ${launch.facts.symbol}
-          </h2>
+        <div className="flex min-w-0 items-center gap-3">
+          <TokenLogo
+            mint={launch.facts.mint}
+            symbol={launch.facts.symbol}
+            uri={launch.facts.uri}
+            size="md"
+            eager
+          />
+          <div className="min-w-0">
+            <p className="font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-[#c7ff45]">
+              Caesar · order preview
+            </p>
+            <h2 className="mt-1 truncate text-lg font-extrabold">
+              PAPER buy ${launch.facts.symbol}
+            </h2>
+            <p className="mt-1 font-mono text-[7px] uppercase text-[#ffca72]">
+              {launch.verdict.timing.label} ·{" "}
+              {launch.verdict.timing.entryAllowed ? "entry lane" : "watch only"}
+            </p>
+          </div>
         </div>
         <SourceBadge source="PAPER" hot />
       </div>
@@ -581,6 +647,26 @@ function BagPanel({
         </button>
       </div>
 
+      <div className="border-b border-[#31291f] bg-[#5cc8ff]/[0.035] p-4">
+        <div className="flex items-start gap-3">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#5cc8ff]/20 bg-[#5cc8ff]/7 text-[#86d8ff]">
+            <ShieldCheck className="size-4" />
+          </span>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[10px] font-extrabold">Free-ride exit default</p>
+              <span className="rounded border border-pass/20 bg-pass/7 px-1.5 py-0.5 font-mono text-[6px] font-bold text-pass">
+                ARMED IN PLAN
+              </span>
+            </div>
+            <p className="mt-1 text-[8px] leading-relaxed text-[#6f85a5]">
+              Recover stake + fees near 2×, trail the runner 30%, stop at −35%,
+              and flag dev, cluster, Gate-flip, or pool-drain exits.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {positions.length ? (
         <div className="max-h-[640px] space-y-3 overflow-y-auto p-4">
           {positions.map((position) => {
@@ -597,13 +683,20 @@ function BagPanel({
                 className="rounded-xl border border-[#272119] bg-[#090806] p-4"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-extrabold">
-                      ${position.symbol}
-                    </p>
-                    <p className="mt-1 font-mono text-[8px] text-[#5f584f]">
-                      {formatTokens(position.tokens)} tokens
-                    </p>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <TokenLogo
+                      mint={position.mint}
+                      symbol={position.symbol}
+                      uri={launch?.facts.uri}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-extrabold">
+                        ${position.symbol}
+                      </p>
+                      <p className="mt-1 font-mono text-[8px] text-[#5f584f]">
+                        {formatTokens(position.tokens)} tokens
+                      </p>
+                    </div>
                   </div>
                   <span
                     className={cn(

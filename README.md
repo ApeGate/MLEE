@@ -4,9 +4,10 @@
 launches: facts go in, Kong runs deterministic checks, and a tamper-evident
 decision receipt comes out.
 
-This release keeps browser real-money paths disabled while live intelligence
-and the local PAPER loop are exercised. An operator-only, locally signed
-mainnet canary is enabled behind explicit safeguards:
+This release exposes guarded, user-approved browser buys through Privy external
+Solana wallets alongside the local PAPER loop. A fresh Kong `PASS`, an
+entry-allowed Cheeta timing call, a verified fee payer, and a strict program
+allowlist are required before the wallet prompt opens:
 
 - `/` — Gate-first product home
 - `/feed` — real launch discovery with a recorded real-tape fallback
@@ -19,7 +20,7 @@ mainnet canary is enabled behind explicit safeguards:
 - `/crew` — all six jobs with explicit permissions and hard boundaries
 - `/token` — official $APEGATE status and contract-address registry
 - `/status` — honest capability status
-- `/desk` — redirects to the Gate
+- `/desk` — production desk entry point; redirects to the Gate
 
 The feed connects to the public Pump launch stream in the browser. Opening a
 launch asks Solana RPC for mint safety and an optional independent risk source
@@ -122,7 +123,12 @@ optional.
 Wallet login uses Privy with external Solana wallets only. The provider shows
 Solana wallets, uses wallet login, and explicitly disables automatic Ethereum
 or Solana embedded-wallet creation. It authenticates the wallet session but
-does not build or send a transaction. Manual signing remains the default.
+never receives a seed phrase or delegated key. On a fresh `PASS` plus an
+entry-allowed timing call, `/feed` may request a 0.01–0.05 SOL unsigned Pump
+transaction, verify its fee payer, signer count, address-table count, and
+program IDs, then ask the connected wallet to sign and send it. The locked 0.5%
+Apegate fee is displayed but waived during this guarded browser beta; Pump and
+priority fees are still charged by the prepared transaction.
 
 The operator-only mainnet canary is separate from the browser app. It requires
 a fresh Kong `PASS`, a Cheeta timing chip that permits entry, a 0.01–0.05 SOL

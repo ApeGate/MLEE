@@ -14,6 +14,46 @@ when the custom domains were attached. Add the zone to the same account as the
 Worker, or deploy the Worker from the account that owns the zone, before
 enabling the route block below.
 
+## Mick: exact unblock steps
+
+The nameserver change is already doing its job. Error `10083` is an account
+ownership mismatch: a Worker Custom Domain can only use an active zone owned by
+the same Cloudflare account as that Worker. Repeating the deploy from the
+current Worker account cannot fix it.
+
+Use Mick's Cloudflare account as the source of truth:
+
+1. Sign in to Mick's Cloudflare dashboard and select the account where
+   **Domains → apegate.io** is visible. Confirm the zone status is **Active**.
+   If it is not listed, select **Onboard a domain**, add `apegate.io`, and use
+   the plan already intended for the site. Do not create a second pending zone
+   in another account.
+2. In that same account, open **Workers & Pages**. Deploy this repository as
+   `apegate-web` there, or grant the deployment identity access to this account
+   and deploy it into this account. Copy these non-secret variables:
+   `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_PRIVY_APP_ID`, and `PRIVY_APP_ID`.
+   Re-enter the server secrets in **Settings → Variables and Secrets**:
+   `PRIVY_APP_SECRET`, `HELIUS_API_KEY`, `HELIUS_RPC_URL`, and
+   `SOLANA_RPC_URL`. Never copy secret values into DNS or git.
+3. Open **apegate.io → DNS → Records**. Remove any A, AAAA, or CNAME record
+   already using the exact host `apegate.io` or `www` if that hostname will be
+   attached as a Worker Custom Domain. Leave MX, TXT, and unrelated subdomains
+   alone.
+4. Open **Workers & Pages → apegate-web → Settings → Domains & Routes**.
+   Select **Add → Custom Domain**, enter `apegate.io`, and confirm. Repeat for
+   `www.apegate.io`. Cloudflare creates the DNS records and certificates; do
+   not add manual A/AAAA/CNAME records afterward.
+5. In Privy, open the Apegate app and add exactly
+   `https://apegate.io` and `https://www.apegate.io` under allowed domains.
+   Keep Solana login on and smart wallets off.
+6. Wait until both Custom Domains show **Active**, then run the verification
+   commands below. The apex should serve Apegate and `www` should either serve
+   the same Worker or redirect to the apex.
+
+If Mick prefers not to redeploy the Worker, the only equivalent fix is moving
+or onboarding the `apegate.io` zone into the current Worker account. Cloudflare
+does not let a Custom Domain cross account boundaries.
+
 Prerequisites:
 
 1. Add `apegate.io` as an active Cloudflare DNS zone.
