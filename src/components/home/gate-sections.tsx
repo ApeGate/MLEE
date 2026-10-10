@@ -394,10 +394,11 @@ export function GateSections() {
               </h2>
               <p className="mt-6 max-w-xl text-sm leading-relaxed text-[#91897e]">
                 Practice against live or recorded launches in PAPER mode.
-                On a fresh PASS with an entry timing call, Apegate can prepare a
-                bounded buy, verify its fee payer and programs, then hand it to
-                Privy for your external wallet to approve. Privy Vault stays
-                disabled until policy signing and independent review are ready.
+                On a cleared PumpSwap entry, Apegate decodes the mint, spend,
+                tip, token, and compute limits in both runtimes before Privy
+                opens your external wallet. Bonding-curve sends and Privy Vault
+                stay disabled until their decoders and independent review are
+                ready.
               </p>
               <Link
                 href="/paper"
