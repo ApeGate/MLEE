@@ -298,21 +298,21 @@ function resolvePhase(state: SimState): Phase {
 export function nextStepLabel(state: SimState): string {
   switch (state.phase) {
     case "idle":
-      return "NEXT: set rules → RUN";
+      return "Choose a style, then start the simulated run";
     case "paused":
-      return "NEXT: RESUME or RESET";
+      return "Resume scanning, or reset to change rules";
     case "scouting":
-      return "NEXT: Scout is filtering the tape";
+      return "Checking new coins against your filters…";
     case "watching":
-      return "NEXT: Watch waiting on velocity entry";
+      return "Waiting for an entry on coins that already passed";
     case "awaiting_approval":
-      return "NEXT: APPROVE or SKIP the buy";
+      return "A buy is ready — approve or skip it";
     case "managing":
-      return "NEXT: Desk managing exits · Scout still scanning";
+      return "Managing open bags · still checking new coins";
     case "blocked":
-      return `NEXT: fix block — ${state.lastError ?? "limits"}`;
+      return `Paused by limits: ${state.lastError ?? "raise budget or wait for exits"}`;
     default:
-      return "NEXT: —";
+      return "—";
   }
 }
 

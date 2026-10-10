@@ -2,19 +2,16 @@ import Link from "next/link";
 
 const STEPS = [
   {
-    n: "01",
-    title: "Scout",
-    body: "Checks new Pump.fun coins against your filters — age, liquidity, top-holder concentration — and skips what fails.",
+    title: "1. Check",
+    body: "New coins are scored against your filters. Failures are skipped with a reason you can read on the blotter.",
   },
   {
-    n: "02",
-    title: "Watch",
-    body: "Holds coins that passed. Waits for your entry (velocity threshold), then hands the size to Desk.",
+    title: "2. Watch",
+    body: "Coins that pass wait for your entry condition (how fast they’re moving). You keep trading elsewhere.",
   },
   {
-    n: "03",
-    title: "Desk",
-    body: "Buys within budget and position caps. Follows take-profit, trail, and stop. Asks before each buy if you want.",
+    title: "3. Trade",
+    body: "When the entry hits, Blotter sizes the buy inside your budget. You approve first (default), then exits follow your take-profit, trail, and stop.",
   },
 ];
 
@@ -23,85 +20,55 @@ export function HomeSections() {
     <>
       <section
         id="how"
-        className="border-t border-[#242824] px-5 py-20 sm:px-8 sm:py-28"
+        className="border-t border-[#243044] px-5 py-16 sm:px-8 sm:py-24"
       >
         <div className="mx-auto max-w-6xl">
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#ff5c2e]">
-            How Rivet works
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-[#3dd6c6]">
+            Workflow
           </p>
-          <h2 className="mt-3 max-w-xl font-display text-3xl font-semibold tracking-tight sm:text-4xl text-balance">
-            Three jobs. One strategy. A tape that shows every call.
+          <h2 className="mt-2 max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl text-balance">
+            Three steps. One set of rules. A log for every call.
           </h2>
-          <p className="mt-4 max-w-xl text-[#8d9488]">
-            For traders who already know their Pump.fun plan — and are tired of
-            manually checking holders, waiting on entries, and babysitting
-            exits.
-          </p>
-
-          <ol className="mt-14 grid gap-10 md:grid-cols-3 md:gap-8">
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
             {STEPS.map((step) => (
-              <li key={step.n} className="border-t border-[#ff5c2e]/40 pt-5">
-                <div className="font-mono text-xs text-[#ff5c2e]">{step.n}</div>
-                <h3 className="mt-2 font-display text-xl font-semibold">
+              <div
+                key={step.title}
+                className="rounded-xl border border-[#243044] bg-[#121a2a]/70 p-5"
+              >
+                <h3 className="text-lg font-semibold text-[#3dd6c6]">
                   {step.title}
                 </h3>
-                <p className="mt-2 text-sm leading-relaxed text-[#8d9488]">
+                <p className="mt-2 text-sm leading-relaxed text-[#8b9bb0]">
                   {step.body}
                 </p>
-              </li>
+              </div>
             ))}
-          </ol>
+          </div>
         </div>
       </section>
 
-      <section className="border-t border-[#242824] px-5 py-20 sm:px-8 sm:py-28">
-        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#ff5c2e]">
-              Who it’s for
-            </p>
-            <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl text-balance">
-              Pump.fun desks that want rules, not vibes.
-            </h2>
-            <p className="mt-4 max-w-lg text-[#8d9488]">
-              Set Clips, Balanced, or Wide. Cap budget and size. Keep approval
-              on if you want the final say. Pause anytime — open bags still
-              manage to your exits.
-            </p>
+      <section className="border-t border-[#243044] px-5 py-16 sm:px-8 sm:py-24">
+        <div className="mx-auto max-w-6xl rounded-2xl border border-[#243044] bg-[#121a2a]/80 px-6 py-10 sm:px-10">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                Ready to see it run?
+              </h2>
+              <p className="mt-2 max-w-lg text-[#8b9bb0]">
+                The desk starts in simulation with sensible Clips defaults.
+                Change the plan anytime. Nothing here spends real funds.
+              </p>
+            </div>
+            <Link
+              href="/desk"
+              className="inline-flex shrink-0 rounded-md bg-[#3dd6c6] px-5 py-3 text-sm font-semibold text-[#041016] hover:bg-[#5eead4]"
+            >
+              Open the desk
+            </Link>
           </div>
-          <ul className="space-y-3 font-mono text-sm text-[#e9ece6]">
-            <li className="border-l-2 border-[#ff5c2e] pl-3">
-              Plain-English plan before you run
-            </li>
-            <li className="border-l-2 border-[#242824] pl-3 text-[#8d9488]">
-              Skip / pass / buy / sell reasons on the tape
-            </li>
-            <li className="border-l-2 border-[#242824] pl-3 text-[#8d9488]">
-              Hard budget and position caps Desk cannot override
-            </li>
-          </ul>
         </div>
-      </section>
-
-      <section className="border-t border-[#242824] px-5 py-20 sm:px-8 sm:py-24">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="font-display text-4xl font-bold tracking-tight text-[#ff5c2e] sm:text-5xl">
-              RIVET
-            </p>
-            <p className="mt-3 max-w-md text-lg text-[#e9ece6]">
-              Open the desk. Set the plan. Watch the handoffs.
-            </p>
-          </div>
-          <Link
-            href="/desk"
-            className="inline-flex items-center bg-[#ff5c2e] px-5 py-3 text-sm font-semibold text-[#070807] hover:bg-[#ff734d]"
-          >
-            Open desk
-          </Link>
-        </div>
-        <p className="mx-auto mt-14 max-w-6xl text-xs text-[#8d9488]/80">
-          Local simulated market for trying the loop. Not financial advice.
+        <p className="mx-auto mt-8 max-w-6xl text-xs text-[#8b9bb0]/80">
+          Not financial advice. Market data in this demo is simulated.
         </p>
       </section>
     </>

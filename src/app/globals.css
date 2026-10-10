@@ -2,85 +2,67 @@
 @import "tw-animate-css";
 
 @theme inline {
-  --color-background: #070807;
-  --color-foreground: #e9ece6;
-  --color-muted: #8d9488;
-  --color-surface: #101210;
-  --color-surface-2: #161916;
-  --color-line: #242824;
-  --color-accent: #ff5c2e;
-  --color-accent-foreground: #070807;
-  --color-good: #b6f34d;
-  --font-sans: var(--font-display);
+  --color-background: #0b1220;
+  --color-foreground: #e8eef7;
+  --color-muted: #8b9bb0;
+  --color-surface: #121a2a;
+  --color-surface-2: #182235;
+  --color-line: #243044;
+  --color-accent: #3dd6c6;
+  --color-accent-foreground: #041016;
+  --color-warn: #f5a524;
+  --color-danger: #ff6b6b;
+  --color-good: #7dffb3;
+  --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
-  --radius: 0;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
 }
 
 @layer base {
-  * {
-    border-radius: 0 !important;
-  }
   html {
     scroll-behavior: smooth;
   }
   body {
-    background: #070807;
-    color: #e9ece6;
     min-height: 100svh;
-    font-family: var(--font-display), ui-sans-serif, sans-serif;
+    background: #0b1220;
+    color: #e8eef7;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
     background-image:
-      radial-gradient(900px 520px at 85% -5%, rgb(255 92 46 / 18%), transparent 55%),
-      radial-gradient(700px 480px at -10% 30%, rgb(182 243 77 / 6%), transparent 50%),
-      linear-gradient(180deg, #070807 0%, #050605 100%);
+      radial-gradient(1000px 600px at 90% -10%, rgb(61 214 198 / 14%), transparent 55%),
+      radial-gradient(800px 500px at -15% 40%, rgb(80 120 200 / 10%), transparent 50%),
+      linear-gradient(180deg, #0b1220 0%, #090f1a 100%);
     background-attachment: fixed;
   }
   ::selection {
-    background: #ff5c2e;
-    color: #070807;
+    background: #3dd6c6;
+    color: #041016;
   }
 }
 
 @layer utilities {
-  .font-display {
-    font-family: var(--font-display), ui-sans-serif, sans-serif;
-  }
   .font-mono {
     font-family: var(--font-mono), ui-monospace, monospace;
   }
-  .noise {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-  }
   .rise {
-    animation: rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
-  .rise-2 {
-    animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+  .rise-delay {
+    animation: rise 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
   }
-  .rise-3 {
-    animation: rise 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both;
-  }
-  .pulse-line {
-    animation: pulse-line 2.4s ease-in-out infinite;
+  .rise-delay-2 {
+    animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
   }
 }
 
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes pulse-line {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-  50% {
-    opacity: 1;
   }
 }

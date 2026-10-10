@@ -1,8 +1,8 @@
-# Rivet
+# Blotter
 
-Rivet runs your Pump.fun strategy: Scout filters new coins, Watch waits for entries, Desk buys and exits inside your rules.
+Blotter runs your Pump.fun trading rules and keeps a clear record: it checks new coins, waits for your entry, then buys and exits inside the limits you set.
 
-Simulated desk included so you can try the loop locally — no wallet required.
+This repo includes a **simulated** desk so you can try the workflow locally. No wallet. No live trades.
 
 ## Run
 
@@ -14,7 +14,7 @@ npm run dev
 Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 
 - `/` — homepage
-- `/desk` — strategy desk
+- `/desk` — strategy desk (simulated)
 
 ## Stack
 

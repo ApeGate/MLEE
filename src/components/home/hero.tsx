@@ -1,46 +1,88 @@
 import Link from "next/link";
+import { SAMPLE_TAPE } from "@/lib/strategies";
 
 export function HomeHero() {
   return (
-    <section className="relative min-h-[100svh] overflow-hidden">
-      <div className="noise pointer-events-none absolute inset-0 opacity-70" />
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-[8%] top-[28%] h-px w-[28%] bg-[#ff5c2e]/40 pulse-line" />
-        <div className="absolute right-[12%] top-[42%] h-px w-[22%] bg-[#b6f34d]/30 pulse-line [animation-delay:0.6s]" />
-        <div className="absolute bottom-[22%] left-[20%] h-px w-[35%] bg-[#ff5c2e]/25 pulse-line [animation-delay:1.1s]" />
-        <div className="absolute right-[18%] top-[30%] size-2 bg-[#ff5c2e]" />
-        <div className="absolute left-[36%] top-[28%] size-1.5 bg-[#b6f34d]" />
-        <div className="absolute bottom-[22%] left-[55%] size-2 bg-[#ff5c2e]/80" />
-      </div>
-
-      <div className="relative mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-5 pb-16 pt-24 sm:justify-center sm:px-8 sm:pb-20 sm:pt-20">
-        <p className="rise font-display text-6xl font-bold leading-none tracking-tight text-[#ff5c2e] sm:text-8xl md:text-9xl">
-          RIVET
-        </p>
-        <h1 className="rise-2 mt-6 max-w-2xl font-display text-2xl font-semibold leading-tight tracking-tight text-[#e9ece6] sm:text-4xl text-balance">
-          Your Pump.fun strategy, running while you keep trading.
-        </h1>
-        <p className="rise-3 mt-4 max-w-lg text-base leading-relaxed text-[#8d9488] sm:text-lg">
-          Scout filters new coins. Watch waits for your entry. Desk buys and
-          exits inside the rules you set — with a decision tape you can read.
-        </p>
-        <div className="rise-3 mt-8 flex flex-wrap gap-3">
-          <Link
-            href="/desk"
-            className="inline-flex items-center bg-[#ff5c2e] px-5 py-3 text-sm font-semibold text-[#070807] transition-colors hover:bg-[#ff734d]"
-          >
-            Run the desk
-          </Link>
-          <Link
-            href="/#how"
-            className="inline-flex items-center border border-[#242824] px-5 py-3 text-sm font-medium text-[#e9ece6] transition-colors hover:border-[#ff5c2e] hover:text-[#ff5c2e]"
-          >
-            See how it works
-          </Link>
+    <section className="relative overflow-hidden pt-20 sm:pt-24">
+      <div className="mx-auto grid max-w-6xl gap-12 px-5 pb-16 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-10 lg:pb-24">
+        <div className="rise">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#243044] bg-[#121a2a]/80 px-3 py-1 font-mono text-[11px] text-[#8b9bb0]">
+            <span className="size-1.5 rounded-full bg-[#3dd6c6]" />
+            Simulated Pump.fun desk · no wallet
+          </div>
+          <h1 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tight text-[#e8eef7] sm:text-5xl lg:text-6xl text-balance">
+            <span className="text-[#3dd6c6]">Blotter</span> runs your Pump.fun
+            rules and keeps the record.
+          </h1>
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-[#8b9bb0] sm:text-lg">
+            For traders who already know what they want to buy. Blotter checks
+            new coins, waits for your entry, then buys and exits inside your
+            limits — with a decision log you can read later.
+          </p>
+          <ul className="mt-6 space-y-2 text-sm text-[#e8eef7]">
+            <li className="flex gap-2">
+              <span className="text-[#3dd6c6]">→</span>
+              Watches age, liquidity, and top-holder concentration
+            </li>
+            <li className="flex gap-2">
+              <span className="text-[#3dd6c6]">→</span>
+              Helps you decide: skip, watch, approve a buy, or exit
+            </li>
+            <li className="flex gap-2">
+              <span className="text-[#3dd6c6]">→</span>
+              After you open the desk: set a style → start → approve the first
+              buy
+            </li>
+          </ul>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link
+              href="/desk"
+              className="rounded-md bg-[#3dd6c6] px-5 py-3 text-sm font-semibold text-[#041016] hover:bg-[#5eead4]"
+            >
+              Try the simulated desk
+            </Link>
+            <Link
+              href="/#how"
+              className="rounded-md border border-[#243044] px-5 py-3 text-sm font-medium text-[#e8eef7] hover:border-[#3dd6c6] hover:text-[#3dd6c6]"
+            >
+              See the workflow
+            </Link>
+          </div>
         </div>
-        <p className="rise-3 mt-10 font-mono text-[11px] uppercase tracking-[0.2em] text-[#8d9488]">
-          Built for Pump.fun traders · Simulated desk, no wallet needed
-        </p>
+
+        <div className="rise-delay rounded-xl border border-[#243044] bg-[#121a2a]/90 p-4 shadow-[0_0_0_1px_rgb(36_48_68_/_40%)] sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-[#e8eef7]">
+              Sample decision log
+            </p>
+            <span className="rounded-full bg-[#182235] px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-[#f5a524]">
+              Example · not live
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-[#8b9bb0]">
+            What Blotter writes when a Clips plan runs on Pump.fun-style coins.
+          </p>
+          <ul className="mt-4 space-y-0 divide-y divide-[#243044]">
+            {SAMPLE_TAPE.map((row) => (
+              <li key={`${row.coin}-${row.action}`} className="py-3 first:pt-0">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                  <span className="font-mono text-[11px] font-semibold text-[#3dd6c6]">
+                    {row.who}
+                  </span>
+                  <span className="text-sm font-semibold text-[#e8eef7]">
+                    {row.action}
+                  </span>
+                  <span className="font-mono text-sm text-[#e8eef7]">
+                    {row.coin}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-[#8b9bb0]">
+                  {row.why}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </section>
   );

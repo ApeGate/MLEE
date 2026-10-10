@@ -26,6 +26,7 @@ export const STYLE_META: Record<
   StrategyStyle,
   {
     label: string;
+    plain: string;
     summary: string;
     defaults: Omit<
       Strategy,
@@ -35,7 +36,9 @@ export const STYLE_META: Record<
 > = {
   clips: {
     label: "Clips",
-    summary: "Fresh Pump.fun coins, quick entries, fast partial exits.",
+    plain: "Brand-new coins, quick in and out",
+    summary:
+      "Checks coins under ~25 minutes old. Buys when they start moving. Takes profit early.",
     defaults: {
       exit: {
         takeProfitPct: 35,
@@ -53,7 +56,9 @@ export const STYLE_META: Record<
   },
   balanced: {
     label: "Balanced",
-    summary: "Coins already moving with liquidity and volume behind them.",
+    plain: "Coins already moving with real liquidity",
+    summary:
+      "Allows older coins if liquidity is stronger. Slower entries, wider take-profit.",
     defaults: {
       exit: {
         takeProfitPct: 55,
@@ -71,7 +76,9 @@ export const STYLE_META: Record<
   },
   wide: {
     label: "Wide",
-    summary: "Broader net on newer coins — higher coverage, higher variance.",
+    plain: "Broader net, more risk",
+    summary:
+      "Looser holder and age filters so more coins reach the watch list. Bigger swings both ways.",
     defaults: {
       exit: {
         takeProfitPct: 90,
@@ -111,6 +118,42 @@ export function createStrategy(
 }
 
 export function strategyLine(s: Strategy): string {
-  const a = s.askBeforeBuy ? "approve each buy" : "auto-buy within limits";
-  return `${STYLE_META[s.style].label}: Scout age≤${s.filters.maxAgeMinutes}m · liq≥${s.filters.minLiquiditySol} SOL · top≤${s.filters.maxTopHolderPct}% → Watch vel≥${s.filters.minVelocity.toFixed(1)}× → Desk ≤${s.maxPerCoinSol} SOL ×${s.maxPositions} (${s.budgetSol} SOL, ${a}). Exit +${s.exit.takeProfitPct}% / trail ${s.exit.trailingStopPct}% / stop −${s.exit.stopLossPct}%.`;
+  const a = s.askBeforeBuy
+    ? "You approve every buy"
+    : "Buys fire automatically inside your limits";
+  return `${STYLE_META[s.style].label}: only coins ≤${s.filters.maxAgeMinutes}m old, ≥${s.filters.minLiquiditySol} SOL liquidity, top holders ≤${s.filters.maxTopHolderPct}%. Wait for ${s.filters.minVelocity.toFixed(1)}× velocity, then size up to ${s.maxPerCoinSol} SOL (budget ${s.budgetSol} SOL, max ${s.maxPositions} open). Sell ${s.exit.partialSellPct}% at +${s.exit.takeProfitPct}%, trail ${s.exit.trailingStopPct}%, stop at −${s.exit.stopLossPct}%. ${a}.`;
 }
+
+/** Sample tape rows for homepage proof — static, labeled simulated. */
+export const SAMPLE_TAPE = [
+  {
+    who: "Check",
+    action: "Skip",
+    coin: "$MOOR12",
+    why: "Top holders own 41% (your max is 28%)",
+  },
+  {
+    who: "Check",
+    action: "Pass",
+    coin: "$SKIFF4",
+    why: "Age 9m · liquidity 52 SOL · top holders 19%",
+  },
+  {
+    who: "Watch",
+    action: "Waiting",
+    coin: "$SKIFF4",
+    why: "Needs 1.4× velocity — currently 1.1×",
+  },
+  {
+    who: "Watch",
+    action: "Ready",
+    coin: "$SKIFF4",
+    why: "Velocity hit 1.6× · size 1.5 SOL · needs your OK",
+  },
+  {
+    who: "Trade",
+    action: "Bought",
+    coin: "$SKIFF4",
+    why: "You approved · 1.5 SOL filled · exits armed",
+  },
+] as const;
