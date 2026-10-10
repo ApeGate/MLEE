@@ -2,15 +2,23 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 type MetadataResponse = {
   image: string | null;
+  name?: string | null;
+  symbol?: string | null;
 };
 
-const resolvedImages = new Map<string, string | null>();
-const pendingImages = new Map<string, Promise<string | null>>();
+type ResolvedMetadata = {
+  image: string | null;
+  name: string | null;
+  symbol: string | null;
+};
+
+const resolvedMetadata = new Map<string, ResolvedMetadata>();
+const pendingMetadata = new Map<string, Promise<ResolvedMetadata>>();
 
 function allowedImage(value?: string | null) {
   if (!value) return null;
@@ -24,28 +32,46 @@ function allowedImage(value?: string | null) {
   }
 }
 
-function requestImage(mint: string, uri?: string | null) {
+function requestMetadata(mint: string, uri?: string | null) {
   const key = `${mint}:${uri ?? ""}`;
-  if (resolvedImages.has(key)) {
-    return Promise.resolve(resolvedImages.get(key) ?? null);
+  if (resolvedMetadata.has(key)) {
+    return Promise.resolve(resolvedMetadata.get(key)!);
   }
-  const existing = pendingImages.get(key);
+  const existing = pendingMetadata.get(key);
   if (existing) return existing;
 
   const query = uri ? `?uri=${encodeURIComponent(uri)}` : "";
   const request = fetch(`/api/meta/${encodeURIComponent(mint)}${query}`)
     .then(async (response) => {
-      if (!response.ok) return null;
+      if (!response.ok) {
+        return { image: null, name: null, symbol: null };
+      }
       const payload = (await response.json()) as MetadataResponse;
-      return allowedImage(payload.image);
+      return {
+        image: allowedImage(payload.image),
+        name:
+          typeof payload.name === "string" && payload.name.trim()
+            ? payload.name.trim()
+            : null,
+        symbol:
+          typeof payload.symbol === "string" && payload.symbol.trim()
+            ? payload.symbol.trim()
+            : null,
+      };
     })
-    .catch(() => null)
-    .then((image) => {
-      resolvedImages.set(key, image);
-      pendingImages.delete(key);
-      return image;
+    .catch(
+      (): ResolvedMetadata => ({
+        image: null,
+        name: null,
+        symbol: null,
+      }),
+    )
+    .then((metadata) => {
+      resolvedMetadata.set(key, metadata);
+      pendingMetadata.delete(key);
+      return metadata;
     });
-  pendingImages.set(key, request);
+  pendingMetadata.set(key, request);
   return request;
 }
 
@@ -57,6 +83,7 @@ export function TokenLogo({
   size = "md",
   className,
   eager = false,
+  onMetadata,
 }: {
   mint: string;
   symbol: string;
@@ -65,23 +92,29 @@ export function TokenLogo({
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
   eager?: boolean;
+  onMetadata?: (metadata: ResolvedMetadata) => void;
 }) {
   const directImage = useMemo(() => allowedImage(imageUrl), [imageUrl]);
+  const onMetadataRef = useRef(onMetadata);
+  onMetadataRef.current = onMetadata;
   const requestKey = `${mint}:${uri ?? ""}`;
   const [loaded, setLoaded] = useState<{
     key: string;
-    image: string | null;
+    metadata: ResolvedMetadata;
   } | null>(null);
   const [failedSource, setFailedSource] = useState<string | null>(null);
   const resolved =
-    directImage ?? (loaded?.key === requestKey ? loaded.image : null);
+    directImage ??
+    (loaded?.key === requestKey ? loaded.metadata.image : null);
   const failed = Boolean(resolved && failedSource === resolved);
 
   useEffect(() => {
-    if (directImage) return;
+    if (directImage && !onMetadataRef.current) return;
     let cancelled = false;
-    void requestImage(mint, uri).then((image) => {
-      if (!cancelled) setLoaded({ key: requestKey, image });
+    void requestMetadata(mint, uri).then((metadata) => {
+      if (cancelled) return;
+      setLoaded({ key: requestKey, metadata });
+      onMetadataRef.current?.(metadata);
     });
     return () => {
       cancelled = true;

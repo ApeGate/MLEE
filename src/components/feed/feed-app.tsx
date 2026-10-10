@@ -214,6 +214,39 @@ export function FeedApp() {
     }
   }, []);
 
+  const mergePositionMetadata = useCallback(
+    (
+      mint: string,
+      metadata: {
+        image: string | null;
+        name: string | null;
+        symbol: string | null;
+      },
+    ) => {
+      setPositionData((current) => {
+        if (!current) return current;
+        let changed = false;
+        const positions = current.positions.map((position) => {
+          if (position.mint !== mint) return position;
+          const next = {
+            ...position,
+            image: position.image ?? metadata.image,
+            name: position.name ?? metadata.name,
+            symbol: position.symbol ?? metadata.symbol,
+          };
+          changed =
+            changed ||
+            next.image !== position.image ||
+            next.name !== position.name ||
+            next.symbol !== position.symbol;
+          return next;
+        });
+        return changed ? { ...current, positions } : current;
+      });
+    },
+    [],
+  );
+
   useEffect(() => {
     const refreshTimer = window.setTimeout(() => {
       if (!walletAddress) {
@@ -907,6 +940,7 @@ export function FeedApp() {
           tradeMessage={tradeMessage}
           onConnect={() => setWalletOpen(true)}
           onRefresh={() => void refreshPositions(walletAddress)}
+          onMetadata={mergePositionMetadata}
           onExit={(position, percent) =>
             void executeManualSell(
               {
@@ -1473,6 +1507,7 @@ function WalletPositions({
   tradeMessage,
   onConnect,
   onRefresh,
+  onMetadata,
   onExit,
 }: {
   walletAddress: string | null;
@@ -1483,6 +1518,14 @@ function WalletPositions({
   tradeMessage: string | null;
   onConnect: () => void;
   onRefresh: () => void;
+  onMetadata: (
+    mint: string,
+    metadata: {
+      image: string | null;
+      name: string | null;
+      symbol: string | null;
+    },
+  ) => void;
   onExit: (position: WalletPosition, percent: number) => void;
 }) {
   const tradePending =
@@ -1595,6 +1638,9 @@ function WalletPositions({
                     mint={position.mint}
                     symbol={position.symbol ?? "COIN"}
                     imageUrl={position.image}
+                    onMetadata={(metadata) =>
+                      onMetadata(position.mint, metadata)
+                    }
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
