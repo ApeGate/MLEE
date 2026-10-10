@@ -4,10 +4,10 @@
 launches: facts go in, Kong runs deterministic checks, and a tamper-evident
 decision receipt comes out.
 
-This release exposes guarded, user-approved browser buys through Privy external
-Solana wallets alongside the local PAPER loop. A fresh Kong `PASS`, an
-entry-allowed Cheeta timing call, a verified fee payer, and a strict program
-allowlist are required before the wallet prompt opens:
+This release prepares a guarded PumpSwap browser-buy path through Privy external
+Solana wallets alongside the local PAPER loop. The actual transaction bytes are
+decoded in both the server and browser before a wallet prompt can open.
+Bonding-curve sends remain locked while the official Pump v3 decoder is built:
 
 - `/` — Gate-first product home
 - `/feed` — real launch discovery with a recorded real-tape fallback
@@ -124,11 +124,13 @@ Wallet login uses Privy with external Solana wallets only. The provider shows
 Solana wallets, uses wallet login, and explicitly disables automatic Ethereum
 or Solana embedded-wallet creation. It authenticates the wallet session but
 never receives a seed phrase or delegated key. On a fresh `PASS` plus an
-entry-allowed timing call, `/feed` may request a 0.01–0.05 SOL unsigned Pump
-transaction, verify its fee payer, signer count, address-table count, and
-program IDs, then ask the connected wallet to sign and send it. The locked 0.5%
-Apegate fee is displayed but waived during this guarded browser beta; Pump and
-priority fees are still charged by the prepared transaction.
+entry-allowed timing call, `/feed` may request a 0.01–0.05 SOL unsigned
+PumpSwap transaction. It verifies the fee payer, signer count, mint, max quote,
+wrapped-SOL funding, bounded tip, token-account close, and compute fee from the
+bytes in both runtimes before the connected wallet can sign. The locked 0.5%
+Apegate fee is displayed but waived during this guarded beta; Pump and priority
+fees are still charged by the prepared transaction. Fresh bonding-curve rows
+remain PAPER-only.
 
 The operator-only mainnet canary is separate from the browser app. It requires
 a fresh Kong `PASS`, a Cheeta timing chip that permits entry, a 0.01–0.05 SOL
@@ -151,7 +153,7 @@ Set `CANARY_EXPECTED_PUBKEY` in the uncommitted `.env.local`. Dry-run mode
 does not read a private key and cannot sign or send. A real canary additionally
 requires `CANARY_WALLET_SECRET_PATH`; the script then prints a hash-chained
 `manual_fill` receipt after confirmation and never prints key material.
-Bonding-curve and browser sends remain locked until their Pump v3 bytes have
+Bonding-curve browser sends remain locked until their Pump v3 bytes have
 equivalent instruction-level decoding; an allowlisted program ID alone is not
 treated as sufficient authorization.
 
