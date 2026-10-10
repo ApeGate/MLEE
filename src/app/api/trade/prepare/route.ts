@@ -2,7 +2,10 @@ import { Buffer } from "node:buffer";
 import { NextResponse } from "next/server";
 import { VersionedTransaction } from "@solana/web3.js";
 import { inspectManualBuyTransaction } from "@/lib/manual-buy-transaction";
-import { inspectManualSellTransaction } from "@/lib/manual-sell-transaction";
+import {
+  calculateManualSellFloor,
+  inspectManualSellTransaction,
+} from "@/lib/manual-sell-transaction";
 import { configuredSolanaRpc } from "@/lib/solana-rpc";
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -22,7 +25,7 @@ type PrepareBody = {
   slippagePct?: unknown;
 };
 
-async function readTokenBaseUnits(owner: string, mint: string) {
+async function readTokenPosition(owner: string, mint: string) {
   const { endpoint } = configuredSolanaRpc();
   const response = await fetch(endpoint, {
     method: "POST",
@@ -47,7 +50,12 @@ async function readTokenBaseUnits(owner: string, mint: string) {
         account?: {
           data?: {
             parsed?: {
-              info?: { tokenAmount?: { amount?: string } };
+              info?: {
+                tokenAmount?: {
+                  amount?: string;
+                  uiAmountString?: string;
+                };
+              };
             };
           };
         };
@@ -57,13 +65,62 @@ async function readTokenBaseUnits(owner: string, mint: string) {
   };
   if (body.error) throw new Error(body.error.message ?? "RPC balance failed");
   return (body.result?.value ?? []).reduce(
-    (total, account) =>
-      total +
-      BigInt(
-        account.account?.data?.parsed?.info?.tokenAmount?.amount ?? "0",
-      ),
-    BigInt(0),
+    (total, account) => {
+      const tokenAmount =
+        account.account?.data?.parsed?.info?.tokenAmount;
+      return {
+        baseUnits: total.baseUnits + BigInt(tokenAmount?.amount ?? "0"),
+        uiAmount:
+          total.uiAmount +
+          Number(tokenAmount?.uiAmountString ?? "0"),
+      };
+    },
+    { baseUnits: BigInt(0), uiAmount: 0 },
   );
+}
+
+async function readIndependentSellFloor(
+  mint: string,
+  tokenAmount: number,
+  slippagePct: number,
+) {
+  const response = await fetch(
+    `https://api.dexscreener.com/latest/dex/tokens/${mint}`,
+    { signal: AbortSignal.timeout(4_000), cache: "no-store" },
+  );
+  if (!response.ok) throw new Error(`Price source returned ${response.status}`);
+  const body = (await response.json()) as {
+    pairs?: Array<{
+      chainId?: string;
+      dexId?: string;
+      priceNative?: string;
+      liquidity?: { usd?: number };
+    }>;
+  };
+  const pair = (body.pairs ?? [])
+    .filter(
+      (item) =>
+        item.chainId === "solana" &&
+        item.dexId === "pumpswap" &&
+        Number(item.priceNative) > 0,
+    )
+    .sort(
+      (left, right) =>
+        (right.liquidity?.usd ?? 0) - (left.liquidity?.usd ?? 0),
+    )[0];
+  const priceSol = Number(pair?.priceNative);
+  if (!(priceSol > 0) || !(tokenAmount > 0)) {
+    throw new Error("Independent PumpSwap exit price is unavailable");
+  }
+  const quote = calculateManualSellFloor({
+    tokenAmount,
+    priceSol,
+    slippagePct,
+  });
+  return {
+    ...quote,
+    source: "DexScreener PumpSwap snapshot",
+  };
 }
 
 async function readBoundedBytes(response: Response) {
@@ -154,11 +211,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const tokenBaseUnits =
-      side === "sell" ? await readTokenBaseUnits(publicKey, mint) : BigInt(0);
+    const tokenPosition =
+      side === "sell"
+        ? await readTokenPosition(publicKey, mint)
+        : { baseUnits: BigInt(0), uiAmount: 0 };
     const maxSellTokenBaseUnits =
       side === "sell"
-        ? (tokenBaseUnits * BigInt(percent)) / BigInt(100)
+        ? (tokenPosition.baseUnits * BigInt(percent)) / BigInt(100)
         : BigInt(0);
     if (side === "sell" && maxSellTokenBaseUnits <= BigInt(0)) {
       return NextResponse.json(
@@ -166,6 +225,14 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
+    const independentFloor =
+      side === "sell"
+        ? await readIndependentSellFloor(
+            mint,
+            (tokenPosition.uiAmount * percent) / 100,
+            slippagePct,
+          )
+        : null;
     const tradeResponse = await fetch(TRADE_ENDPOINT, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -188,7 +255,9 @@ export async function POST(request: Request) {
         expectedSigner: publicKey,
         expectedMint: mint,
         maxSellTokenBaseUnits: maxSellTokenBaseUnits.toString(),
-        minimumOutputLamports: "1",
+        minimumOutputLamports: String(
+          independentFloor?.minimumOutputLamports ?? 0,
+        ),
         maxAccountFundingLamports: 0,
         priorityFeeSol: PRIORITY_FEE_SOL,
         maxTipLamports: MAX_TIP_LAMPORTS,
@@ -207,9 +276,12 @@ export async function POST(request: Request) {
           },
           intent: {
             maxSellTokenBaseUnits: maxSellTokenBaseUnits.toString(),
-            minimumOutputLamports: "1",
+            minimumOutputLamports: String(
+              independentFloor?.minimumOutputLamports ?? 0,
+            ),
             maxAccountFundingLamports: 0,
           },
+          quote: independentFloor,
           expiresAt: Date.now() + 45_000,
         },
         { headers: { "cache-control": "no-store" } },

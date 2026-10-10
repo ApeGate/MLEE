@@ -486,6 +486,11 @@ export function FeedApp() {
               minimumOutputLamports: string;
               maxAccountFundingLamports: number;
             };
+            quote: {
+              expectedLamports: number;
+              minimumOutputLamports: number;
+              source: string;
+            };
             expiresAt: number;
           }
         | { error?: string };
@@ -530,7 +535,7 @@ export function FeedApp() {
 
       setTradeState("signing");
       setTradeMessage(
-        `Exit ${percent}% of $${launch.facts.symbol}. Check the mint and minimum received in your wallet.`,
+        `Exit ${percent}% of $${launch.facts.symbol}. Independent floor ${(payload.quote.minimumOutputLamports / 1_000_000_000).toFixed(6)} SOL · check the mint in your wallet.`,
       );
       const result = await activeWallet.signAndSendTransaction({
         transaction: bytes,
@@ -542,6 +547,18 @@ export function FeedApp() {
         },
       });
       const signature = bs58.encode(result.signature);
+      setTradeState("sent");
+      setTradeMessage(`Exit submitted · ${signature} · waiting for confirmation`);
+      const confirmation = await waitForManualTradeConfirmation(signature);
+      if (confirmation.state === "failed") {
+        throw new Error(`Exit landed but failed · ${signature}`);
+      }
+      if (confirmation.state !== "confirmed") {
+        setTradeMessage(
+          `Exit submitted · confirmation still pending · ${signature}`,
+        );
+        return;
+      }
       await addManualFill({
         mint: launch.facts.mint,
         symbol: launch.facts.symbol,
@@ -550,6 +567,7 @@ export function FeedApp() {
         percent,
         signature,
         factsHash: launch.verdict.factsHash,
+        slot: confirmation.slot,
       });
       setTradeState("sent");
       setTradeMessage(`Exit confirmed · ${signature}`);

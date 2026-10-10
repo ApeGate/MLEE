@@ -16,6 +16,39 @@ export type ManualSellIntent = {
   maxTipLamports: number;
 };
 
+export function calculateManualSellFloor(input: {
+  tokenAmount: number;
+  priceSol: number;
+  slippagePct: number;
+  oracleBuffer?: number;
+}) {
+  const oracleBuffer = input.oracleBuffer ?? 0.9;
+  if (
+    !(input.tokenAmount > 0) ||
+    !(input.priceSol > 0) ||
+    input.slippagePct < 0 ||
+    input.slippagePct >= 100 ||
+    oracleBuffer <= 0 ||
+    oracleBuffer > 1
+  ) {
+    throw new Error("Independent exit quote inputs are invalid");
+  }
+  const expectedLamports = Math.floor(
+    input.tokenAmount * input.priceSol * LAMPORTS_PER_SOL,
+  );
+  return {
+    expectedLamports,
+    minimumOutputLamports: Math.max(
+      1,
+      Math.floor(
+        expectedLamports *
+          (1 - input.slippagePct / 100) *
+          oracleBuffer,
+      ),
+    ),
+  };
+}
+
 export function inspectManualSellTransaction(
   transaction: VersionedTransaction,
   intent: ManualSellIntent,
