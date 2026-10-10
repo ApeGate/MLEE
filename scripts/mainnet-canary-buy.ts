@@ -340,8 +340,15 @@ async function main() {
   };
   const verdict = await evaluateGate(facts, "standard", observedAt);
   if (verdict.kind !== "PASS") {
+    const unresolvedHardChecks = verdict.checks
+      .filter((check) => check.hard && check.outcome === "unknown")
+      .map((check) => check.id);
     throw new Error(
-      `Kong returned ${verdict.kind}: ${verdict.topReasons.join("; ")}`,
+      `Kong returned ${verdict.kind}: ${verdict.topReasons.join("; ")}${
+        unresolvedHardChecks.length > 0
+          ? `; unresolved hard checks: ${unresolvedHardChecks.join(", ")}`
+          : ""
+      }`,
     );
   }
 
