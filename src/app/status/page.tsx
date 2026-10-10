@@ -73,7 +73,7 @@ const SERVICES = [
     name: "Real trading and Vault",
     state: "Canary gated",
     detail:
-      "An operator-only manual buy canary enforces fresh Gate and timing checks, one expected signer, program allowlists, and simulation; browser sends and Vault automation stay off",
+      "The PumpSwap buy canary enforces a fresh Gate, expected signer, decoded mint/spend/tip/compute caps, and RPC simulation; curve sends, browser sends, and Vault automation stay off",
   },
 ] as const;
 

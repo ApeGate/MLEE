@@ -126,8 +126,10 @@ does not build or send a transaction. Manual signing remains the default.
 
 The operator-only mainnet canary is separate from the browser app. It requires
 a fresh Kong `PASS`, a Cheeta timing chip that permits entry, a 0.01–0.05 SOL
-amount, the expected local signer, a single-signer transaction, approved Pump
-programs, and a successful simulation:
+amount, the expected local signer, a single-signer transaction, and a successful
+simulation. Its PumpSwap firewall decodes every top-level instruction and
+checks the mint, max quote, wrapped-SOL funding, bounded tip, token-account
+close, and compute-unit fee before signing:
 
 ```bash
 # Build, decode, firewall-check, and simulate without loading a private key:
@@ -143,6 +145,9 @@ Set `CANARY_EXPECTED_PUBKEY` in the uncommitted `.env.local`. Dry-run mode
 does not read a private key and cannot sign or send. A real canary additionally
 requires `CANARY_WALLET_SECRET_PATH`; the script then prints a hash-chained
 `manual_fill` receipt after confirmation and never prints key material.
+Bonding-curve and browser sends remain locked until their Pump v3 bytes have
+equivalent instruction-level decoding; an allowlisted program ID alone is not
+treated as sufficient authorization.
 
 Privy Vault is also wired to the Worker-compatible `@privy-io/node` server SDK.
 The App ID and App Secret are enough to initialize that client. The separate
