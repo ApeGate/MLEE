@@ -147,14 +147,18 @@ export function useReceipts() {
       mint,
       symbol,
       wallet,
+      side,
       amountSol,
+      percent,
       signature,
       factsHash,
     }: {
       mint: string;
       symbol: string;
       wallet: string;
-      amountSol: number;
+      side: "BUY" | "SELL";
+      amountSol?: number;
+      percent?: number;
       signature: string;
       factsHash: string;
     }) => {
@@ -168,15 +172,17 @@ export function useReceipts() {
           factsHash,
           rulesetVersion: "gate-1.2.0",
           params: {
-            side: "BUY",
+            side,
             amountSol,
+            percent,
             signing: "privy_external_wallet",
           },
         },
         outputs: {
           symbol,
-          side: "BUY",
+          side,
           amountSol,
+          percent,
           signature,
           custody: "user",
           apegateFeeBps: 50,
@@ -189,11 +195,24 @@ export function useReceipts() {
             ref: signature,
             note: "User-approved Solana transaction",
           },
+          {
+            kind: "url",
+            ref: `https://solscan.io/tx/${signature}`,
+            note: "Solscan transaction",
+          },
         ],
         source: "live",
         prev: previous,
       });
-      setReceipts((current) => [...current, receipt].slice(-100));
+      setReceipts((current) =>
+        current.some(
+          (item) =>
+            item.kind === "manual_fill" &&
+            item.outputs.signature === signature,
+        )
+          ? current
+          : [...current, receipt].slice(-100),
+      );
     },
     [receipts],
   );
