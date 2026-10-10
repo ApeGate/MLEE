@@ -1018,6 +1018,7 @@ export function FeedApp() {
                   ) ?? null
                 }
                 positionState={positionState}
+                watchReady={gateAlerts.hydrated}
                 watched={gateAlerts.watched.has(selected.facts.mint)}
                 onWatch={() => gateAlerts.toggleWatch(selected.facts.mint)}
                 onEnableNotifications={() =>
@@ -1169,6 +1170,7 @@ function CoinPanel({
   tradeMessage,
   walletPosition,
   positionState,
+  watchReady,
   watched,
   onWatch,
   onEnableNotifications,
@@ -1188,6 +1190,7 @@ function CoinPanel({
   tradeMessage: string | null;
   walletPosition: WalletPosition | null;
   positionState: "idle" | "loading" | "ready" | "error";
+  watchReady: boolean;
   watched: boolean;
   onWatch: () => void;
   onEnableNotifications: () => void;
@@ -1271,6 +1274,7 @@ function CoinPanel({
           </a>
           <button
             type="button"
+            disabled={!watchReady}
             onClick={() => {
               onWatch();
               if (!watched) onEnableNotifications();
@@ -1279,7 +1283,7 @@ function CoinPanel({
               "ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1.5 text-[9px] font-bold",
               watched
                 ? "border-pass/30 bg-pass/7 text-pass"
-                : "border-[#31291f] text-[#91897e] hover:border-ape-cheeta/40 hover:text-ape-cheeta",
+                : "border-[#31291f] text-[#91897e] enabled:hover:border-ape-cheeta/40 enabled:hover:text-ape-cheeta disabled:cursor-wait disabled:opacity-60",
             )}
             title="In-app while the Gate is open; desktop notification when allowed"
           >
@@ -1288,7 +1292,11 @@ function CoinPanel({
             ) : (
               <Bell className="size-2.5" />
             )}
-            {watched ? "Watching PASS" : "Tell me when PASS"}
+            {!watchReady
+              ? "Loading watch"
+              : watched
+                ? "Watching PASS"
+                : "Tell me when PASS"}
           </button>
           <Link
             href={`/coin/${facts.mint}${
