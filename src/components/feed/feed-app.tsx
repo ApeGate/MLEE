@@ -99,6 +99,30 @@ type WalletPositionsPayload = {
   observedAt: number;
 };
 
+type PublicCanaryFill = {
+  signature: string;
+  mint: string;
+  symbol: string;
+  side: "BUY" | "SELL";
+  wallet: string;
+  slot: number;
+  blockTime: number | null;
+  solDelta: number;
+  tokenDelta: number;
+  feeSol: number;
+  receiptHash: string | null;
+  confirmed: true;
+  solscan: string;
+};
+
+type PublicCanaryFillsPayload = {
+  verified: true;
+  source: string;
+  wallet: string;
+  fills: PublicCanaryFill[];
+  checkedAt: number;
+};
+
 type ManualSellTarget = {
   mint: string;
   symbol: string;
@@ -931,6 +955,8 @@ export function FeedApp() {
           </section>
         </div>
 
+        <LiveFillTape />
+
         <WalletPositions
           walletAddress={walletAddress}
           state={positionState}
@@ -1495,6 +1521,153 @@ function WalletPanel({
         </div>
       </section>
     </div>
+  );
+}
+
+function LiveFillTape() {
+  const [state, setState] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
+  const [data, setData] = useState<PublicCanaryFillsPayload | null>(null);
+
+  const load = useCallback(async () => {
+    setState("loading");
+    try {
+      const response = await fetch("/api/live-fills", { cache: "no-store" });
+      const payload = (await response.json()) as
+        | PublicCanaryFillsPayload
+        | { verified?: false; error?: string };
+      if (!response.ok || payload.verified !== true || !("fills" in payload)) {
+        throw new Error("Live verification unavailable");
+      }
+      setData(payload);
+      setState("ready");
+    } catch {
+      setState("error");
+    }
+  }, []);
+
+  useEffect(() => {
+    queueMicrotask(() => void load());
+  }, [load]);
+
+  return (
+    <section className="mt-4 overflow-hidden rounded-2xl border border-[#31291f] bg-[#0d0b09]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#31291f] px-4 py-3.5">
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 items-center justify-center rounded-xl border border-pass/25 bg-pass/8 text-pass">
+            <ShieldCheck className="size-4" />
+          </span>
+          <div>
+            <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-pass">
+              Mainnet fill receipts
+            </p>
+            <p className="mt-1 text-xs text-[#91897e]">
+              Operator canaries · wallet and balance deltas verified from chain
+            </p>
+          </div>
+        </div>
+        {data ? (
+          <div className="flex items-center gap-2">
+            <SourceBadge source={data.source} compact />
+            <span className="inline-flex items-center gap-1 font-mono text-[8px] font-bold uppercase text-pass">
+              <Check className="size-3" /> {data.fills.length} confirmed
+            </span>
+          </div>
+        ) : null}
+      </div>
+
+      {state === "loading" && !data ? (
+        <div className="grid gap-px bg-[#272119] md:grid-cols-3">
+          {[0, 1, 2].map((item) => (
+            <div key={item} className="animate-pulse bg-[#0d0b09] p-4">
+              <span className="block h-3 w-24 rounded bg-[#211b14]" />
+              <span className="mt-3 block h-2 w-full rounded bg-[#17130e]" />
+              <span className="mt-2 block h-2 w-2/3 rounded bg-[#17130e]" />
+            </div>
+          ))}
+        </div>
+      ) : state === "error" && !data ? (
+        <div className="px-5 py-8 text-center">
+          <AlertTriangle className="mx-auto size-5 text-warn" />
+          <p className="mt-2 text-xs font-bold">Chain verification timed out</p>
+          <p className="mt-1 text-[10px] text-[#6f685f]">
+            No fill is labeled confirmed while the RPC evidence is unavailable.
+          </p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="mt-3 text-[10px] font-bold text-signal hover:text-[#ff9b7d]"
+          >
+            Retry chain read
+          </button>
+        </div>
+      ) : data ? (
+        <>
+          <div className="grid gap-px bg-[#272119] md:grid-cols-3">
+            {data.fills.map((fill) => (
+              <article key={fill.signature} className="min-w-0 bg-[#0d0b09] p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className={cn(
+                      "rounded-md border px-2 py-1 font-mono text-[8px] font-black tracking-[0.12em]",
+                      fill.side === "BUY"
+                        ? "border-pass/25 bg-pass/8 text-pass"
+                        : "border-block/25 bg-block/8 text-[#ff8f7b]",
+                    )}
+                  >
+                    {fill.side}
+                  </span>
+                  <span className="inline-flex items-center gap-1 font-mono text-[8px] font-bold uppercase text-pass">
+                    <Check className="size-3" /> Confirmed
+                  </span>
+                </div>
+                <p className="mt-3 text-sm font-extrabold">${fill.symbol}</p>
+                <div className="mt-2 space-y-1 font-mono text-[9px] tabular-nums text-[#91897e]">
+                  <p>
+                    {fill.solDelta > 0 ? "+" : ""}
+                    {fill.solDelta.toFixed(9)} SOL
+                  </p>
+                  <p>
+                    {fill.tokenDelta > 0 ? "+" : ""}
+                    {fill.tokenDelta.toLocaleString("en-US", {
+                      maximumFractionDigits: 6,
+                    })}{" "}
+                    tokens
+                  </p>
+                  <p className="text-[#5f584f]">
+                    fee {fill.feeSol.toFixed(6)} SOL · slot{" "}
+                    {fill.slot.toLocaleString("en-US")}
+                  </p>
+                </div>
+                {fill.receiptHash ? (
+                  <p
+                    className="mt-2 truncate font-mono text-[8px] text-[#5f584f]"
+                    title={fill.receiptHash}
+                  >
+                    RECEIPT {fill.receiptHash}
+                  </p>
+                ) : null}
+                <a
+                  href={fill.solscan}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-flex items-center gap-1 text-[9px] font-bold text-signal hover:text-[#ff9b7d]"
+                >
+                  Open on Solscan <ExternalLink className="size-2.5" />
+                </a>
+              </article>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#31291f] px-4 py-2.5 font-mono text-[8px] text-[#5f584f]">
+            <span>QA wallet {short(data.wallet)}</span>
+            <span>
+              Verified {formatClock(data.checkedAt)} · public mainnet evidence
+            </span>
+          </div>
+        </>
+      ) : null}
+    </section>
   );
 }
 

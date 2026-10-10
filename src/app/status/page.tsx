@@ -20,6 +20,12 @@ const SERVICES = [
       "Homepage, live feed, token metadata images, public dossiers, crew roster, receipts, and wallet signing path",
   },
   {
+    name: "apegate.io custom domain",
+    state: "Account action",
+    detail:
+      "Cloudflare nameservers are delegated, but apex and www have no address records. The zone must be attached to the same Cloudflare account as apegate-web before Custom Domains can issue DNS and certificates",
+  },
+  {
     name: "Launch discovery",
     state: "Client checked",
     detail:
@@ -135,6 +141,7 @@ export default function StatusPage() {
                 <span
                   className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 font-mono text-[7px] font-bold uppercase ${
                     service.state === "Pre-launch" ||
+                          service.state === "Account action" ||
                           service.state === "Parked" ||
                           service.state === "Preview only" ||
                           service.state === "Limited"
@@ -143,6 +150,7 @@ export default function StatusPage() {
                   }`}
                 >
                   {service.state === "Pre-launch" ||
+                  service.state === "Account action" ||
                   service.state === "Parked" ||
                   service.state === "Preview only" ||
                   service.state === "Limited" ? (

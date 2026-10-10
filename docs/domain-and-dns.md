@@ -14,6 +14,13 @@ when the custom domains were attached. Add the zone to the same account as the
 Worker, or deploy the Worker from the account that owns the zone, before
 enabling the route block below.
 
+Rechecked on 2026-10-10: `lina.ns.cloudflare.com` and
+`bill.ns.cloudflare.com` are authoritative, but the apex and `www` still have
+no A, AAAA, or CNAME answer, so HTTPS cannot resolve yet. The current Wrangler
+identity can deploy `apegate-web` but still does not have the zone in its
+account. This is an account-placement block, not DNS propagation or Worker
+code; the workers.dev release remains usable.
+
 ## Mick: exact unblock steps
 
 The nameserver change is already doing its job. Error `10083` is an account
