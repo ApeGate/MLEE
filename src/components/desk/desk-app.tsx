@@ -368,7 +368,7 @@ function Live({
         <div className="grid gap-0 border-[3px] border-[#ff3300] bg-[#0f0f0f] sm:grid-cols-[1fr_auto]">
           <div className="p-3 sm:p-4">
             <div className="text-[10px] font-bold tracking-wider text-[#ff3300]">
-              // APPROVAL REQUIRED
+              {"// APPROVAL REQUIRED"}
             </div>
             <div className="mt-1 text-lg font-bold leading-none sm:text-xl">
               BUY ${state.pending.token.ticker}
