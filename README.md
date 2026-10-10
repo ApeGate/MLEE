@@ -10,6 +10,8 @@ the local PAPER loop are exercised:
 - `/` — Gate-first product home
 - `/feed` — real launch discovery with a recorded real-tape fallback
 - `/paper` — local 10 SOL practice portfolio with modeled buys and exits
+- `/plans` — bounded lifecycle plan drafts and recorded-tape eligibility rehearsal
+- `/vault` — hashed Privy policy preview; signer creation remains locked
 - `/coin/{mint}` — public, on-demand mint and holder dossier
 - `/crew` — all six jobs with explicit permissions and hard boundaries
 - `/token` — official $APEGATE status and contract-address registry
@@ -58,6 +60,20 @@ This is intentionally not presented as a real fill model: it does not claim
 reserve-curve parity, landing, MEV, or wallet execution. `BLOCK` disables paper
 entry; `WARN` and `WAIT` require an explicit acknowledgement and can never
 bypass Kong for future real trading.
+
+## Plans and Privy Vault
+
+Plans can be validated, rehearsed against recorded Gate decisions, hashed, and
+saved locally as immutable inactive versions. The current fixture tape does not
+contain reserve progression or outcome labels, so rehearsal honestly reports
+eligibility counts only—never hypothetical P&L.
+
+The Vault page builds a deterministic Privy policy preview with per-trade and
+daily caps, program allowlists, open-position limits, profit sweeps, and
+withdrawals fixed to the owner wallet. The preview can write a receipt, but
+Vault creation, funding, policy signing, and automation are hard-disabled
+regardless of credential presence. They remain blocked on the transaction
+firewall, mainnet canaries, revoke tests, and an external security review.
 
 ## Run locally
 

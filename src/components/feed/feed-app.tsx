@@ -864,7 +864,11 @@ function ReceiptTape({
                     ? `${String(receipt.outputs.verdict)} · score ${String(receipt.outputs.score)}`
                     : receipt.kind === "paper_fill"
                       ? `${String(receipt.outputs.side)} $${String(receipt.outputs.symbol)} · PAPER`
-                    : "Manual wallet connected"}
+                      : receipt.kind === "plan_change"
+                        ? `${String(receipt.outputs.name)} · plan saved`
+                        : receipt.kind === "vault_preview"
+                          ? "Privy policy preview"
+                          : "Manual wallet connected"}
                 </p>
                 <div className="mt-3 space-y-1 font-mono text-[8px] text-[#5f584f]">
                   <p className="truncate">HASH {receipt.hash}</p>

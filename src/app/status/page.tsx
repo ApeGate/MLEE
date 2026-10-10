@@ -49,6 +49,12 @@ const SERVICES = [
       "Local 10 SOL practice portfolio, deterministic estimated quotes, itemized 0.5% fee, modeled exits, and hash-chained PAPER fill receipts",
   },
   {
+    name: "Plans and Privy Vault",
+    state: "Preview only",
+    detail:
+      "Immutable local plan rehearsal and hashed Vault policy previews are live; PlanRunner, signer creation, funding, and automation stay disabled",
+  },
+  {
     name: "Real trading and Vault",
     state: "Disabled",
     detail:
@@ -115,13 +121,15 @@ export default function StatusPage() {
                   className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 font-mono text-[7px] font-bold uppercase ${
                     service.state === "Disabled"
                       ? "border-[#6f685f]/25 text-[#6f685f]"
-                      : service.state === "Pre-launch"
+                      : service.state === "Pre-launch" ||
+                          service.state === "Preview only"
                         ? "border-wait/25 bg-wait/6 text-wait"
                       : "border-pass/25 bg-pass/6 text-pass"
                   }`}
                 >
                   {service.state === "Disabled" ||
-                  service.state === "Pre-launch" ? (
+                  service.state === "Pre-launch" ||
+                  service.state === "Preview only" ? (
                     <CircleDot className="size-2.5" />
                   ) : (
                     <CheckCircle2 className="size-2.5" />

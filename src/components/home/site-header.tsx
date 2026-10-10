@@ -48,6 +48,12 @@ export function SiteHeader() {
             $APEGATE
           </Link>
           <Link
+            href="/plans"
+            className="hidden text-[#a79f92] transition-colors hover:text-[#f4efe5] xl:inline"
+          >
+            Plans
+          </Link>
+          <Link
             href="/launch"
             className="hidden text-[#a79f92] transition-colors hover:text-[#f4efe5] xl:inline"
           >

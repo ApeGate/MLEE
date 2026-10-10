@@ -4,8 +4,10 @@ import {
   applyPaperBuy,
   applyPaperSell,
   canonicalize,
+  createPlanSpec,
   createPaperPortfolio,
   createReceipt,
+  createVaultPolicyPreview,
   estimateFees,
   evaluateGate,
   hashCanonical,
@@ -15,11 +17,13 @@ import {
   preflightLaunch,
   quotePaperBuy,
   quotePaperSell,
+  rehearsePlan,
   resemblesApegateIdentity,
   verifyReceipt,
   verifyReceiptChain,
   type LaunchDraft,
   type LaunchFacts,
+  type PlanDraft,
 } from "../src";
 
 const now = 1_800_000_000_000;
@@ -244,6 +248,73 @@ describe("paper trading engine", () => {
     expect(() =>
       applyPaperBuy(createPaperPortfolio(0.25), quote, now),
     ).toThrow(/below the quoted total/);
+  });
+});
+
+const safePlan: PlanDraft = {
+  name: "First ten minutes",
+  template: "first-minutes",
+  profile: "strict",
+  sizeSol: 0.1,
+  perTradeCapSol: 0.25,
+  dailySpendCapSol: 1,
+  slippageBps: 800,
+  exitTemplate: "quick-flip",
+  approvalRequired: true,
+  coolOffAfterLosses: 3,
+  coolOffMinutes: 15,
+};
+
+describe("plans and Vault previews", () => {
+  it("locks a validated plan and rehearses eligibility on deterministic tape", async () => {
+    const spec = createPlanSpec(safePlan, now);
+    const verdict = await evaluateGate(safeFacts, "strict", now);
+    const rehearsal = await rehearsePlan(spec, [{ facts: safeFacts, verdict }]);
+
+    expect(Object.isFrozen(spec)).toBe(true);
+    expect(spec.executionEnabled).toBe(false);
+    expect(rehearsal.status).toBe("eligibility-only");
+    expect(rehearsal.gateEligible).toBe(1);
+    expect(rehearsal.planHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(() =>
+      createPlanSpec(
+        { ...safePlan, sizeSol: 0.5, perTradeCapSol: 0.25 },
+        now,
+      ),
+    ).toThrow(/per-trade cap/);
+  });
+
+  it("hashes a disabled Privy policy with withdrawals fixed to the owner", async () => {
+    const ownerWallet = "So11111111111111111111111111111111111111112";
+    const preview = await createVaultPolicyPreview(
+      {
+        ownerWallet,
+        perTradeCapSol: 0.25,
+        dailySpendCapSol: 1,
+        maxOpenPositions: 5,
+        profitSweepPct: 75,
+        allowedPrograms: ["pump", "pumpswap"],
+      },
+      now,
+    );
+    expect(preview.provider).toBe("privy");
+    expect(preview.withdrawalsTo).toBe(ownerWallet);
+    expect(preview.executionEnabled).toBe(false);
+    expect(preview.externalReviewComplete).toBe(false);
+    expect(preview.policyHash).toMatch(/^[a-f0-9]{64}$/);
+    await expect(
+      createVaultPolicyPreview(
+        {
+          ownerWallet,
+          perTradeCapSol: 1,
+          dailySpendCapSol: 0.5,
+          maxOpenPositions: 5,
+          profitSweepPct: 75,
+          allowedPrograms: ["pump"],
+        },
+        now,
+      ),
+    ).rejects.toThrow(/Daily cap/);
   });
 });
 

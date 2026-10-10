@@ -48,3 +48,26 @@ test("paper desk writes an explicitly simulated fill", async ({ page }) => {
   await page.getByRole("button", { name: /PAPER buy 0\.1 SOL/i }).click();
   await expect(page.getByText(/PAPER fill/i).first()).toBeVisible();
 });
+
+test("plan builder keeps rehearsed versions inactive", async ({ page }) => {
+  await page.goto("/plans");
+  await expect(
+    page.getByRole("heading", { name: /rehearse\. then lock\./i }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/PlanRunner and Privy signing remain locked/i),
+  ).toBeVisible();
+  await expect(page.getByText(/Eligibility only/i)).toHaveCount(0);
+});
+
+test("Vault creates only a disabled policy preview", async ({ page }) => {
+  await page.goto("/vault");
+  await page
+    .getByPlaceholder("Paste your Solana address")
+    .fill("So11111111111111111111111111111111111111112");
+  await page.getByRole("button", { name: "Hash policy preview" }).click();
+  await expect(page.getByText("Policy hash")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Create Vault locked" }),
+  ).toBeDisabled();
+});

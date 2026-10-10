@@ -142,6 +142,58 @@ export function useReceipts() {
     [receipts],
   );
 
+  const addPlanChange = useCallback(
+    async (planHash: string, name: string, tapeFactsHash: string) => {
+      const previous = receipts.at(-1)?.hash ?? null;
+      const receipt = await createReceipt({
+        kind: "plan_change",
+        actor: "caesar",
+        subject: {},
+        at: { ts: Date.now() },
+        inputs: {
+          params: {
+            planHash,
+            tapeFactsHash,
+            immutable: true,
+          },
+        },
+        outputs: {
+          name,
+          saved: true,
+          executionEnabled: false,
+        },
+        evidence: [],
+        source: "replay",
+        prev: previous,
+      });
+      setReceipts((current) => [...current, receipt].slice(-100));
+    },
+    [receipts],
+  );
+
+  const addVaultPreview = useCallback(
+    async (policyHash: string, ownerWallet: string) => {
+      const previous = receipts.at(-1)?.hash ?? null;
+      const receipt = await createReceipt({
+        kind: "vault_preview",
+        actor: "cornelius",
+        subject: { wallet: ownerWallet },
+        at: { ts: Date.now() },
+        inputs: { params: { policyHash, provider: "privy" } },
+        outputs: {
+          previewed: true,
+          executionEnabled: false,
+          externalReviewComplete: false,
+        },
+        evidence: [],
+        source: "hypothetical",
+        prev: previous,
+      });
+      setReceipts((current) => [...current, receipt].slice(-100));
+    },
+    [receipts],
+  );
+
   const clear = useCallback(() => setReceipts([]), []);
 
   return {
@@ -150,6 +202,8 @@ export function useReceipts() {
     addVerdict,
     addWalletConnect,
     addPaperFill,
+    addPlanChange,
+    addVaultPreview,
     clear,
   };
 }
