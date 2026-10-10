@@ -5,6 +5,8 @@ import Link from "next/link";
 import {
   Activity,
   AlertTriangle,
+  Bell,
+  BellRing,
   Check,
   CircleDot,
   Coins,
@@ -42,6 +44,7 @@ import {
 } from "../../../packages/core/src";
 import { cn } from "@/lib/utils";
 import { useLaunchFeed, type FeedLaunch } from "@/lib/use-launch-feed";
+import { useGateAlerts, type GatePassAlert } from "@/lib/use-gate-alerts";
 import { useOutcomeTape } from "@/lib/use-outcome-tape";
 import { useReceipts } from "@/lib/use-receipts";
 import { TokenLogo } from "@/components/token/token-logo";
@@ -160,6 +163,7 @@ async function waitForManualTradeConfirmation(signature: string) {
 export function FeedApp() {
   const { launches, status, lastMessageAt, retry, updateLaunch } =
     useLaunchFeed();
+  const gateAlerts = useGateAlerts(launches);
   const outcomeTape = useOutcomeTape(launches);
   const {
     receipts,
@@ -842,6 +846,13 @@ export function FeedApp() {
           />
         </section>
 
+        {gateAlerts.alerts.length ? (
+          <PassAlert
+            alert={gateAlerts.alerts[gateAlerts.alerts.length - 1]!}
+            onDismiss={gateAlerts.dismiss}
+          />
+        ) : null}
+
         <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(430px,1.05fr)]">
           <section className="overflow-hidden rounded-2xl border border-[#31291f] bg-[#0d0b09]">
             <div className="border-b border-[#31291f] p-4">
@@ -927,6 +938,11 @@ export function FeedApp() {
                 onWallet={() => setWalletOpen(true)}
                 tradeState={tradeState}
                 tradeMessage={tradeMessage}
+                watched={gateAlerts.watched.has(selected.facts.mint)}
+                onWatch={() => gateAlerts.toggleWatch(selected.facts.mint)}
+                onEnableNotifications={() =>
+                  void gateAlerts.enableDesktopNotifications()
+                }
                 onTrade={(amountSol) => void executeManualBuy(selected, amountSol)}
                 onExit={(percent) =>
                   void executeManualSell(
@@ -1067,6 +1083,9 @@ function CoinPanel({
   onWallet,
   tradeState,
   tradeMessage,
+  watched,
+  onWatch,
+  onEnableNotifications,
   onTrade,
   onExit,
 }: {
@@ -1081,6 +1100,9 @@ function CoinPanel({
   onWallet: () => void;
   tradeState: "idle" | "preparing" | "signing" | "sent" | "error";
   tradeMessage: string | null;
+  watched: boolean;
+  onWatch: () => void;
+  onEnableNotifications: () => void;
   onTrade: (amountSol: number) => void;
   onExit: (percent: number) => void;
 }) {
@@ -1155,13 +1177,34 @@ function CoinPanel({
           >
             <ExternalLink className="size-3" />
           </a>
+          <button
+            type="button"
+            onClick={() => {
+              onWatch();
+              if (!watched) onEnableNotifications();
+            }}
+            className={cn(
+              "ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1.5 text-[9px] font-bold",
+              watched
+                ? "border-pass/30 bg-pass/7 text-pass"
+                : "border-[#31291f] text-[#91897e] hover:border-ape-cheeta/40 hover:text-ape-cheeta",
+            )}
+            title="In-app while the Gate is open; desktop notification when allowed"
+          >
+            {watched ? (
+              <BellRing className="size-2.5" />
+            ) : (
+              <Bell className="size-2.5" />
+            )}
+            {watched ? "Watching PASS" : "Tell me when PASS"}
+          </button>
           <Link
             href={`/coin/${facts.mint}${
               facts.bondingCurve
                 ? `?curve=${encodeURIComponent(facts.bondingCurve)}`
                 : ""
             }`}
-            className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border border-[#31291f] px-2.5 py-1.5 text-[9px] font-bold text-[#91897e] hover:border-[#ff7250]/40 hover:text-[#f4efe5]"
+            className="hidden shrink-0 items-center gap-1 rounded-full border border-[#31291f] px-2.5 py-1.5 text-[9px] font-bold text-[#91897e] hover:border-[#ff7250]/40 hover:text-[#f4efe5] sm:inline-flex"
           >
             Public dossier <ExternalLink className="size-2.5" />
           </Link>
@@ -1521,6 +1564,39 @@ function WalletPanel({
         </div>
       </section>
     </div>
+  );
+}
+
+function PassAlert({
+  alert,
+  onDismiss,
+}: {
+  alert: GatePassAlert;
+  onDismiss: (id: string) => void;
+}) {
+  return (
+    <section
+      className="mb-4 flex items-center gap-3 rounded-2xl border border-pass/30 bg-[linear-gradient(90deg,rgb(67_208_125_/_12%),transparent),#0d0b09] p-3.5"
+      role="status"
+    >
+      <TokenLogo mint={alert.mint} symbol={alert.symbol} size="sm" />
+      <div className="min-w-0 flex-1">
+        <p className="font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-pass">
+          PASS watch fired · review fresh evidence
+        </p>
+        <p className="mt-1 truncate text-xs font-bold">
+          ${alert.symbol} · {alert.name}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => onDismiss(alert.id)}
+        className="rounded-full border border-pass/20 p-2 text-[#7f9d83] hover:text-pass"
+        aria-label={`Dismiss ${alert.symbol} PASS alert`}
+      >
+        <X className="size-3" />
+      </button>
+    </section>
   );
 }
 

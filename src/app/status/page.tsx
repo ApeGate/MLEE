@@ -44,6 +44,12 @@ const SERVICES = [
       "Privy authenticates external Solana wallets only; embedded and smart wallet creation remain off",
   },
   {
+    name: "PASS watch alerts",
+    state: "Local only",
+    detail:
+      "Tell-me-when-PASS watches persist in this browser and fire in-app while the Gate is open; desktop notifications fire when the browser has permission. Push and Telegram delivery are not active",
+  },
+  {
     name: "Launch Bay",
     state: "Parked",
     detail:
@@ -144,7 +150,8 @@ export default function StatusPage() {
                           service.state === "Account action" ||
                           service.state === "Parked" ||
                           service.state === "Preview only" ||
-                          service.state === "Limited"
+                          service.state === "Limited" ||
+                          service.state === "Local only"
                         ? "border-wait/25 bg-wait/6 text-wait"
                       : "border-pass/25 bg-pass/6 text-pass"
                   }`}
@@ -153,7 +160,8 @@ export default function StatusPage() {
                   service.state === "Account action" ||
                   service.state === "Parked" ||
                   service.state === "Preview only" ||
-                  service.state === "Limited" ? (
+                  service.state === "Limited" ||
+                  service.state === "Local only" ? (
                     <CircleDot className="size-2.5" />
                   ) : (
                     <CheckCircle2 className="size-2.5" />

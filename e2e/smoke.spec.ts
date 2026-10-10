@@ -123,6 +123,20 @@ test("live Gate exposes guarded entries, exits, receipts, and outcome tape", asy
   await expect(page.getByText(/decision receipts · local tape/i)).toBeVisible();
 });
 
+test("PASS watch persists without a wallet", async ({ page }) => {
+  await page.goto("/feed");
+  const watch = page.getByRole("button", { name: "Tell me when PASS" });
+  await expect(watch).toBeVisible();
+  await watch.click();
+  await expect(
+    page.getByRole("button", { name: "Watching PASS" }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Watching PASS" }),
+  ).toBeVisible();
+});
+
 test("paper desk writes an explicitly simulated fill", async ({ page }) => {
   await page.goto("/paper");
   await expect(page.getByText("Caesar's paper desk")).toBeVisible();
