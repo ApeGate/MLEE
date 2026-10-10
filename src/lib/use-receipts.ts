@@ -161,7 +161,7 @@ export function useReceipts() {
       amountSol?: number;
       percent?: number;
       signature: string;
-      factsHash: string;
+      factsHash?: string;
       slot: number | null;
     }) => {
       const previous = receipts.at(-1)?.hash ?? null;
@@ -171,20 +171,20 @@ export function useReceipts() {
         subject: { mint, wallet },
         at: { ts: Date.now(), ...(slot === null ? {} : { slot }) },
         inputs: {
-          factsHash,
+          ...(factsHash ? { factsHash } : {}),
           rulesetVersion: "gate-1.2.0",
           params: {
             side,
-            amountSol,
-            percent,
+            ...(amountSol === undefined ? {} : { amountSol }),
+            ...(percent === undefined ? {} : { percent }),
             signing: "privy_external_wallet",
           },
         },
         outputs: {
           symbol,
           side,
-          amountSol,
-          percent,
+          ...(amountSol === undefined ? {} : { amountSol }),
+          ...(percent === undefined ? {} : { percent }),
           signature,
           confirmed: true,
           confirmationSlot: slot,

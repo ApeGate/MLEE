@@ -9,6 +9,7 @@ import {
   fetchPublicText,
   requirePublicHttpsUrl,
 } from "@/lib/safe-remote-text";
+import { resolveTokenMetadata } from "@/lib/token-metadata";
 
 export const dynamic = "force-dynamic";
 
@@ -202,9 +203,47 @@ export async function GET(
   try {
     resolved = await resolveMetadata(mint, requestedUri);
   } catch {
+    const fallback = await resolveTokenMetadata(mint, requestedUri);
+    if (
+      !fallback.image &&
+      !fallback.name &&
+      !fallback.symbol
+    ) {
+      return NextResponse.json(
+        { error: "Token metadata is temporarily unavailable", retryable: true },
+        { status: 503 },
+      );
+    }
     return NextResponse.json(
-      { error: "Token metadata is temporarily unavailable", retryable: true },
-      { status: 503 },
+      {
+        name: fallback.name,
+        symbol: fallback.symbol,
+        image: fallback.image,
+        imageUrl: fallback.image,
+        websiteUrl: null,
+        websiteHost: null,
+        websiteReachable: null,
+        websiteMentionsToken: null,
+        websiteMatchesX: null,
+        websiteTemplateHash: null,
+        domainRegisteredAt: null,
+        domainAgeDays: null,
+        xLinkType: "none",
+        xUrl: null,
+        xHandle: null,
+        telegramUrl: null,
+        telegramPresent: false,
+        sources: {
+          metadata: fallback.metadataUri,
+          website: null,
+          domain: null,
+        },
+      },
+      {
+        headers: {
+          "cache-control": "public, max-age=300, stale-while-revalidate=900",
+        },
+      },
     );
   }
 

@@ -520,7 +520,10 @@ export function FeedApp() {
     }
   }
 
-  async function executeManualSell(launch: FeedLaunch, percent: number) {
+  async function executeManualSell(
+    target: { mint: string; symbol: string; factsHash?: string },
+    percent: number,
+  ) {
     setTradeMessage(null);
     if (!activeWallet) {
       setWalletOpen(true);
@@ -534,7 +537,7 @@ export function FeedApp() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           publicKey: activeWallet.address,
-          mint: launch.facts.mint,
+          mint: target.mint,
           side: "sell",
           percent,
           slippagePct: MANUAL_BUY_SLIPPAGE_PCT,
@@ -581,7 +584,7 @@ export function FeedApp() {
       const transaction = VersionedTransaction.deserialize(bytes);
       const inspection = inspectManualSellTransaction(transaction, {
         expectedSigner: activeWallet.address,
-        expectedMint: launch.facts.mint,
+        expectedMint: target.mint,
         maxSellTokenBaseUnits: payload.intent.maxSellTokenBaseUnits,
         minimumOutputLamports: payload.intent.minimumOutputLamports,
         maxAccountFundingLamports:
@@ -605,7 +608,7 @@ export function FeedApp() {
 
       setTradeState("signing");
       setTradeMessage(
-        `Exit ${percent}% of $${launch.facts.symbol}. Independent floor ${(payload.quote.minimumOutputLamports / 1_000_000_000).toFixed(6)} SOL · check the mint in your wallet.`,
+        `Exit ${percent}% of $${target.symbol}. Independent floor ${(payload.quote.minimumOutputLamports / 1_000_000_000).toFixed(6)} SOL · check the mint in your wallet.`,
       );
       const result = await activeWallet.signAndSendTransaction({
         transaction: bytes,
@@ -630,15 +633,16 @@ export function FeedApp() {
         return;
       }
       await addManualFill({
-        mint: launch.facts.mint,
-        symbol: launch.facts.symbol,
+        mint: target.mint,
+        symbol: target.symbol,
         wallet: activeWallet.address,
         side: "SELL",
         percent,
         signature,
-        factsHash: launch.verdict.factsHash,
+        factsHash: target.factsHash,
         slot: confirmation.slot,
       });
+      await refreshPositions(activeWallet.address);
       setTradeState("sent");
       setTradeMessage(`Exit confirmed · ${signature}`);
     } catch (error) {
@@ -862,7 +866,16 @@ export function FeedApp() {
                 tradeState={tradeState}
                 tradeMessage={tradeMessage}
                 onTrade={(amountSol) => void executeManualBuy(selected, amountSol)}
-                onExit={(percent) => void executeManualSell(selected, percent)}
+                onExit={(percent) =>
+                  void executeManualSell(
+                    {
+                      mint: selected.facts.mint,
+                      symbol: selected.facts.symbol,
+                      factsHash: selected.verdict.factsHash,
+                    },
+                    percent,
+                  )
+                }
               />
             ) : (
               <div className="flex min-h-[560px] items-center justify-center p-8 text-center">
@@ -885,8 +898,19 @@ export function FeedApp() {
           state={positionState}
           data={positionData}
           error={positionError}
+          tradeState={tradeState}
+          tradeMessage={tradeMessage}
           onConnect={() => setWalletOpen(true)}
           onRefresh={() => void refreshPositions(walletAddress)}
+          onExit={(position, percent) =>
+            void executeManualSell(
+              {
+                mint: position.mint,
+                symbol: position.symbol ?? short(position.mint),
+              },
+              percent,
+            )
+          }
         />
 
         <ReceiptTape receipts={receipts} verified={verified} onClear={clear} />
@@ -1440,16 +1464,24 @@ function WalletPositions({
   state,
   data,
   error,
+  tradeState,
+  tradeMessage,
   onConnect,
   onRefresh,
+  onExit,
 }: {
   walletAddress: string | null;
   state: "idle" | "loading" | "ready" | "error";
   data: WalletPositionsPayload | null;
   error: string | null;
+  tradeState: "idle" | "preparing" | "signing" | "sent" | "error";
+  tradeMessage: string | null;
   onConnect: () => void;
   onRefresh: () => void;
+  onExit: (position: WalletPosition, percent: number) => void;
 }) {
+  const tradePending =
+    tradeState === "preparing" || tradeState === "signing";
   return (
     <section className="mt-4 overflow-hidden rounded-2xl border border-[#31291f] bg-[#0d0b09]">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#31291f] px-4 py-3.5">
@@ -1488,6 +1520,19 @@ function WalletPositions({
           </div>
         ) : null}
       </div>
+
+      {walletAddress && tradeMessage ? (
+        <div
+          className={cn(
+            "border-b border-[#31291f] px-4 py-2.5 font-mono text-[8px] leading-relaxed",
+            tradeState === "error"
+              ? "bg-block/6 text-block"
+              : "bg-ape-caesar/5 text-[#9eb673]",
+          )}
+        >
+          {tradeMessage}
+        </div>
+      ) : null}
 
       {!walletAddress ? (
         <div className="flex flex-col items-center px-5 py-10 text-center">
@@ -1538,7 +1583,7 @@ function WalletPositions({
             {data.positions.map((position) => (
               <article
                 key={position.mint}
-                className="flex min-w-0 items-center gap-3 border-[#272119] p-4 sm:border-b sm:[&:nth-child(odd)]:border-r xl:[&:nth-child(odd)]:border-r-0 xl:[&:not(:nth-child(3n))]:border-r"
+                className="flex min-w-0 items-start gap-3 border-[#272119] p-4 sm:border-b sm:[&:nth-child(odd)]:border-r xl:[&:nth-child(odd)]:border-r-0 xl:[&:not(:nth-child(3n))]:border-r"
               >
                 <TokenLogo
                   mint={position.mint}
@@ -1569,6 +1614,19 @@ function WalletPositions({
                     >
                       Evidence <ExternalLink className="size-2.5" />
                     </a>
+                  </div>
+                  <div className="mt-2 flex gap-1.5">
+                    {[50, 100].map((percent) => (
+                      <button
+                        key={percent}
+                        type="button"
+                        disabled={tradePending}
+                        onClick={() => onExit(position, percent)}
+                        className="rounded-md border border-block/20 bg-block/5 px-2 py-1 font-mono text-[7px] font-bold text-[#ff8f7b] enabled:hover:border-block/50 disabled:cursor-wait disabled:opacity-45"
+                      >
+                        {percent === 100 ? "EXIT ALL" : "SELL 50%"}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </article>
