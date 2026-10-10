@@ -13,6 +13,9 @@ test("home exposes the Gate-first paths", async ({ page }) => {
     "/feed",
   );
   await expect(page.getByText("Official Apegate token", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /open the browser trade path/i }),
+  ).toHaveAttribute("href", "/feed");
   await expect(page.getByRole("link", { name: /launch bay|prepare a launch/i })).toHaveCount(0);
   expect((await page.goto("/launch"))?.status()).toBe(404);
 });
@@ -129,6 +132,12 @@ test("live Gate exposes guarded entries, exits, receipts, and outcome tape", asy
   await expect(
     page.getByRole("heading", { name: /new launches at the gate/i }),
   ).toBeVisible();
+  const tradePath = page.getByRole("region", { name: "Manual trade path" });
+  await expect(tradePath).toContainText("Connect");
+  await expect(tradePath).toContainText("Gate");
+  await expect(tradePath).toContainText("Buy");
+  await expect(tradePath).toContainText("Exit");
+  await expect(tradePath).toContainText("50% / 100%");
   await expect(page.getByText("Outcome tape", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sell 50%" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Exit 100%" })).toBeVisible();

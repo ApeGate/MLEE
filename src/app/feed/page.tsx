@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { FeedApp } from "@/components/feed/feed-app";
 
 export const metadata: Metadata = {
-  title: "Live Pump.fun Gate",
+  title: "Live Gate desk",
   description:
-    "Watch fresh Pump.fun launches pass through Kong's deterministic risk gate, with evidence-backed decision receipts.",
+    "Open Apegate's live desk for Kong's evidence-backed Pump.fun checks, guarded browser trading, and decision receipts.",
   alternates: {
     canonical: "https://apegate.io/feed",
   },

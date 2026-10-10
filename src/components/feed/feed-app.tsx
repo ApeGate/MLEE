@@ -857,7 +857,15 @@ export function FeedApp() {
       ? "Live launch stream connected"
       : status === "connecting"
         ? "Opening live launch stream"
-        : "Recorded launch tape fallback";
+        : status === "error"
+          ? "Live stream failed · showing recorded tape"
+          : "Recorded launch tape fallback";
+  const sourceLabel =
+    status === "live"
+      ? "LIVE"
+      : status === "error"
+        ? "DEGRADED"
+        : "REPLAY";
 
   return (
     <div className="min-h-[100svh] bg-[#080705] text-[#f4efe5]">
@@ -873,20 +881,20 @@ export function FeedApp() {
                 priority
                 className="size-9 rounded-xl border border-[#ff4f1f]/35 object-cover"
               />
-              <span className="hidden text-sm font-extrabold tracking-[-0.04em] sm:block">
+              <span className="text-sm font-extrabold tracking-[-0.04em]">
                 APEGATE
               </span>
             </Link>
             <span className="h-5 w-px bg-[#31291f]" />
             <div className="min-w-0">
-              <p className="truncate text-xs font-bold">Kong&apos;s Gate</p>
-              <p className="truncate font-mono text-[8px] uppercase tracking-[0.15em] text-[#766f65]">
-                Gate · manual sign · receipts
+              <p className="truncate text-xs font-bold">Gate desk</p>
+              <p className="hidden truncate font-mono text-[8px] uppercase tracking-[0.15em] text-[#766f65] sm:block">
+                Kong · manual sign · receipts
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <SourceBadge source={status === "live" ? "LIVE" : "REPLAY"} />
+            <SourceBadge source={sourceLabel} />
             <Link
               href="/paper"
               className="hidden h-9 items-center rounded-full border border-[#c7ff45]/25 bg-[#c7ff45]/6 px-3 text-xs font-bold text-[#c7ff45] hover:border-[#c7ff45]/50 sm:inline-flex"
@@ -1063,10 +1071,14 @@ export function FeedApp() {
               ) : (
                 <div className="px-5 py-16 text-center">
                   <p className="text-sm font-bold">
-                    Nothing in this lane matches.
+                    {launches.length
+                      ? "Nothing in this lane matches."
+                      : "Cheeta’s waking up the firehose…"}
                   </p>
                   <p className="mt-1 text-xs text-[#766f65]">
-                    Loosen a filter, or wait — Cheeta never sleeps.
+                    {launches.length
+                      ? "Loosen a filter, or wait — Cheeta never sleeps."
+                      : "A recorded launch tape appears if the live stream cannot."}
                   </p>
                 </div>
               )}
