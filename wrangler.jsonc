@@ -5,7 +5,12 @@
   "compatibility_date": "2026-10-10",
   "compatibility_flags": ["nodejs_compat"],
   "secrets": {
-    "required": ["PRIVY_APP_SECRET"]
+    "required": [
+      "PRIVY_APP_SECRET",
+      "HELIUS_API_KEY",
+      "HELIUS_RPC_URL",
+      "SOLANA_RPC_URL"
+    ]
   },
   "assets": {
     "directory": ".open-next/assets",
