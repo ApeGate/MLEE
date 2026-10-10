@@ -17,7 +17,7 @@ const SERVICES = [
     name: "Web application",
     state: "Operational",
     detail:
-      "Homepage, live feed, public coin dossiers, crew roster, local receipts, and wallet connect path",
+      "Homepage, live feed, token metadata images, public dossiers, crew roster, receipts, and wallet signing path",
   },
   {
     name: "Launch discovery",
@@ -71,9 +71,9 @@ const SERVICES = [
   },
   {
     name: "Real trading and Vault",
-    state: "Canary gated",
+    state: "Manual sign live",
     detail:
-      "The PumpSwap buy canary enforces a fresh Gate, expected signer, decoded mint/spend/tip/compute caps, and RPC simulation; curve sends, browser sends, and Vault automation stay off",
+      "Privy browser buys require a fresh PASS and timing clearance; PumpSwap canaries decode mint, spend, tip, token, and compute limits before signing; Vault automation stays off",
   },
 ] as const;
 

@@ -67,7 +67,7 @@ const CREW = [
     can: "Explain the facts",
     cannot: "Trade or size",
     color: "var(--color-ape-rafiki)",
-    image: null,
+    image: "/agents/rafiki.jpg",
     icon: BrainCircuit,
   },
   {
@@ -77,7 +77,7 @@ const CREW = [
     can: "Measure the record",
     cannot: "Promise tomorrow",
     color: "var(--color-ape-zira)",
-    image: null,
+    image: "/agents/zira.jpg",
     icon: FlaskConical,
   },
 ] as const;
@@ -352,7 +352,7 @@ export function GateSections() {
                 <WalletNode
                   icon={<WalletCards className="size-5" />}
                   title="Main wallet"
-                  note="You approve every send"
+                  note="Privy opens your wallet"
                   active
                 />
                 <ArrowRight className="mx-auto size-4 rotate-90 text-[#554f47] sm:rotate-0" />
@@ -374,7 +374,7 @@ export function GateSections() {
                 <div>
                   <p className="text-xs font-bold">Apegate execution fee</p>
                   <p className="mt-0.5 text-[9px] text-[#6f685f]">
-                    Itemized before any future signature
+                    Shown before signing · beta waiver disclosed
                   </p>
                 </div>
                 <span className="text-2xl font-extrabold tracking-[-0.04em] text-signal">
@@ -394,10 +394,10 @@ export function GateSections() {
               </h2>
               <p className="mt-6 max-w-xl text-sm leading-relaxed text-[#91897e]">
                 Practice against live or recorded launches in PAPER mode.
-                Wallet connect is available for the future manual path, but no
-                real transaction builder is enabled. Privy Vault support stays
-                visibly disabled until policy signing, keys, and safety canaries
-                are ready.
+                On a fresh PASS with an entry timing call, Apegate can prepare a
+                bounded buy, verify its fee payer and programs, then hand it to
+                Privy for your external wallet to approve. Privy Vault stays
+                disabled until policy signing and independent review are ready.
               </p>
               <Link
                 href="/paper"
@@ -407,9 +407,10 @@ export function GateSections() {
                 <ArrowRight className="size-3.5" />
               </Link>
               <div className="mt-6 rounded-xl border border-[#302a20] bg-[#12100c] p-4 text-xs leading-relaxed text-[#a79f92]">
-                <strong className="text-[#f4efe5]">Worst case today:</strong>{" "}
-                Apegate can read a public wallet address after you connect. It
-                cannot build, sign, or send a transaction.
+                <strong className="text-[#f4efe5]">Custody line:</strong>{" "}
+                Apegate may prepare a transaction, but your connected wallet
+                shows the approval and owns the signature. No seed phrase or
+                delegated key enters Apegate.
               </div>
             </div>
           </div>
@@ -553,7 +554,7 @@ export function GateSections() {
             </span>
           </div>
           <p>
-            Live intelligence · PAPER simulation · Real trading disabled
+            Live Gate · PAPER simulation · Privy manual signing
           </p>
         </footer>
       </section>

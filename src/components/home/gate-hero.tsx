@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   WalletCards,
 } from "lucide-react";
+import { TokenLogo } from "@/components/token/token-logo";
 
 const TICKETS = [
   {
@@ -14,18 +15,24 @@ const TICKETS = [
     name: "Gucci Rick",
     reason: "Safety reads resolving",
     mayhem: true,
+    mint: "5D2ZvDCoQcjYdqnBtT9fFkmfbqrM5oWaW3ZqqWtZpump",
+    uri: "https://ipfs.io/ipfs/QmQANeThxgTQVbBan34coQxccHRcxcGA3TP28HqrHrKYKh",
   },
   {
     symbol: "ATLAS",
     name: "Atlas Pad",
     reason: "1 trade observed",
     mayhem: false,
+    mint: "H92BvYo9c9bVcBXxxJA6y2VWP9sbX6TRQ9qt88zJpump",
+    uri: "https://ipfs.io/ipfs/bafkreigkay466ukcnfhnzleq7chpcdfuvdobcpiyb3on44pik7vwz7maqy",
   },
   {
     symbol: "PF",
     name: "Print.Fun",
     reason: "Mint checks in progress",
     mayhem: false,
+    mint: "Ex6KePrCjGvdVnC8XuF1ozB5og39B1C7sVFM1n4A6KUz",
+    uri: "https://ipfs.io/ipfs/bafkreiakozn3b63eei4cp34jtokrqt25bayjyujzzgehzoxzzilz7igxny",
   },
 ] as const;
 
@@ -77,8 +84,8 @@ export function GateHero() {
           </div>
           <p className="mt-4 max-w-lg text-xs leading-relaxed text-[#766f65]">
             Read-only intelligence is live when the public stream is reachable.
-            Real trading is disabled; PAPER mode is available. Recorded tape
-            takes over if the stream drops.
+            Fresh PASS entries can open a guarded Privy wallet signature; PAPER
+            mode and recorded tape stay available without a wallet.
           </p>
         </div>
 
@@ -119,9 +126,12 @@ export function GateHero() {
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex min-w-0 items-center gap-2.5">
-                            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-ape-kong/25 bg-signal/10 text-[10px] font-black text-ape-kong">
-                              {ticket.symbol.slice(0, 2)}
-                            </span>
+                            <TokenLogo
+                              mint={ticket.mint}
+                              symbol={ticket.symbol}
+                              uri={ticket.uri}
+                              size="sm"
+                            />
                             <div className="min-w-0">
                               <p className="truncate text-xs font-extrabold">
                                 ${ticket.symbol}

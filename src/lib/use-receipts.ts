@@ -142,6 +142,62 @@ export function useReceipts() {
     [receipts],
   );
 
+  const addManualFill = useCallback(
+    async ({
+      mint,
+      symbol,
+      wallet,
+      amountSol,
+      signature,
+      factsHash,
+    }: {
+      mint: string;
+      symbol: string;
+      wallet: string;
+      amountSol: number;
+      signature: string;
+      factsHash: string;
+    }) => {
+      const previous = receipts.at(-1)?.hash ?? null;
+      const receipt = await createReceipt({
+        kind: "manual_fill",
+        actor: "caesar",
+        subject: { mint, wallet },
+        at: { ts: Date.now() },
+        inputs: {
+          factsHash,
+          rulesetVersion: "gate-1.2.0",
+          params: {
+            side: "BUY",
+            amountSol,
+            signing: "privy_external_wallet",
+          },
+        },
+        outputs: {
+          symbol,
+          side: "BUY",
+          amountSol,
+          signature,
+          custody: "user",
+          apegateFeeBps: 50,
+          apegateFeeCharged: false,
+          feeNote: "Guarded browser beta waiver",
+        },
+        evidence: [
+          {
+            kind: "tx",
+            ref: signature,
+            note: "User-approved Solana transaction",
+          },
+        ],
+        source: "live",
+        prev: previous,
+      });
+      setReceipts((current) => [...current, receipt].slice(-100));
+    },
+    [receipts],
+  );
+
   const addPlanChange = useCallback(
     async (planHash: string, name: string, tapeFactsHash: string) => {
       const previous = receipts.at(-1)?.hash ?? null;
@@ -202,6 +258,7 @@ export function useReceipts() {
     addVerdict,
     addWalletConnect,
     addPaperFill,
+    addManualFill,
     addPlanChange,
     addVaultPreview,
     clear,

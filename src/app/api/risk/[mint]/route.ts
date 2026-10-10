@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { configuredSolanaRpc } from "@/lib/solana-rpc";
 import { selectHolderEvidence } from "@/lib/holder-evidence";
+import { safePublicUrl } from "@/lib/token-metadata";
 
 type RugHolder = {
   owner: string;
@@ -243,11 +244,14 @@ export async function GET(
         ? {
             name: report.tokenMeta?.name ?? null,
             symbol: report.tokenMeta?.symbol ?? null,
-            uri: report.tokenMeta?.uri ?? null,
+            uri: safePublicUrl(report.tokenMeta?.uri),
             mutable: report.tokenMeta?.mutable ?? null,
             updateAuthority: report.tokenMeta?.updateAuthority ?? null,
             description: report.fileMeta?.description ?? null,
-            image: report.fileMeta?.image ?? null,
+            image: safePublicUrl(
+              report.fileMeta?.image,
+              safePublicUrl(report.tokenMeta?.uri),
+            ),
           }
         : null,
       totalHolders: report?.totalHolders ?? null,

@@ -28,9 +28,14 @@ import {
 } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useWallets as useSolanaWallets } from "@privy-io/react-auth/solana";
+import { VersionedTransaction } from "@solana/web3.js";
+import bs58 from "bs58";
 import {
+  assertManualBuyTransactionSafe,
   estimateFees,
   evaluateGate,
+  indexSessionLaunches,
+  type GateTiming,
   type GateVerdict,
   type Profile,
   type Receipt,
@@ -38,6 +43,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useLaunchFeed, type FeedLaunch } from "@/lib/use-launch-feed";
 import { useReceipts } from "@/lib/use-receipts";
+import { TokenLogo } from "@/components/token/token-logo";
 
 type RiskPayload = {
   mintAuthority?: string | null;
@@ -57,17 +63,36 @@ type RiskPayload = {
   };
 };
 
+type MetaPayload = {
+  websiteUrl: string | null;
+  websiteHost: string | null;
+  websiteReachable: boolean | null;
+  websiteMentionsToken: boolean | null;
+  websiteMatchesX: boolean | null;
+  websiteTemplateHash: string | null;
+  domainRegisteredAt: string | null;
+  domainAgeDays: number | null;
+  xLinkType: "profile" | "community" | "post" | "none";
+  xHandle: string | null;
+  telegramPresent: boolean;
+};
+
 const FILTERS = ["ALL", "PASS", "WARN", "BLOCK", "WAIT"] as const;
 const PROFILES: Profile[] = ["strict", "standard", "loose"];
-const FEE_PREVIEW = estimateFees(0.25, 125, 0.000_01);
 const OFFICIAL_APEGATE_MINT =
   process.env.NEXT_PUBLIC_APEGATE_TOKEN_MINT ?? null;
 
 export function FeedApp() {
   const { launches, status, lastMessageAt, retry, updateLaunch } =
     useLaunchFeed();
-  const { receipts, verified, addVerdict, addWalletConnect, clear } =
-    useReceipts();
+  const {
+    receipts,
+    verified,
+    addVerdict,
+    addWalletConnect,
+    addManualFill,
+    clear,
+  } = useReceipts();
   const {
     ready: privyReady,
     authenticated,
@@ -86,7 +111,12 @@ export function FeedApp() {
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<string | null>(null);
+  const [tradeState, setTradeState] = useState<
+    "idle" | "preparing" | "signing" | "sent" | "error"
+  >("idle");
+  const [tradeMessage, setTradeMessage] = useState<string | null>(null);
   const recordedWallet = useRef<string | null>(null);
+  const activeWallet = wallets[0] ?? null;
   const walletAddress = wallets[0]?.address ?? null;
 
   useEffect(() => {
@@ -121,21 +151,76 @@ export function FeedApp() {
         const curve = launch.facts.bondingCurve
           ? `?curve=${encodeURIComponent(launch.facts.bondingCurve)}`
           : "";
-        const response = await fetch(
-          `/api/risk/${launch.facts.mint}${curve}`,
-        );
-        if (!response.ok) throw new Error("Risk sources unavailable");
-        const risk = (await response.json()) as RiskPayload;
-        const facts = {
+        const metadataQuery = `?uri=${encodeURIComponent(launch.facts.uri)}`;
+        const [riskResult, metaResult] = await Promise.allSettled([
+          fetch(`/api/risk/${launch.facts.mint}${curve}`).then(
+            async (response) => {
+              if (!response.ok) throw new Error("Risk sources unavailable");
+              return (await response.json()) as RiskPayload;
+            },
+          ),
+          fetch(`/api/meta/${launch.facts.mint}${metadataQuery}`).then(
+            async (response) => {
+              if (!response.ok) throw new Error("Metadata unavailable");
+              return (await response.json()) as MetaPayload;
+            },
+          ),
+        ]);
+        if (
+          riskResult.status === "rejected" &&
+          metaResult.status === "rejected"
+        ) {
+          throw new Error("Launch evidence is unavailable");
+        }
+        const risk =
+          riskResult.status === "fulfilled" ? riskResult.value : null;
+        const metadata =
+          metaResult.status === "fulfilled" ? metaResult.value : null;
+        const rawFacts = {
           ...launch.facts,
           observedAt: Date.now(),
-          mintAuthority: risk.mintAuthority,
-          freezeAuthority: risk.freezeAuthority,
-          devPct: risk.devPct,
-          top10Pct: risk.top10Pct,
-          rugScore: risk.rugScore,
-          rugRisks: risk.rugRisks,
+          ...(risk
+            ? {
+                mintAuthority: risk.mintAuthority,
+                freezeAuthority: risk.freezeAuthority,
+                devPct: risk.devPct,
+                top10Pct: risk.top10Pct,
+                rugScore: risk.rugScore,
+                rugRisks: risk.rugRisks,
+              }
+            : {}),
+          ...(metadata
+            ? {
+                websiteUrl: metadata.websiteUrl,
+                websiteHost: metadata.websiteHost,
+                websiteReachable: metadata.websiteReachable,
+                websiteMentionsToken: metadata.websiteMentionsToken,
+                websiteMatchesX: metadata.websiteMatchesX,
+                websiteTemplateHash: metadata.websiteTemplateHash,
+                domainRegisteredAt: metadata.domainRegisteredAt,
+                domainAgeDays: metadata.domainAgeDays,
+                xLinkType: metadata.xLinkType,
+                xHandle: metadata.xHandle,
+                telegramPresent: metadata.telegramPresent,
+              }
+            : {}),
         };
+        const sourceFacts = launches
+          .filter((item) => item.source === launch.source)
+          .map((item) =>
+            item.facts.mint === rawFacts.mint ? rawFacts : item.facts,
+          );
+        const indexed = indexSessionLaunches(
+          sourceFacts,
+          launch.source === "live"
+            ? Date.now()
+            : sourceFacts.reduce(
+                (latest, item) => Math.max(latest, item.createdAt),
+                rawFacts.createdAt,
+              ),
+        );
+        const facts =
+          indexed.find((item) => item.mint === rawFacts.mint) ?? rawFacts;
         const verdict = await evaluateGate(facts, nextProfile, Date.now(), {
           officialApegateMint: OFFICIAL_APEGATE_MINT,
         });
@@ -145,17 +230,19 @@ export function FeedApp() {
           verdict,
         }));
         await addVerdict(facts, verdict, launch.source);
-        setRiskState("ready");
+        setRiskState(risk ? "ready" : "error");
       } catch {
         await addVerdict(launch.facts, launch.verdict, launch.source);
         setRiskState("error");
       }
     },
-    [addVerdict, profile, updateLaunch],
+    [addVerdict, launches, profile, updateLaunch],
   );
 
   async function selectLaunch(launch: FeedLaunch) {
     setSelectedMint(launch.facts.mint);
+    setTradeState("idle");
+    setTradeMessage(null);
     if (
       launch.facts.mintAuthority === undefined ||
       launch.verdict.profile !== profile
@@ -202,6 +289,108 @@ export function FeedApp() {
     window.setTimeout(() => setCopyState(null), 1_500);
   }
 
+  async function executeManualBuy(launch: FeedLaunch, amountSol: number) {
+    setTradeMessage(null);
+    if (!activeWallet) {
+      setWalletOpen(true);
+      return;
+    }
+    if (
+      launch.verdict.kind !== "PASS" ||
+      !launch.verdict.timing.entryAllowed
+    ) {
+      setTradeState("error");
+      setTradeMessage(
+        `Kong and Cheeta have not cleared this entry: ${launch.verdict.kind} · ${launch.verdict.timing.label}.`,
+      );
+      return;
+    }
+    if (Date.now() > launch.verdict.freshUntil) {
+      setTradeState("preparing");
+      await enrich(launch);
+      setTradeState("idle");
+      setTradeMessage("Gate refreshed. Review the fresh verdict, then sign.");
+      return;
+    }
+
+    try {
+      setTradeState("preparing");
+      const response = await fetch("/api/trade/prepare", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          publicKey: activeWallet.address,
+          mint: launch.facts.mint,
+          amountSol,
+          slippagePct: 8,
+        }),
+      });
+      const payload = (await response.json()) as
+        | {
+            transaction: string;
+            summary: {
+              feePayer: string;
+              requiredSigners: string[];
+              addressLookupTableCount: number;
+              programIds: string[];
+            };
+            expiresAt: number;
+          }
+        | { error?: string };
+      if (!response.ok || !("transaction" in payload)) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "A fresh guarded transaction could not be prepared",
+        );
+      }
+      if (Date.now() > payload.expiresAt) {
+        throw new Error("The prepared transaction expired before approval");
+      }
+      assertManualBuyTransactionSafe(payload.summary);
+      const bytes = Uint8Array.from(
+        window.atob(payload.transaction),
+        (character) => character.charCodeAt(0),
+      );
+      const transaction = VersionedTransaction.deserialize(bytes);
+      if (transaction.message.recentBlockhash.length === 0) {
+        throw new Error("Prepared transaction has no recent blockhash");
+      }
+
+      setTradeState("signing");
+      setTradeMessage(
+        `Check ${amountSol.toFixed(2)} SOL, the mint, and fees in your wallet. Nothing sends without your approval.`,
+      );
+      const result = await activeWallet.signAndSendTransaction({
+        transaction: bytes,
+        chain: "solana:mainnet",
+        options: {
+          commitment: "confirmed",
+          skipPreflight: false,
+          maxRetries: 2,
+        },
+      });
+      const signature = bs58.encode(result.signature);
+      await addManualFill({
+        mint: launch.facts.mint,
+        symbol: launch.facts.symbol,
+        wallet: activeWallet.address,
+        amountSol,
+        signature,
+        factsHash: launch.verdict.factsHash,
+      });
+      setTradeState("sent");
+      setTradeMessage(`Confirmed · ${signature}`);
+    } catch (error) {
+      setTradeState("error");
+      setTradeMessage(
+        error instanceof Error
+          ? error.message
+          : "The wallet did not send the transaction",
+      );
+    }
+  }
+
   const statusCopy =
     status === "live"
       ? "Live launch stream connected"
@@ -231,7 +420,7 @@ export function FeedApp() {
             <div className="min-w-0">
               <p className="truncate text-xs font-bold">Kong&apos;s Gate</p>
               <p className="truncate font-mono text-[8px] uppercase tracking-[0.15em] text-[#766f65]">
-                Read-only intelligence
+                Gate · manual sign · receipts
               </p>
             </div>
           </div>
@@ -287,7 +476,7 @@ export function FeedApp() {
             </button>
           ) : (
             <p className="font-mono text-[8px] uppercase tracking-[0.14em] text-[#5f584f]">
-              Real launches · no trading
+              Real launches · user-approved signing
             </p>
           )}
         </div>
@@ -403,6 +592,9 @@ export function FeedApp() {
                 copied={copyState}
                 walletAddress={walletAddress}
                 onWallet={() => setWalletOpen(true)}
+                tradeState={tradeState}
+                tradeMessage={tradeMessage}
+                onTrade={(amountSol) => void executeManualBuy(selected, amountSol)}
               />
             ) : (
               <div className="flex min-h-[560px] items-center justify-center p-8 text-center">
@@ -459,7 +651,11 @@ function LaunchRow({
       )}
     >
       <div className="flex min-w-0 items-center gap-3">
-        <TokenMark symbol={launch.facts.symbol} mayhem={launch.facts.isMayhem} />
+        <TokenLogo
+          mint={launch.facts.mint}
+          symbol={launch.facts.symbol}
+          uri={launch.facts.uri}
+        />
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-1.5">
             <p className="truncate text-sm font-extrabold">
@@ -503,6 +699,9 @@ function CoinPanel({
   copied,
   walletAddress,
   onWallet,
+  tradeState,
+  tradeMessage,
+  onTrade,
 }: {
   launch: FeedLaunch;
   profile: Profile;
@@ -513,20 +712,36 @@ function CoinPanel({
   copied: string | null;
   walletAddress: string | null;
   onWallet: () => void;
+  tradeState: "idle" | "preparing" | "signing" | "sent" | "error";
+  tradeMessage: string | null;
+  onTrade: (amountSol: number) => void;
 }) {
   const { facts, verdict, source } = launch;
+  const [tradeSize, setTradeSize] = useState(0.02);
+  const feePreview = estimateFees(tradeSize, 125, 0.0005);
+  const tradeCleared =
+    verdict.kind === "PASS" && verdict.timing.entryAllowed;
+  const tradePending =
+    tradeState === "preparing" || tradeState === "signing";
   return (
     <div>
       <div className="border-b border-[#31291f] p-4 sm:p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
-            <TokenMark symbol={facts.symbol} mayhem={facts.isMayhem} large />
+            <TokenLogo
+              mint={facts.mint}
+              symbol={facts.symbol}
+              uri={facts.uri}
+              size="lg"
+              eager
+            />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-2xl font-extrabold tracking-[-0.045em]">
                   ${facts.symbol}
                 </h2>
                 <SourceBadge source={source.toUpperCase()} />
+                <TimingBadge timing={verdict.timing} />
                 {facts.isMayhem ? (
                   <span className="rounded border border-warn/25 bg-warn/8 px-1.5 py-0.5 font-mono text-[8px] font-bold text-warn">
                     MAYHEM
@@ -594,6 +809,27 @@ function CoinPanel({
           value={`${facts.initialBuySol.toFixed(3)} SOL`}
           source={source.toUpperCase()}
         />
+      </div>
+
+      <div className="border-b border-[#31291f] bg-[linear-gradient(90deg,rgb(255_177_60_/_7%),transparent)] px-4 py-3 sm:px-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="font-mono text-[8px] font-bold uppercase tracking-[0.15em] text-ape-cheeta">
+              Cheeta · timing call
+            </p>
+            <p className="mt-1 text-[10px] leading-relaxed text-[#a79f92]">
+              {verdict.timing.reason}
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            <TimingBadge timing={verdict.timing} />
+            {verdict.timing.insidersOut ? (
+              <span className="font-mono text-[7px] font-bold text-pass">
+                INSIDERS OUT
+              </span>
+            ) : null}
+          </div>
+        </div>
       </div>
 
       <div className="border-b border-[#31291f] p-4 sm:p-5">
@@ -673,21 +909,68 @@ function CoinPanel({
       <div className="grid md:grid-cols-2">
         <div className="border-b border-[#31291f] p-4 sm:p-5 md:border-b-0 md:border-r">
           <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-ape-caesar">
-            Caesar · manual sign
+            Caesar · Privy manual sign
           </p>
-          <h3 className="mt-1 text-sm font-bold">0.25 SOL preview</h3>
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            {[0.01, 0.02, 0.05].map((amount) => (
+              <button
+                key={amount}
+                type="button"
+                onClick={() => setTradeSize(amount)}
+                className={cn(
+                  "rounded-lg border px-2 py-2 font-mono text-[8px] font-bold",
+                  tradeSize === amount
+                    ? "border-[#c7ff45]/40 bg-[#c7ff45]/7 text-[#c7ff45]"
+                    : "border-[#31291f] text-[#6f685f]",
+                )}
+              >
+                {amount} SOL
+              </button>
+            ))}
+          </div>
           <div className="mt-3 space-y-1.5 text-[10px]">
-            <FeeRow label="Pump fee estimate" value="0.003125 SOL" />
-            <FeeRow label="Apegate · 0.5%" value={`${FEE_PREVIEW.apegateFee.toFixed(6)} SOL`} />
-            <FeeRow label="Network estimate" value="0.000010 SOL" />
+            <FeeRow
+              label="Pump fee estimate"
+              value={feePreview.protocolFee.toFixed(6) + " SOL"}
+            />
+            <FeeRow
+              label="Apegate · 0.5%"
+              value={`${feePreview.apegateFee.toFixed(6)} SOL · beta waived`}
+            />
+            <FeeRow label="Priority fee" value="0.000500 SOL" />
           </div>
           <button
             type="button"
-            disabled
-            className="mt-4 w-full cursor-not-allowed rounded-lg border border-[#31291f] bg-[#17130e] px-3 py-2.5 text-xs font-extrabold text-[#5f584f]"
+            disabled={tradePending || !tradeCleared}
+            onClick={() =>
+              walletAddress ? onTrade(tradeSize) : onWallet()
+            }
+            className="mt-4 w-full rounded-lg border border-[#c7ff45]/25 bg-[#c7ff45]/7 px-3 py-2.5 text-xs font-extrabold text-[#c7ff45] enabled:hover:border-[#c7ff45]/55 disabled:cursor-not-allowed disabled:border-[#31291f] disabled:bg-[#17130e] disabled:text-[#5f584f]"
           >
-            Trading locked · Phase 1 read-only
+            {tradeState === "preparing"
+              ? "Building guarded transaction…"
+              : tradeState === "signing"
+                ? "Approve in your wallet…"
+                : !tradeCleared
+                  ? `${verdict.kind} · ${verdict.timing.label}`
+                  : walletAddress
+                    ? `Review & sign ${tradeSize} SOL`
+                    : "Connect wallet to sign"}
           </button>
+          {tradeMessage ? (
+            <p
+              className={cn(
+                "mt-2 break-all text-[8px] leading-relaxed",
+                tradeState === "error" ? "text-block" : "text-[#8da966]",
+              )}
+            >
+              {tradeMessage}
+            </p>
+          ) : null}
+          <p className="mt-2 text-[7px] leading-relaxed text-[#4f4941]">
+            Fresh PASS + entry timing required. Transaction programs and fee
+            payer are checked before Privy opens your wallet.
+          </p>
         </div>
         <div className="p-4 sm:p-5">
           <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-ape-cornelius">
@@ -697,8 +980,9 @@ function CoinPanel({
             {walletAddress ? "Wallet connected" : "Your wallet keeps custody"}
           </h3>
           <p className="mt-2 text-[10px] leading-relaxed text-[#766f65]">
-            Manual signing is the default. Apegate cannot send a transaction or
-            move funds in this read-only release.
+            Manual signing is the default. Apegate prepares a bounded
+            transaction; only your external Solana wallet can approve and send
+            it.
           </p>
           <button
             type="button"
@@ -770,7 +1054,7 @@ function WalletPanel({
             <div>
               <p className="text-sm font-bold">Manual signing · default</p>
               <p className="text-[10px] text-[#91897e]">
-                Every future transaction requires your wallet.
+                Every transaction requires your wallet&apos;s approval.
               </p>
             </div>
           </div>
@@ -801,8 +1085,9 @@ function WalletPanel({
             </p>
           ) : null}
           <p className="mt-3 text-[9px] leading-relaxed text-[#6f685f]">
-            Privy authenticates the external Solana wallet. No transaction is
-            created or sent. Never enter a seed phrase into Apegate.
+            Privy authenticates the external Solana wallet and opens its signing
+            prompt only after the Gate, timing, fee-payer, and program checks.
+            Never enter a seed phrase into Apegate.
           </p>
         </div>
 
@@ -834,7 +1119,7 @@ function WalletPanel({
             disabled
             className="mt-3 w-full cursor-not-allowed rounded-xl border border-[#31291f] px-4 py-3 text-xs font-bold text-[#554f47]"
           >
-            Vault unavailable in read-only release
+            Vault unavailable · manual signing only
           </button>
         </div>
       </section>
@@ -905,6 +1190,8 @@ function ReceiptTape({
                     ? `${String(receipt.outputs.verdict)} · score ${String(receipt.outputs.score)}`
                     : receipt.kind === "paper_fill"
                       ? `${String(receipt.outputs.side)} $${String(receipt.outputs.symbol)} · PAPER`
+                      : receipt.kind === "manual_fill"
+                        ? `${String(receipt.outputs.side)} $${String(receipt.outputs.symbol)} · ${String(receipt.outputs.amountSol)} SOL`
                       : receipt.kind === "plan_change"
                         ? `${String(receipt.outputs.name)} · plan saved`
                         : receipt.kind === "vault_preview"
@@ -1044,6 +1331,34 @@ function LaunchSignalChips({
       {clones && facts.cloneLeaderMint === facts.mint ? (
         <SignalChip label="MC leader" tone="neutral" />
       ) : null}
+      {facts.websiteReachable === true ? (
+        <SignalChip
+          label={
+            facts.websiteMentionsToken && facts.websiteMatchesX
+              ? "Website checked"
+              : "Website live"
+          }
+          tone={
+            facts.websiteMentionsToken && facts.websiteMatchesX
+              ? "pass"
+              : "neutral"
+          }
+        />
+      ) : facts.websiteReachable === false ? (
+        <SignalChip label="Website down" tone="warn" />
+      ) : null}
+      {facts.xLinkType && facts.xLinkType !== "none" ? (
+        <SignalChip
+          label={`X ${facts.xLinkType}`}
+          tone={facts.xLinkType === "profile" ? "pass" : "warn"}
+        />
+      ) : null}
+      {(facts.websiteTemplateReuse24h ?? 0) >= 3 ? (
+        <SignalChip
+          label={`${facts.websiteTemplateReuse24h} site matches`}
+          tone="warn"
+        />
+      ) : null}
       {facts.launchIndexScope === "session" ? (
         <SignalChip
           label={facts.launchIndexLabel ?? "This session"}
@@ -1079,31 +1394,6 @@ function SignalChip({
   );
 }
 
-function TokenMark({
-  symbol,
-  mayhem,
-  large,
-}: {
-  symbol: string;
-  mayhem: boolean;
-  large?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl border text-xs font-black",
-        large ? "size-12 text-sm" : "size-9",
-        mayhem
-          ? "border-line-strong bg-surface-3 text-fg-2"
-          : "border-line bg-surface-2 text-muted",
-      )}
-    >
-      <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgb(255_255_255_/_14%),transparent_45%)]" />
-      <span className="relative">{symbol.slice(0, 2).toUpperCase()}</span>
-    </div>
-  );
-}
-
 function VerdictStamp({
   verdict,
   compact,
@@ -1130,6 +1420,29 @@ function VerdictStamp({
     >
       {verdict.kind} · {verdict.score}
     </div>
+  );
+}
+
+function TimingBadge({
+  timing,
+  compact,
+}: {
+  timing: GateTiming;
+  compact?: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center rounded border font-mono font-bold uppercase tracking-[0.08em]",
+        timing.entryAllowed
+          ? "border-pass/25 bg-pass/7 text-pass"
+          : "border-[#ffb13c]/25 bg-[#ffb13c]/7 text-[#ffca72]",
+        compact ? "px-1 py-px text-[6px]" : "px-1.5 py-0.5 text-[7px]",
+      )}
+      title={timing.reason}
+    >
+      {timing.label}
+    </span>
   );
 }
 

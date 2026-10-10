@@ -46,6 +46,9 @@ export function indexSessionLaunches<T extends LaunchFacts>(
     string,
     { hour: number; day: number; week: number }
   >();
+  const websiteTemplates = new Map<string, number>();
+  const xHandles = new Map<string, number>();
+  const imageHashes = new Map<string, number>();
 
   for (const launch of unique) {
     if (launch.createdAt > asOf) continue;
@@ -58,6 +61,25 @@ export function indexSessionLaunches<T extends LaunchFacts>(
     if (withinWindow(launch.createdAt, asOf, DAY_MS)) counts.day += 1;
     if (withinWindow(launch.createdAt, asOf, 7 * DAY_MS)) counts.week += 1;
     creatorWindows.set(launch.creator, counts);
+
+    if (withinWindow(launch.createdAt, asOf, DAY_MS)) {
+      if (launch.websiteTemplateHash) {
+        websiteTemplates.set(
+          launch.websiteTemplateHash,
+          (websiteTemplates.get(launch.websiteTemplateHash) ?? 0) + 1,
+        );
+      }
+      if (launch.xHandle) {
+        const handle = launch.xHandle.toLowerCase();
+        xHandles.set(handle, (xHandles.get(handle) ?? 0) + 1);
+      }
+      if (launch.imageHash) {
+        imageHashes.set(
+          launch.imageHash,
+          (imageHashes.get(launch.imageHash) ?? 0) + 1,
+        );
+      }
+    }
   }
 
   const recent = unique.filter((launch) =>
@@ -145,6 +167,15 @@ export function indexSessionLaunches<T extends LaunchFacts>(
       cloneCount1h: clones?.count ?? 0,
       cloneRank1h: clones?.rank ?? null,
       cloneLeaderMint: clones?.leaderMint ?? null,
+      websiteTemplateReuse24h: launch.websiteTemplateHash
+        ? (websiteTemplates.get(launch.websiteTemplateHash) ?? 0)
+        : null,
+      xReuseCount24h: launch.xHandle
+        ? (xHandles.get(launch.xHandle.toLowerCase()) ?? 0)
+        : null,
+      imageCloneCount24h: launch.imageHash
+        ? (imageHashes.get(launch.imageHash) ?? 0)
+        : null,
     };
   });
 }
