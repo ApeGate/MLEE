@@ -150,6 +150,7 @@ export function useReceipts() {
       amountSol,
       signature,
       factsHash,
+      slot,
     }: {
       mint: string;
       symbol: string;
@@ -157,13 +158,14 @@ export function useReceipts() {
       amountSol: number;
       signature: string;
       factsHash: string;
+      slot: number | null;
     }) => {
       const previous = receipts.at(-1)?.hash ?? null;
       const receipt = await createReceipt({
         kind: "manual_fill",
         actor: "caesar",
         subject: { mint, wallet },
-        at: { ts: Date.now() },
+        at: { ts: Date.now(), ...(slot === null ? {} : { slot }) },
         inputs: {
           factsHash,
           rulesetVersion: "gate-1.2.0",
@@ -178,6 +180,8 @@ export function useReceipts() {
           side: "BUY",
           amountSol,
           signature,
+          confirmed: true,
+          confirmationSlot: slot,
           custody: "user",
           apegateFeeBps: 50,
           apegateFeeCharged: false,
@@ -187,7 +191,7 @@ export function useReceipts() {
           {
             kind: "tx",
             ref: signature,
-            note: "User-approved Solana transaction",
+            note: "Confirmed user-approved Solana transaction",
           },
         ],
         source: "live",

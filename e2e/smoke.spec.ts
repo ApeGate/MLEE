@@ -43,6 +43,23 @@ test("coin dossier has an honest unavailable state", async ({ page }) => {
   await expect(page.getByText(/will not turn missing reads into a PASS/i)).toBeVisible();
 });
 
+test("manual trade APIs reject malformed identifiers", async ({ page }) => {
+  const prepare = await page.request.post("/api/trade/prepare", {
+    data: {
+      publicKey: "not-a-wallet",
+      mint: "not-a-mint",
+      amountSol: 0.01,
+      slippagePct: 8,
+    },
+  });
+  expect(prepare.status()).toBe(400);
+
+  const status = await page.request.get(
+    "/api/trade/status?signature=not-a-signature",
+  );
+  expect(status.status()).toBe(400);
+});
+
 test("paper desk writes an explicitly simulated fill", async ({ page }) => {
   await page.goto("/paper");
   await expect(page.getByText("Caesar's paper desk")).toBeVisible();

@@ -129,8 +129,9 @@ PumpSwap transaction. It verifies the fee payer, signer count, mint, max quote,
 wrapped-SOL funding, bounded tip, token-account close, and compute fee from the
 bytes in both runtimes before the connected wallet can sign. The locked 0.5%
 Apegate fee is displayed but waived during this guarded beta; Pump and priority
-fees are still charged by the prepared transaction. Fresh bonding-curve rows
-remain PAPER-only.
+fees are still charged by the prepared transaction. A `manual_fill` receipt is
+written only after server-side RPC reports a confirmed slot; a broadcast alone
+is shown as pending. Fresh bonding-curve rows remain PAPER-only.
 
 The operator-only mainnet canary is separate from the browser app. It requires
 a fresh Kong `PASS`, a Cheeta timing chip that permits entry, a 0.01–0.05 SOL
