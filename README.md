@@ -121,7 +121,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://127.0.0.1:43127](http://127.0.0.1:43127). Credentials are optional
+Open [http://localhost:43127](http://localhost:43127). Credentials are optional
 for local use: the feed falls back to `fixtures/tapes/pump-launches.json`, a
 recorded set of real create events. Set `HELIUS_RPC_URL` for dependable mint
 reads. `SOLANA_RPC_URL` is the provider-neutral server-only override and takes
@@ -221,8 +221,10 @@ Privy dashboard checklist:
 
 1. Under **App settings → Domains**, allow `https://apegate.io` and
    `https://www.apegate.io`.
-2. Keep `http://127.0.0.1:43127` and `http://localhost:43127` for local
-   development.
+2. Keep `http://localhost:43127` for local development and open that exact
+   origin when testing wallet login. Add `http://127.0.0.1:43127` separately
+   only if the numeric loopback origin is also needed; Privy treats them as
+   different allowed domains.
 3. Keep wallet login and external Solana wallets enabled.
 4. Keep smart and embedded wallets off. The application also enforces
    `createOnLogin: "off"` for both chains.

@@ -48,6 +48,10 @@ import { useGateAlerts, type GatePassAlert } from "@/lib/use-gate-alerts";
 import { useOutcomeTape } from "@/lib/use-outcome-tape";
 import { useReceipts } from "@/lib/use-receipts";
 import { TokenLogo } from "@/components/token/token-logo";
+import {
+  ManualTradeReviewDialog,
+  useManualTradeReview,
+} from "@/components/trading/manual-trade-review";
 import { inspectManualBuyTransaction } from "@/lib/manual-buy-transaction";
 import { inspectManualSellTransaction } from "@/lib/manual-sell-transaction";
 
@@ -164,6 +168,7 @@ export function FeedApp() {
   const { launches, status, lastMessageAt, retry, updateLaunch } =
     useLaunchFeed();
   const gateAlerts = useGateAlerts(launches);
+  const manualTradeReview = useManualTradeReview();
   const outcomeTape = useOutcomeTape(launches);
   const {
     receipts,
@@ -538,6 +543,39 @@ export function FeedApp() {
         throw new Error("Browser and server firewall summaries do not match");
       }
 
+      const approved = await manualTradeReview.requestReview({
+        side: "BUY",
+        symbol: launch.facts.symbol,
+        mint: launch.facts.mint,
+        wallet: activeWallet.address,
+        summary: `Buy $${launch.facts.symbol} with ${amountSol.toFixed(2)} SOL`,
+        facts: [
+          { label: "Mint", value: launch.facts.mint },
+          { label: "Signing wallet", value: activeWallet.address },
+          { label: "Decoded route", value: inspection.decodedSwap },
+          {
+            label: "Wrapped SOL funding",
+            value: `${(inspection.fundedLamports / 1_000_000_000).toFixed(9)} SOL`,
+          },
+          {
+            label: "Priority fee",
+            value: `${(inspection.priorityFeeLamports / 1_000_000_000).toFixed(9)} SOL`,
+          },
+          {
+            label: "Builder tip",
+            value: `${(inspection.tippedLamports / 1_000_000_000).toFixed(9)} SOL`,
+          },
+          { label: "Apegate fee", value: "0.5% · beta waived" },
+        ],
+      });
+      if (!approved) {
+        setTradeState("idle");
+        setTradeMessage("Trade review cancelled. Nothing was sent.");
+        return;
+      }
+      if (Date.now() > payload.expiresAt) {
+        throw new Error("The reviewed transaction expired. Request a fresh quote.");
+      }
       setTradeState("signing");
       setTradeMessage(
         `Check ${amountSol.toFixed(2)} SOL, the mint, and fees in your wallet. Nothing sends without your approval.`,
@@ -672,6 +710,42 @@ export function FeedApp() {
         throw new Error("Browser and server exit summaries do not match");
       }
 
+      const approved = await manualTradeReview.requestReview({
+        side: "SELL",
+        symbol: target.symbol,
+        mint: target.mint,
+        wallet: activeWallet.address,
+        summary: `Exit ${percent}% of $${target.symbol}`,
+        facts: [
+          { label: "Mint", value: target.mint },
+          { label: "Signing wallet", value: activeWallet.address },
+          { label: "Decoded route", value: inspection.decodedSwap },
+          {
+            label: "Maximum tokens",
+            value: `${inspection.soldTokenBaseUnits} base units`,
+          },
+          {
+            label: "Independent floor",
+            value: `${(Number(inspection.minOutputLamports) / 1_000_000_000).toFixed(9)} SOL`,
+          },
+          {
+            label: "Priority fee",
+            value: `${(inspection.priorityFeeLamports / 1_000_000_000).toFixed(9)} SOL`,
+          },
+          {
+            label: "Builder tip",
+            value: `${(inspection.tippedLamports / 1_000_000_000).toFixed(9)} SOL`,
+          },
+        ],
+      });
+      if (!approved) {
+        setTradeState("idle");
+        setTradeMessage("Exit review cancelled. Nothing was sent.");
+        return;
+      }
+      if (Date.now() > payload.expiresAt) {
+        throw new Error("The reviewed exit expired. Request a fresh quote.");
+      }
       setTradeState("signing");
       setTradeMessage(
         `Exit ${percent}% of $${target.symbol}. Independent floor ${(payload.quote.minimumOutputLamports / 1_000_000_000).toFixed(6)} SOL · check the mint in your wallet.`,
@@ -1016,6 +1090,10 @@ export function FeedApp() {
           onDisconnect={() => void disconnectWallet()}
         />
       ) : null}
+      <ManualTradeReviewDialog
+        intent={manualTradeReview.intent}
+        onDecision={manualTradeReview.decide}
+      />
     </div>
   );
 }
