@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
-import { Space_Mono } from "next/font/google";
+import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-const mono = Space_Mono({
+const display = Space_Grotesk({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const mono = IBM_Plex_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "CLEAT — Solana strategy desk",
+  title: "Rivet — Pump.fun strategy desk",
   description:
-    "CLEAT runs a Solana strategy: Scout filters coins, Watch waits for entries, Desk buys and exits within your rules.",
+    "Rivet runs your Pump.fun strategy: Scout filters new coins, Watch waits for entries, Desk buys and exits inside your rules.",
 };
 
 export default function RootLayout({
@@ -21,7 +27,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${mono.variable} antialiased`}>{children}</body>
+      <body className={`${display.variable} ${mono.variable} antialiased`}>
+        {children}
+      </body>
     </html>
   );
 }

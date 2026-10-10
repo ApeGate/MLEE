@@ -1,8 +1,8 @@
-# CLEAT
+# Rivet
 
-CLEAT runs a Solana strategy: Scout filters coins, Watch waits for entries, Desk buys and exits within your rules.
+Rivet runs your Pump.fun strategy: Scout filters new coins, Watch waits for entries, Desk buys and exits inside your rules.
 
-Simulated market desk — no wallet required.
+Simulated desk included so you can try the loop locally — no wallet required.
 
 ## Run
 
@@ -12,6 +12,9 @@ npm run dev
 ```
 
 Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
+
+- `/` — homepage
+- `/desk` — strategy desk
 
 ## Stack
 

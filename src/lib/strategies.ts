@@ -34,8 +34,8 @@ export const STYLE_META: Record<
   }
 > = {
   clips: {
-    label: "CLIPS",
-    summary: "Age ≤25m · liq ≥18 SOL · top holders ≤28% · velocity ≥1.4×",
+    label: "Clips",
+    summary: "Fresh Pump.fun coins, quick entries, fast partial exits.",
     defaults: {
       exit: {
         takeProfitPct: 35,
@@ -52,8 +52,8 @@ export const STYLE_META: Record<
     },
   },
   balanced: {
-    label: "BALANCED",
-    summary: "Age ≤90m · liq ≥40 SOL · top holders ≤35% · velocity ≥1.1×",
+    label: "Balanced",
+    summary: "Coins already moving with liquidity and volume behind them.",
     defaults: {
       exit: {
         takeProfitPct: 55,
@@ -70,8 +70,8 @@ export const STYLE_META: Record<
     },
   },
   wide: {
-    label: "WIDE",
-    summary: "Age ≤180m · liq ≥12 SOL · top holders ≤42% · velocity ≥0.8×",
+    label: "Wide",
+    summary: "Broader net on newer coins — higher coverage, higher variance.",
     defaults: {
       exit: {
         takeProfitPct: 90,
@@ -110,8 +110,7 @@ export function createStrategy(
   };
 }
 
-/** One-line functional description of the active rules. */
 export function strategyLine(s: Strategy): string {
-  const a = s.askBeforeBuy ? "approve buys" : "auto-buy";
-  return `${STYLE_META[s.style].label}: Scout filters → Watch @ ${s.filters.minVelocity.toFixed(1)}× → Desk ≤${s.maxPerCoinSol} SOL ×${s.maxPositions} (${s.budgetSol} SOL budget, ${a}). Exit +${s.exit.takeProfitPct}% / trail ${s.exit.trailingStopPct}% / stop −${s.exit.stopLossPct}%.`;
+  const a = s.askBeforeBuy ? "approve each buy" : "auto-buy within limits";
+  return `${STYLE_META[s.style].label}: Scout age≤${s.filters.maxAgeMinutes}m · liq≥${s.filters.minLiquiditySol} SOL · top≤${s.filters.maxTopHolderPct}% → Watch vel≥${s.filters.minVelocity.toFixed(1)}× → Desk ≤${s.maxPerCoinSol} SOL ×${s.maxPositions} (${s.budgetSol} SOL, ${a}). Exit +${s.exit.takeProfitPct}% / trail ${s.exit.trailingStopPct}% / stop −${s.exit.stopLossPct}%.`;
 }
