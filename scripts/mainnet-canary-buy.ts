@@ -5,6 +5,7 @@ import {
   VersionedTransaction,
 } from "@solana/web3.js";
 import {
+  CANARY_WALLET_RESERVE_SOL,
   assertManualBuyTransactionSafe,
   authorizeMainnetCanaryBuy,
   createReceipt,
@@ -293,6 +294,12 @@ async function main() {
       connection.getBalance(signerPublicKey, "confirmed"),
       tokenBalance(connection, signerPublicKey, mint),
     ]);
+  const balanceSol = balanceLamports / 1_000_000_000;
+  if (balanceSol < options.amountSol + CANARY_WALLET_RESERVE_SOL) {
+    throw new Error(
+      `Canary wallet needs at least ${(options.amountSol + CANARY_WALLET_RESERVE_SOL).toFixed(3)} SOL for this trade and reserve`,
+    );
+  }
   if (report.rugged) throw new Error("Risk source marks this mint rugged");
 
   const observedAt = Date.now();
@@ -441,7 +448,7 @@ async function main() {
 
   const authorization = authorizeMainnetCanaryBuy({
     amountSol: options.amountSol,
-    balanceSol: balanceLamports / 1_000_000_000,
+    balanceSol,
     expectedSigner: expectedWallet,
     actualSigner: signerAddress,
     verdict,
