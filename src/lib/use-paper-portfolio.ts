@@ -19,6 +19,7 @@ export function usePaperPortfolio() {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    let savedPortfolio: PaperPortfolio | null = null;
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -28,14 +29,16 @@ export function usePaperPortfolio() {
           Array.isArray(parsed.positions) &&
           Array.isArray(parsed.fills)
         ) {
-          setPortfolio(parsed);
+          savedPortfolio = parsed;
         }
       }
     } catch {
       window.localStorage.removeItem(STORAGE_KEY);
-    } finally {
-      setHydrated(true);
     }
+    queueMicrotask(() => {
+      if (savedPortfolio) setPortfolio(savedPortfolio);
+      setHydrated(true);
+    });
   }, []);
 
   useEffect(() => {
