@@ -1,9 +1,5 @@
-import { DeskApp } from "@/components/desk/desk-app";
+import { redirect } from "next/navigation";
 
 export default function DeskPage() {
-  return (
-    <main>
-      <DeskApp />
-    </main>
-  );
+  redirect("/");
 }

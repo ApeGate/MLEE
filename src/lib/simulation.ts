@@ -1,6 +1,15 @@
 import type { Strategy } from "./strategies";
 
-export type Specialist = "scout" | "watch" | "desk" | "relay";
+export type Specialist = "scout" | "watch" | "desk" | "system";
+
+export type Phase =
+  | "idle"
+  | "scouting"
+  | "watching"
+  | "awaiting_approval"
+  | "managing"
+  | "blocked"
+  | "paused";
 
 export type Token = {
   id: string;
@@ -37,7 +46,8 @@ export type DeskEvent = {
     | "pending"
     | "buy"
     | "sell"
-    | "note";
+    | "note"
+    | "error";
   ticker?: string;
   title: string;
   detail: string;
@@ -58,6 +68,8 @@ export type SimState = {
   positions: Position[];
   events: DeskEvent[];
   pending: PendingBuy | null;
+  phase: Phase;
+  lastError: string | null;
   stats: {
     scanned: number;
     skipped: number;
@@ -110,17 +122,29 @@ export function createInitialState(): SimState {
     positions: [],
     events: [],
     pending: null,
+    phase: "idle",
+    lastError: null,
     stats: { scanned: 0, skipped: 0, passed: 0, bought: 0, sold: 0 },
   };
 }
 
-function makeToken(): Token {
+/** Bias tokens so ~35% pass Scout filters for the active style — faster useful loop. */
+function makeToken(strategy: Strategy): Token {
   const [ticker, name] = pick(TICKERS);
-  const ageMinutes = Math.floor(rand(2, 200));
-  const liquiditySol = rand(8, 160);
-  const topHolderPct = rand(12, 55);
-  const velocity = rand(0.4, 2.6);
-  const price = rand(0.00001, 0.008);
+  const passBias = Math.random() < 0.38;
+  const f = strategy.filters;
+  const ageMinutes = passBias
+    ? Math.floor(rand(2, Math.max(3, f.maxAgeMinutes * 0.85)))
+    : Math.floor(rand(2, 220));
+  const liquiditySol = passBias
+    ? rand(f.minLiquiditySol, f.minLiquiditySol + 80)
+    : rand(6, 140);
+  const topHolderPct = passBias
+    ? rand(12, Math.max(13, f.maxTopHolderPct - 1))
+    : rand(12, 58);
+  const velocity = passBias
+    ? rand(f.minVelocity * 0.7, f.minVelocity + 1.1)
+    : rand(0.3, 2.4);
   return {
     id: uid("tok"),
     ticker: `${ticker}${Math.floor(rand(1, 99))}`,
@@ -129,7 +153,7 @@ function makeToken(): Token {
     liquiditySol: Number(liquiditySol.toFixed(1)),
     topHolderPct: Number(topHolderPct.toFixed(1)),
     velocity: Number(velocity.toFixed(2)),
-    price,
+    price: rand(0.00001, 0.008),
     change5m: Number(rand(-28, 65).toFixed(1)),
   };
 }
@@ -138,51 +162,59 @@ function pushEvent(
   state: SimState,
   event: Omit<DeskEvent, "id" | "at">,
 ): SimState {
-  const next: DeskEvent = {
-    ...event,
-    id: uid("evt"),
-    at: Date.now(),
-  };
-  return {
-    ...state,
-    events: [next, ...state.events].slice(0, 80),
-  };
+  const next: DeskEvent = { ...event, id: uid("evt"), at: Date.now() };
+  return { ...state, events: [next, ...state.events].slice(0, 100) };
 }
 
-function scoutCheck(token: Token, strategy: Strategy): { ok: boolean; reason: string } {
+function scoutCheck(
+  token: Token,
+  strategy: Strategy,
+): { ok: boolean; reason: string } {
   const f = strategy.filters;
   if (token.ageMinutes > f.maxAgeMinutes) {
-    return { ok: false, reason: `Age ${token.ageMinutes}m exceeds ${f.maxAgeMinutes}m cap` };
+    return {
+      ok: false,
+      reason: `age ${token.ageMinutes}m > ${f.maxAgeMinutes}m`,
+    };
   }
   if (token.liquiditySol < f.minLiquiditySol) {
     return {
       ok: false,
-      reason: `Liquidity ${token.liquiditySol} SOL below ${f.minLiquiditySol} SOL floor`,
+      reason: `liq ${token.liquiditySol} < ${f.minLiquiditySol} SOL`,
     };
   }
   if (token.topHolderPct > f.maxTopHolderPct) {
     return {
       ok: false,
-      reason: `Top holders own ${token.topHolderPct}% (max ${f.maxTopHolderPct}%)`,
+      reason: `top ${token.topHolderPct}% > ${f.maxTopHolderPct}%`,
     };
   }
   return {
     ok: true,
-    reason: `Passed filters — liq ${token.liquiditySol} SOL, top ${token.topHolderPct}%, age ${token.ageMinutes}m`,
+    reason: `age ${token.ageMinutes}m · liq ${token.liquiditySol} SOL · top ${token.topHolderPct}%`,
   };
 }
 
 function canOpen(state: SimState, strategy: Strategy, sizeSol: number) {
-  if (state.positions.length >= strategy.maxPositions) return false;
-  if (state.spentSol + sizeSol > strategy.budgetSol) return false;
-  if (sizeSol > strategy.maxPerCoinSol) return false;
-  return true;
+  if (state.positions.length >= strategy.maxPositions) {
+    return "max positions reached";
+  }
+  if (state.spentSol + sizeSol > strategy.budgetSol + 1e-9) {
+    return "budget exhausted";
+  }
+  if (sizeSol > strategy.maxPerCoinSol) {
+    return "size over max per coin";
+  }
+  return null;
 }
 
 function markToMarket(positions: Position[]): Position[] {
   return positions.map((p) => {
-    const drift = rand(-0.04, 0.055);
-    const price = Math.max(p.entryPrice * 0.2, p.entryPrice * (1 + p.pnlPct / 100) * (1 + drift));
+    const drift = rand(-0.035, 0.05);
+    const price = Math.max(
+      p.entryPrice * 0.2,
+      p.entryPrice * (1 + p.pnlPct / 100) * (1 + drift),
+    );
     const pnlPct = ((price - p.entryPrice) / p.entryPrice) * 100;
     return {
       ...p,
@@ -192,36 +224,39 @@ function markToMarket(positions: Position[]): Position[] {
   });
 }
 
-function manageExits(
-  state: SimState,
-  strategy: Strategy,
-): SimState {
+function manageExits(state: SimState, strategy: Strategy): SimState {
   let next = { ...state, positions: [...state.positions] };
   const keep: Position[] = [];
 
   for (const pos of next.positions) {
-    const dropFromPeak =
-      ((pos.peakPrice - pos.entryPrice * (1 + pos.pnlPct / 100)) / pos.peakPrice) * 100;
+    const current = pos.entryPrice * (1 + pos.pnlPct / 100);
+    const dropFromPeak = ((pos.peakPrice - current) / pos.peakPrice) * 100;
     const hardStop = pos.pnlPct <= -strategy.exit.stopLossPct;
     const trailHit =
       pos.pnlPct > strategy.exit.takeProfitPct * 0.35 &&
       dropFromPeak >= strategy.exit.trailingStopPct;
-    const tpHit = pos.pnlPct >= strategy.exit.takeProfitPct && pos.remainingPct > 40;
+    const tpHit =
+      pos.pnlPct >= strategy.exit.takeProfitPct && pos.remainingPct > 40;
 
     if (hardStop || trailHit) {
       next = pushEvent(next, {
         specialist: "desk",
         kind: "sell",
         ticker: pos.ticker,
-        title: hardStop ? `Stop hit on $${pos.ticker}` : `Trail exit on $${pos.ticker}`,
+        title: hardStop
+          ? `STOP $${pos.ticker} ${pos.pnlPct.toFixed(1)}%`
+          : `TRAIL $${pos.ticker} −${dropFromPeak.toFixed(1)}% from peak`,
         detail: hardStop
-          ? `Closed remaining ${pos.remainingPct}% at ${pos.pnlPct.toFixed(1)}% vs −${strategy.exit.stopLossPct}% stop.`
-          : `Price fell ${dropFromPeak.toFixed(1)}% from peak — trailing ${strategy.exit.trailingStopPct}% rule fired.`,
+          ? `closed ${pos.remainingPct}% at stop −${strategy.exit.stopLossPct}%`
+          : `closed ${pos.remainingPct}% on ${strategy.exit.trailingStopPct}% trail`,
       });
       next = {
         ...next,
         stats: { ...next.stats, sold: next.stats.sold + 1 },
-        spentSol: Math.max(0, next.spentSol - pos.sizeSol * (pos.remainingPct / 100)),
+        spentSol: Math.max(
+          0,
+          next.spentSol - pos.sizeSol * (pos.remainingPct / 100),
+        ),
       };
       continue;
     }
@@ -233,20 +268,15 @@ function manageExits(
         specialist: "desk",
         kind: "sell",
         ticker: pos.ticker,
-        title: `Partial take-profit $${pos.ticker}`,
-        detail: `Sold ${soldPct}% at +${pos.pnlPct.toFixed(1)}%. Leaving ${remaining}% to trail.`,
+        title: `TP $${pos.ticker} +${pos.pnlPct.toFixed(1)}%`,
+        detail: `sold ${soldPct}% · left ${remaining}%`,
       });
       next = {
         ...next,
         stats: { ...next.stats, sold: next.stats.sold + 1 },
-        spentSol: Math.max(
-          0,
-          next.spentSol - pos.sizeSol * (soldPct / 100),
-        ),
+        spentSol: Math.max(0, next.spentSol - pos.sizeSol * (soldPct / 100)),
       };
-      if (remaining > 0) {
-        keep.push({ ...pos, remainingPct: remaining });
-      }
+      if (remaining > 0) keep.push({ ...pos, remainingPct: remaining });
       continue;
     }
 
@@ -256,12 +286,43 @@ function manageExits(
   return { ...next, positions: keep };
 }
 
+function resolvePhase(state: SimState): Phase {
+  if (!state.running) return state.tick === 0 ? "idle" : "paused";
+  if (state.pending) return "awaiting_approval";
+  if (state.lastError) return "blocked";
+  if (state.watched.length > 0) return "watching";
+  if (state.positions.length > 0) return "managing";
+  return "scouting";
+}
+
+export function nextStepLabel(state: SimState): string {
+  switch (state.phase) {
+    case "idle":
+      return "NEXT: set rules → RUN";
+    case "paused":
+      return "NEXT: RESUME or RESET";
+    case "scouting":
+      return "NEXT: Scout is filtering the tape";
+    case "watching":
+      return "NEXT: Watch waiting on velocity entry";
+    case "awaiting_approval":
+      return "NEXT: APPROVE or SKIP the buy";
+    case "managing":
+      return "NEXT: Desk managing exits · Scout still scanning";
+    case "blocked":
+      return `NEXT: fix block — ${state.lastError ?? "limits"}`;
+    default:
+      return "NEXT: —";
+  }
+}
+
 export function approvePending(state: SimState): SimState {
   if (!state.pending) return state;
   const { token, sizeSol, reason } = state.pending;
   let next: SimState = {
     ...state,
     pending: null,
+    lastError: null,
     spentSol: state.spentSol + sizeSol,
     positions: [
       {
@@ -282,66 +343,73 @@ export function approvePending(state: SimState): SimState {
     specialist: "desk",
     kind: "buy",
     ticker: token.ticker,
-    title: `Bought $${token.ticker}`,
-    detail: `${sizeSol.toFixed(2)} SOL filled. ${reason}`,
+    title: `BUY $${token.ticker} ${sizeSol.toFixed(2)} SOL`,
+    detail: reason,
   });
+  next = { ...next, phase: resolvePhase(next) };
   return next;
 }
 
 export function rejectPending(state: SimState): SimState {
   if (!state.pending) return state;
+  const ticker = state.pending.token.ticker;
   let next: SimState = {
     ...state,
     pending: null,
     watched: state.watched.filter((id) => id !== state.pending!.token.id),
   };
   next = pushEvent(next, {
-    specialist: "relay",
+    specialist: "system",
     kind: "note",
-    ticker: state.pending.token.ticker,
-    title: `You passed on $${state.pending.token.ticker}`,
-    detail: "Desk stood down. Scout keeps scanning the next candidates.",
+    ticker,
+    title: `SKIPPED BUY $${ticker}`,
+    detail: "you passed · Scout continues",
   });
+  next = { ...next, phase: resolvePhase(next) };
   return next;
 }
 
 export function simTick(state: SimState, strategy: Strategy): SimState {
   if (!state.running) return state;
-  if (state.pending) return state;
+  if (state.pending) {
+    return { ...state, phase: "awaiting_approval" };
+  }
 
   let next: SimState = {
     ...state,
     tick: state.tick + 1,
+    lastError: null,
     positions: markToMarket(state.positions),
   };
   next = manageExits(next, strategy);
 
-  // Update live tape
   next = {
     ...next,
     tokens: next.tokens.map((t) => ({
       ...t,
-      ageMinutes: t.ageMinutes + 0.2,
-      velocity: Number(Math.max(0.2, t.velocity + rand(-0.15, 0.18)).toFixed(2)),
+      ageMinutes: t.ageMinutes + 0.15,
+      velocity: Number(
+        Math.max(0.2, t.velocity + rand(-0.12, 0.22)).toFixed(2),
+      ),
       change5m: Number((t.change5m + rand(-3, 4)).toFixed(1)),
       price: t.price * (1 + rand(-0.03, 0.04)),
     })),
   };
 
-  // New coin every ~3 ticks
-  if (next.tick % 3 === 1 || next.tokens.length < 6) {
-    const token = makeToken();
+  // New coin every 2 ticks — denser tape
+  if (next.tick % 2 === 1 || next.tokens.length < 5) {
+    const token = makeToken(strategy);
     next = {
       ...next,
-      tokens: [token, ...next.tokens].slice(0, 14),
+      tokens: [token, ...next.tokens].slice(0, 16),
       stats: { ...next.stats, scanned: next.stats.scanned + 1 },
     };
     next = pushEvent(next, {
       specialist: "scout",
       kind: "scan",
       ticker: token.ticker,
-      title: `Scout checking $${token.ticker}`,
-      detail: `${token.name} · ${token.ageMinutes}m · liq ${token.liquiditySol} SOL · top ${token.topHolderPct}%`,
+      title: `SCAN $${token.ticker}`,
+      detail: `${token.ageMinutes}m · liq ${token.liquiditySol} · top ${token.topHolderPct}% · vel ${token.velocity.toFixed(2)}×`,
     });
 
     const check = scoutCheck(token, strategy);
@@ -354,7 +422,7 @@ export function simTick(state: SimState, strategy: Strategy): SimState {
         specialist: "scout",
         kind: "skip",
         ticker: token.ticker,
-        title: `Skipped $${token.ticker}`,
+        title: `SKIP $${token.ticker}`,
         detail: check.reason,
       });
     } else {
@@ -367,20 +435,19 @@ export function simTick(state: SimState, strategy: Strategy): SimState {
         specialist: "scout",
         kind: "pass",
         ticker: token.ticker,
-        title: `Passed to Watch · $${token.ticker}`,
+        title: `PASS → WATCH $${token.ticker}`,
         detail: check.reason,
       });
       next = pushEvent(next, {
         specialist: "watch",
         kind: "watching",
         ticker: token.ticker,
-        title: `Watching entry on $${token.ticker}`,
-        detail: `Waiting for velocity ≥ ${strategy.filters.minVelocity.toFixed(1)}× (now ${token.velocity.toFixed(2)}×).`,
+        title: `WATCH $${token.ticker}`,
+        detail: `need vel ≥ ${strategy.filters.minVelocity.toFixed(1)}× · now ${token.velocity.toFixed(2)}×`,
       });
     }
   }
 
-  // Watch → entry
   const candidates = next.tokens.filter((t) => next.watched.includes(t.id));
   for (const token of candidates) {
     if (token.velocity < strategy.filters.minVelocity) continue;
@@ -388,22 +455,24 @@ export function simTick(state: SimState, strategy: Strategy): SimState {
       strategy.maxPerCoinSol,
       strategy.budgetSol - next.spentSol,
     );
-    if (sizeSol < 0.2 || !canOpen(next, strategy, sizeSol)) {
-      next = pushEvent(next, {
-        specialist: "relay",
-        kind: "note",
-        ticker: token.ticker,
-        title: `Held $${token.ticker} — limits reached`,
-        detail: "Budget or position cap blocked the handoff. Pause or raise limits to resume buys.",
-      });
+    const block = sizeSol < 0.2 ? "budget exhausted" : canOpen(next, strategy, sizeSol);
+    if (block) {
       next = {
         ...next,
+        lastError: block,
         watched: next.watched.filter((id) => id !== token.id),
       };
+      next = pushEvent(next, {
+        specialist: "system",
+        kind: "error",
+        ticker: token.ticker,
+        title: `BLOCKED $${token.ticker}`,
+        detail: block,
+      });
       continue;
     }
 
-    const reason = `Velocity ${token.velocity.toFixed(2)}× cleared ${strategy.filters.minVelocity.toFixed(1)}× entry.`;
+    const reason = `vel ${token.velocity.toFixed(2)}× ≥ ${strategy.filters.minVelocity.toFixed(1)}×`;
 
     if (strategy.askBeforeBuy) {
       next = {
@@ -415,8 +484,8 @@ export function simTick(state: SimState, strategy: Strategy): SimState {
         specialist: "watch",
         kind: "pending",
         ticker: token.ticker,
-        title: `Entry ready · $${token.ticker}`,
-        detail: `${reason} Awaiting your approval for ${sizeSol.toFixed(2)} SOL.`,
+        title: `ENTRY READY $${token.ticker}`,
+        detail: `${reason} · ${sizeSol.toFixed(2)} SOL · awaiting APPROVE`,
       });
       break;
     }
@@ -443,18 +512,19 @@ export function simTick(state: SimState, strategy: Strategy): SimState {
       specialist: "watch",
       kind: "entry",
       ticker: token.ticker,
-      title: `Entry triggered · $${token.ticker}`,
+      title: `ENTRY $${token.ticker}`,
       detail: reason,
     });
     next = pushEvent(next, {
       specialist: "desk",
       kind: "buy",
       ticker: token.ticker,
-      title: `Bought $${token.ticker}`,
-      detail: `${sizeSol.toFixed(2)} SOL filled inside your rules.`,
+      title: `BUY $${token.ticker} ${sizeSol.toFixed(2)} SOL`,
+      detail: "auto within rules",
     });
     break;
   }
 
+  next = { ...next, phase: resolvePhase(next) };
   return next;
 }

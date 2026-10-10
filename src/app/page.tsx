@@ -1,11 +1,9 @@
-import { Hero } from "@/components/landing/hero";
-import { LandingSections } from "@/components/landing/sections";
+import { DeskApp } from "@/components/desk/desk-app";
 
 export default function HomePage() {
   return (
     <main>
-      <Hero />
-      <LandingSections />
+      <DeskApp />
     </main>
   );
 }

@@ -14,6 +14,12 @@ export function formatPct(n: number) {
   return `${sign}${n.toFixed(1)}%`;
 }
 
-export function shortId(id: string) {
-  return id.length > 10 ? `${id.slice(0, 4)}…${id.slice(-4)}` : id;
+export function formatTime(ts: number) {
+  const d = new Date(ts);
+  return d.toLocaleTimeString("en-GB", {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 }

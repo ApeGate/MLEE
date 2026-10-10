@@ -1,48 +1,58 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useRef, useState, startTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
+import {
+  useEffect,
+  useRef,
+  useState,
+  startTransition,
+  type ReactNode,
+} from "react";
 import {
   STYLE_META,
   createStrategy,
-  strategyPlainEnglish,
+  strategyLine,
   type Strategy,
   type StrategyStyle,
 } from "@/lib/strategies";
 import {
   approvePending,
   createInitialState,
+  nextStepLabel,
   rejectPending,
   simTick,
   type DeskEvent,
+  type Phase,
   type SimState,
 } from "@/lib/simulation";
-import { cn, formatPct, formatSol } from "@/lib/utils";
+import { cn, formatPct, formatSol, formatTime } from "@/lib/utils";
 
-const SPECIALIST_LABEL: Record<DeskEvent["specialist"], string> = {
-  scout: "Scout",
-  watch: "Watch",
-  desk: "Desk",
-  relay: "Relay",
+const PHASE_LABEL: Record<Phase, string> = {
+  idle: "IDLE",
+  paused: "PAUSED",
+  scouting: "SCOUT",
+  watching: "WATCH",
+  awaiting_approval: "APPROVAL",
+  managing: "DESK",
+  blocked: "BLOCKED",
 };
 
-const KIND_TONE: Record<DeskEvent["kind"], string> = {
-  scan: "text-mist",
-  skip: "text-warn",
-  pass: "text-signal",
-  watching: "text-mist",
-  entry: "text-signal",
-  pending: "text-warn",
-  buy: "text-signal",
-  sell: "text-foreground",
-  note: "text-mist",
+const KIND_PREFIX: Record<DeskEvent["kind"], string> = {
+  scan: "SCAN",
+  skip: "SKIP",
+  pass: "PASS",
+  watching: "WATCH",
+  entry: "ENTRY",
+  pending: "READY",
+  buy: "BUY",
+  sell: "SELL",
+  note: "NOTE",
+  error: "ERR",
 };
 
 export function DeskApp() {
-  const [strategy, setStrategy] = useState<Strategy>(() => createStrategy("clips"));
+  const [strategy, setStrategy] = useState<Strategy>(() =>
+    createStrategy("clips"),
+  );
   const [state, setState] = useState<SimState>(() => createInitialState());
   const [started, setStarted] = useState(false);
   const strategyRef = useRef(strategy);
@@ -52,9 +62,24 @@ export function DeskApp() {
     if (!state.running) return;
     const id = window.setInterval(() => {
       setState((prev) => simTick(prev, strategyRef.current));
-    }, 1100);
+    }, 650);
     return () => window.clearInterval(id);
   }, [state.running]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!state.pending) return;
+      if (e.key === "Enter") {
+        e.preventDefault();
+        setState((s) => approvePending(s));
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setState((s) => rejectPending(s));
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [state.pending]);
 
   function updateStyle(style: StrategyStyle) {
     setStrategy((prev) =>
@@ -73,14 +98,15 @@ export function DeskApp() {
       setState({
         ...createInitialState(),
         running: true,
+        phase: "scouting",
         events: [
           {
             id: "boot",
             at: Date.now(),
-            specialist: "relay",
+            specialist: "system",
             kind: "note",
-            title: "Desk online",
-            detail: strategyPlainEnglish(strategy),
+            title: "DESK ONLINE",
+            detail: strategyLine(strategy),
           },
         ],
       });
@@ -88,7 +114,20 @@ export function DeskApp() {
   }
 
   function toggleRunning() {
-    setState((prev) => ({ ...prev, running: !prev.running }));
+    setState((prev) => {
+      const running = !prev.running;
+      return {
+        ...prev,
+        running,
+        phase: running
+          ? prev.pending
+            ? "awaiting_approval"
+            : prev.watched.length
+              ? "watching"
+              : "scouting"
+          : "paused",
+      };
+    });
   }
 
   function resetDesk() {
@@ -96,49 +135,47 @@ export function DeskApp() {
     setState(createInitialState());
   }
 
-  const preview = strategyPlainEnglish(strategy);
   const budgetLeft = Math.max(0, strategy.budgetSol - state.spentSol);
+  const step = nextStepLabel(
+    started ? state : { ...state, phase: "idle" },
+  );
 
   return (
-    <div className="relative min-h-[100svh] px-4 pb-16 pt-5 sm:px-6 lg:px-8">
-      <div className="atmosphere-grid pointer-events-none absolute inset-0 opacity-60" />
-
-      <div className="relative mx-auto max-w-6xl">
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="font-display text-lg font-bold tracking-tight text-signal"
-            >
-              RELAY
-            </Link>
-            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-mist">
-              Strategy desk
+    <div className="min-h-[100svh] bg-[#0a0a0a] text-[#e0e0e0]">
+      <header className="border-b-[3px] border-[#ff3300] px-3 py-3 sm:px-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div className="flex flex-wrap items-baseline gap-3">
+            <span className="text-lg font-bold text-[#ff3300]">RELAY</span>
+            <span className="text-xs text-[#888888] sm:text-sm">
+              runs a Solana strategy: Scout filters coins, Watch waits for
+              entries, Desk buys and exits within your rules.
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            {started && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleRunning}
-                  className="border-signal/25"
-                >
-                  {state.running ? "Pause" : "Resume"}
-                </Button>
-                <Button variant="ghost" size="sm" onClick={resetDesk}>
-                  Reset
-                </Button>
-              </>
-            )}
-          </div>
-        </header>
+          {started && (
+            <div className="flex gap-2">
+              <ActionButton onClick={toggleRunning}>
+                {state.running ? "PAUSE" : "RESUME"}
+              </ActionButton>
+              <ActionButton onClick={resetDesk}>RESET</ActionButton>
+            </div>
+          )}
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          <span>
+            PHASE{" "}
+            <span className="text-[#ff3300]">
+              {started ? PHASE_LABEL[state.phase] : "IDLE"}
+            </span>
+            {state.running && <span className="blink text-[#ff3300]"> █</span>}
+          </span>
+          <span className="text-[#ff3300]">{step}</span>
+        </div>
+      </header>
 
+      <main className="px-3 py-4 sm:px-4">
         {!started ? (
-          <SetupPanel
+          <Setup
             strategy={strategy}
-            preview={preview}
             onStyle={updateStyle}
             onBudget={(v) => setStrategy((s) => ({ ...s, budgetSol: v }))}
             onMaxPer={(v) => setStrategy((s) => ({ ...s, maxPerCoinSol: v }))}
@@ -147,7 +184,7 @@ export function DeskApp() {
             onStart={startDesk}
           />
         ) : (
-          <LiveDesk
+          <Live
             strategy={strategy}
             state={state}
             budgetLeft={budgetLeft}
@@ -155,14 +192,13 @@ export function DeskApp() {
             onReject={() => setState((s) => rejectPending(s))}
           />
         )}
-      </div>
+      </main>
     </div>
   );
 }
 
-function SetupPanel({
+function Setup({
   strategy,
-  preview,
   onStyle,
   onBudget,
   onMaxPer,
@@ -171,7 +207,6 @@ function SetupPanel({
   onStart,
 }: {
   strategy: Strategy;
-  preview: string;
   onStyle: (s: StrategyStyle) => void;
   onBudget: (n: number) => void;
   onMaxPer: (n: number) => void;
@@ -180,17 +215,14 @@ function SetupPanel({
   onStart: () => void;
 }) {
   return (
-    <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_0.95fr] lg:gap-14">
-      <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl text-balance">
-          Configure the desk
-        </h1>
-        <p className="mt-3 max-w-md text-mist">
-          Choose a style, set capital rules, then start. The simulated market
-          runs locally — no wallet needed.
-        </p>
+    <div className="mx-auto max-w-3xl space-y-5">
+      <p className="text-sm text-[#888888]">
+        Configure rules, then RUN. Simulated market — no wallet.
+      </p>
 
-        <div className="mt-8 flex flex-wrap gap-2">
+      <fieldset className="space-y-2">
+        <legend className="text-xs text-[#ff3300]">STYLE</legend>
+        <div className="grid gap-2 sm:grid-cols-3">
           {(Object.keys(STYLE_META) as StrategyStyle[]).map((style) => {
             const active = strategy.style === style;
             return (
@@ -199,93 +231,85 @@ function SetupPanel({
                 type="button"
                 onClick={() => onStyle(style)}
                 className={cn(
-                  "rounded-md border px-4 py-2 text-left transition-colors",
+                  "border-[3px] px-3 py-3 text-left text-sm",
                   active
-                    ? "border-signal bg-signal/15 text-signal"
-                    : "border-white/10 text-mist hover:border-signal/30 hover:text-foreground",
+                    ? "border-[#ff3300] bg-[#ff3300] text-[#0a0a0a]"
+                    : "border-[#333333] bg-[#111111] text-[#e0e0e0] hover:border-[#ff3300]",
                 )}
               >
-                <div className="font-display text-sm font-semibold">
-                  {STYLE_META[style].label}
+                <div className="font-bold">{STYLE_META[style].label}</div>
+                <div
+                  className={cn(
+                    "mt-1 text-xs",
+                    active ? "text-[#0a0a0a]/80" : "text-[#888888]",
+                  )}
+                >
+                  {STYLE_META[style].summary}
                 </div>
               </button>
             );
           })}
         </div>
-        <p className="mt-3 text-sm text-mist">{STYLE_META[strategy.style].blurb}</p>
+      </fieldset>
 
-        <div className="mt-8 space-y-6">
-          <SliderField
-            label="Budget"
-            valueLabel={formatSol(strategy.budgetSol)}
-            value={strategy.budgetSol}
-            min={2}
-            max={25}
-            step={0.5}
-            onChange={onBudget}
-          />
-          <SliderField
-            label="Max per coin"
-            valueLabel={formatSol(strategy.maxPerCoinSol)}
-            value={strategy.maxPerCoinSol}
-            min={0.3}
-            max={5}
-            step={0.1}
-            onChange={onMaxPer}
-          />
-          <SliderField
-            label="Max open positions"
-            valueLabel={String(strategy.maxPositions)}
-            value={strategy.maxPositions}
-            min={1}
-            max={6}
-            step={1}
-            onChange={(n) => onMaxPos(Math.round(n))}
-          />
-          <label className="flex items-center justify-between gap-4 border-t border-white/10 pt-5">
-            <div>
-              <div className="text-sm font-medium">Ask before each buy</div>
-              <div className="text-xs text-mist">
-                Recommended. Desk pauses for your approval when Watch finds an entry.
-              </div>
-            </div>
-            <Switch
-              checked={strategy.askBeforeBuy}
-              onCheckedChange={onAsk}
-            />
-          </label>
-        </div>
+      <NumberField
+        label="BUDGET (SOL)"
+        value={strategy.budgetSol}
+        min={2}
+        max={25}
+        step={0.5}
+        onChange={onBudget}
+      />
+      <NumberField
+        label="MAX PER COIN (SOL)"
+        value={strategy.maxPerCoinSol}
+        min={0.3}
+        max={5}
+        step={0.1}
+        onChange={onMaxPer}
+      />
+      <NumberField
+        label="MAX OPEN POSITIONS"
+        value={strategy.maxPositions}
+        min={1}
+        max={6}
+        step={1}
+        onChange={(n) => onMaxPos(Math.round(n))}
+      />
+
+      <label className="flex cursor-pointer items-center justify-between gap-4 border-[3px] border-[#ff3300] bg-[#111111] px-3 py-3">
+        <span className="text-sm">
+          ASK BEFORE EACH BUY
+          <span className="mt-1 block text-xs text-[#888888]">
+            Desk pauses for APPROVE / SKIP (Enter / Esc when live)
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          checked={strategy.askBeforeBuy}
+          onChange={(e) => onAsk(e.target.checked)}
+          className="size-5 accent-[#ff3300]"
+        />
+      </label>
+
+      <div className="border-[3px] border-[#333333] bg-[#111111] px-3 py-3 text-xs leading-relaxed text-[#888888]">
+        <span className="text-[#ff3300]">RULES </span>
+        {strategyLine(strategy)}
       </div>
 
-      <div className="flex flex-col justify-between gap-8 border-t border-signal/15 pt-8 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-signal">
-            Plan preview
-          </p>
-          <p className="mt-4 font-display text-xl font-medium leading-snug text-foreground sm:text-2xl text-balance">
-            {preview}
-          </p>
-          <dl className="mt-8 grid grid-cols-2 gap-4 text-sm">
-            <Stat label="Take profit" value={`+${strategy.exit.takeProfitPct}%`} />
-            <Stat label="Partial sell" value={`${strategy.exit.partialSellPct}%`} />
-            <Stat label="Stop loss" value={`−${strategy.exit.stopLossPct}%`} />
-            <Stat label="Trail" value={`${strategy.exit.trailingStopPct}%`} />
-          </dl>
-        </div>
-        <button
-          type="button"
-          data-testid="start-desk"
-          onClick={onStart}
-          className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-signal px-4 text-sm font-medium text-signal-foreground transition-colors hover:bg-signal/90 sm:w-auto"
-        >
-          Start the desk
-        </button>
-      </div>
+      <button
+        type="button"
+        data-testid="start-desk"
+        onClick={onStart}
+        className="w-full border-[3px] border-[#ff3300] bg-[#ff3300] px-4 py-4 text-left text-base font-bold text-[#0a0a0a] hover:bg-[#ff5522]"
+      >
+        RUN DESK →
+      </button>
     </div>
   );
 }
 
-function LiveDesk({
+function Live({
   strategy,
   state,
   budgetLeft,
@@ -299,114 +323,97 @@ function LiveDesk({
   onReject: () => void;
 }) {
   return (
-    <div className="mt-8 space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-            Live desk
-          </h1>
-          <p className="mt-1 text-sm text-mist">
-            {STYLE_META[strategy.style].label} · {state.running ? "Running" : "Paused"}
-            {state.pending ? " · Waiting on you" : ""}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-4 font-mono text-xs uppercase tracking-[0.14em] text-mist">
-          <span>Scanned {state.stats.scanned}</span>
-          <span>Skipped {state.stats.skipped}</span>
-          <span>Passed {state.stats.passed}</span>
-          <span>Bought {state.stats.bought}</span>
-          <span>Sold {state.stats.sold}</span>
-        </div>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-4">
+      <Pipeline phase={state.phase} />
 
       {state.pending && (
-        <div className="animate-tape-in border border-warn/40 bg-warn/10 px-4 py-4 sm:px-5">
-          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-warn">
-            Approval needed
-          </p>
-          <p className="mt-2 font-display text-xl font-semibold">
-            Buy ${state.pending.token.ticker} for {formatSol(state.pending.sizeSol)}?
-          </p>
-          <p className="mt-1 text-sm text-mist">{state.pending.reason}</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button
+        <div className="border-[3px] border-[#ff3300] bg-[#111111] px-3 py-4">
+          <div className="text-xs text-[#ff3300]">APPROVAL NEEDED</div>
+          <div className="mt-1 text-base font-bold">
+            BUY ${state.pending.token.ticker} ·{" "}
+            {formatSol(state.pending.sizeSol)}
+          </div>
+          <div className="mt-1 text-xs text-[#888888]">
+            {state.pending.reason} · liq{" "}
+            {state.pending.token.liquiditySol} SOL · top{" "}
+            {state.pending.token.topHolderPct}%
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
               onClick={onApprove}
-              className="bg-signal text-signal-foreground hover:bg-signal/90"
+              className="border-[3px] border-[#ff3300] bg-[#ff3300] px-4 py-2 text-sm font-bold text-[#0a0a0a]"
             >
-              Approve buy
-            </Button>
-            <Button variant="outline" onClick={onReject} className="border-white/15">
-              Skip
-            </Button>
+              APPROVE [Enter]
+            </button>
+            <button
+              type="button"
+              onClick={onReject}
+              className="border-[3px] border-[#ff3300] bg-[#0a0a0a] px-4 py-2 text-sm text-[#e0e0e0]"
+            >
+              SKIP [Esc]
+            </button>
           </div>
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <section>
-          <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-signal">
-            Decision tape
-          </h2>
-          <ul className="mt-3 max-h-[520px] space-y-0 overflow-y-auto border-t border-white/10">
+      {state.lastError && !state.pending && (
+        <div className="border-[3px] border-[#ff3300] px-3 py-2 text-sm text-[#ff3300]">
+          BLOCKED: {state.lastError}. Raise budget/positions or wait for sells.
+        </div>
+      )}
+
+      <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+        <section className="border-[3px] border-[#ff3300] bg-[#111111]">
+          <div className="border-b-[3px] border-[#ff3300] px-3 py-2 text-xs text-[#ff3300]">
+            DECISION TAPE
+          </div>
+          <ul className="max-h-[560px] overflow-y-auto">
             {state.events.length === 0 && (
-              <li className="py-8 text-sm text-mist">Waiting for Scout…</li>
+              <li className="px-3 py-8 text-sm text-[#888888]">
+                Empty. Scout emits lines when the desk is running.
+              </li>
             )}
             {state.events.map((event) => (
-              <li
-                key={event.id}
-                className="animate-tape-in border-b border-white/8 py-3"
-              >
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-signal/80">
-                    {SPECIALIST_LABEL[event.specialist]}
-                  </span>
-                  <span className={cn("text-sm font-medium", KIND_TONE[event.kind])}>
-                    {event.title}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-mist">{event.detail}</p>
-              </li>
+              <TapeLine key={event.id} event={event} />
             ))}
           </ul>
         </section>
 
-        <aside className="space-y-6">
-          <section>
-            <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-signal">
-              Capital
-            </h2>
-            <dl className="mt-3 grid grid-cols-2 gap-3">
-              <Stat label="Budget left" value={formatSol(budgetLeft)} />
-              <Stat label="In play" value={formatSol(state.spentSol)} />
-              <Stat label="Open" value={String(state.positions.length)} />
-              <Stat label="Watching" value={String(state.watched.length)} />
-            </dl>
-          </section>
+        <aside className="space-y-4">
+          <Panel title="CAPITAL">
+            <Row k="budget left" v={formatSol(budgetLeft)} />
+            <Row k="in play" v={formatSol(state.spentSol)} />
+            <Row k="open" v={String(state.positions.length)} />
+            <Row k="watching" v={String(state.watched.length)} />
+            <Row
+              k="counts"
+              v={`S${state.stats.scanned} K${state.stats.skipped} P${state.stats.passed} B${state.stats.bought} X${state.stats.sold}`}
+            />
+          </Panel>
 
-          <section>
-            <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-signal">
-              Positions
-            </h2>
+          <Panel title="POSITIONS">
             {state.positions.length === 0 ? (
-              <p className="mt-3 text-sm text-mist">No open bags yet.</p>
+              <p className="text-sm text-[#888888]">
+                None open. Buys appear here after Desk fills.
+              </p>
             ) : (
-              <ul className="mt-3 space-y-3">
+              <ul className="space-y-2">
                 {state.positions.map((p) => (
                   <li
                     key={p.tokenId}
-                    className="flex items-baseline justify-between gap-3 border-b border-white/8 pb-3"
+                    className="flex items-baseline justify-between gap-2 border-b border-[#333333] pb-2 text-sm"
                   >
                     <div>
-                      <div className="font-display font-semibold">${p.ticker}</div>
-                      <div className="text-xs text-mist">
+                      <div className="font-bold">${p.ticker}</div>
+                      <div className="text-xs text-[#888888]">
                         {formatSol(p.sizeSol)} · {p.remainingPct}% left
                       </div>
                     </div>
                     <div
-                      className={cn(
-                        "font-mono text-sm",
-                        p.pnlPct >= 0 ? "text-signal" : "text-destructive",
-                      )}
+                      className={
+                        p.pnlPct >= 0 ? "text-[#e0e0e0]" : "text-[#ff3300]"
+                      }
                     >
                       {formatPct(p.pnlPct)}
                     </div>
@@ -414,38 +421,140 @@ function LiveDesk({
                 ))}
               </ul>
             )}
-          </section>
+          </Panel>
 
-          <section>
-            <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-signal">
-              Market tape
-            </h2>
-            <ul className="mt-3 max-h-56 space-y-2 overflow-y-auto">
-              {state.tokens.slice(0, 8).map((t) => (
-                <li
-                  key={t.id}
-                  className="flex items-center justify-between gap-2 text-sm"
-                >
-                  <span className="font-medium">${t.ticker}</span>
-                  <span className="font-mono text-xs text-mist">
-                    {t.liquiditySol} SOL · top {t.topHolderPct}% · {t.velocity.toFixed(2)}×
-                  </span>
-                </li>
-              ))}
-              {state.tokens.length === 0 && (
-                <li className="text-sm text-mist">Scanning…</li>
-              )}
-            </ul>
-          </section>
+          <Panel title="MARKET">
+            {state.tokens.length === 0 ? (
+              <p className="text-sm text-[#888888]">Loading tape…</p>
+            ) : (
+              <ul className="max-h-48 space-y-1 overflow-y-auto text-xs">
+                {state.tokens.slice(0, 10).map((t) => {
+                  const watching = state.watched.includes(t.id);
+                  return (
+                    <li
+                      key={t.id}
+                      className="flex justify-between gap-2 border-b border-[#222222] py-1"
+                    >
+                      <span>
+                        ${t.ticker}
+                        {watching ? (
+                          <span className="text-[#ff3300]"> *</span>
+                        ) : null}
+                      </span>
+                      <span className="text-[#888888]">
+                        {t.liquiditySol} · top {t.topHolderPct}% ·{" "}
+                        {t.velocity.toFixed(2)}×
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <p className="mt-2 text-[10px] text-[#888888]">
+              * = on Watch · filters: age≤{strategy.filters.maxAgeMinutes}m
+              liq≥{strategy.filters.minLiquiditySol} top≤
+              {strategy.filters.maxTopHolderPct}% vel≥
+              {strategy.filters.minVelocity.toFixed(1)}×
+            </p>
+          </Panel>
         </aside>
       </div>
     </div>
   );
 }
 
-function SliderField({
+function Pipeline({ phase }: { phase: Phase }) {
+  const stages: { id: Phase | "scout" | "watch" | "desk"; label: string }[] = [
+    { id: "scouting", label: "1 SCOUT" },
+    { id: "watching", label: "2 WATCH" },
+    { id: "awaiting_approval", label: "3 APPROVE" },
+    { id: "managing", label: "4 DESK" },
+  ];
+  const active =
+    phase === "blocked" || phase === "paused" || phase === "idle"
+      ? null
+      : phase === "scouting"
+        ? "scouting"
+        : phase === "watching"
+          ? "watching"
+          : phase === "awaiting_approval"
+            ? "awaiting_approval"
+            : "managing";
+
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {stages.map((s) => {
+        const on = active === s.id;
+        return (
+          <div
+            key={s.label}
+            className={cn(
+              "border-[3px] px-2 py-2 text-center text-xs font-bold",
+              on
+                ? "border-[#ff3300] bg-[#ff3300] text-[#0a0a0a]"
+                : "border-[#333333] text-[#888888]",
+            )}
+          >
+            {s.label}
+            {on ? " ◄" : ""}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function TapeLine({ event }: { event: DeskEvent }) {
+  const accent =
+    event.kind === "buy" ||
+    event.kind === "pass" ||
+    event.kind === "pending" ||
+    event.kind === "error";
+  return (
+    <li className="border-b border-[#222222] px-3 py-2 text-xs leading-snug sm:text-sm">
+      <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+        <span className="text-[#888888]">{formatTime(event.at)}</span>
+        <span className="font-bold text-[#ff3300]">
+          [{event.specialist.toUpperCase()}]
+        </span>
+        <span className={accent ? "text-[#ff3300]" : "text-[#e0e0e0]"}>
+          {KIND_PREFIX[event.kind]}
+        </span>
+        <span className="font-bold">{event.title.replace(/^(SCAN|SKIP|PASS → WATCH|WATCH|ENTRY READY|ENTRY|BUY|STOP|TRAIL|TP|BLOCKED|SKIPPED BUY|DESK ONLINE)\s*/, "")}</span>
+      </div>
+      <div className="mt-0.5 text-[#888888]">{event.detail}</div>
+    </li>
+  );
+}
+
+function Panel({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="border-[3px] border-[#ff3300] bg-[#111111]">
+      <div className="border-b-[3px] border-[#ff3300] px-3 py-2 text-xs text-[#ff3300]">
+        {title}
+      </div>
+      <div className="px-3 py-3">{children}</div>
+    </section>
+  );
+}
+
+function Row({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex justify-between gap-2 border-b border-[#222222] py-1 text-sm">
+      <span className="text-[#888888]">{k}</span>
+      <span>{v}</span>
+    </div>
+  );
+}
+
+function NumberField({
   label,
-  valueLabel,
   value,
   min,
   max,
@@ -453,7 +562,6 @@ function SliderField({
   onChange,
 }: {
   label: string;
-  valueLabel: string;
   value: number;
   min: number;
   max: number;
@@ -461,30 +569,38 @@ function SliderField({
   onChange: (n: number) => void;
 }) {
   return (
-    <div>
-      <div className="mb-2 flex items-baseline justify-between gap-3">
-        <span className="text-sm font-medium">{label}</span>
-        <span className="font-mono text-xs text-signal">{valueLabel}</span>
-      </div>
-      <Slider
-        value={[value]}
+    <label className="block space-y-1">
+      <span className="text-xs text-[#ff3300]">{label}</span>
+      <input
+        type="number"
+        value={value}
         min={min}
         max={max}
         step={step}
-        onValueChange={(v) => {
-          const next = Array.isArray(v) ? v[0] : v;
-          if (typeof next === "number") onChange(next);
+        onChange={(e) => {
+          const n = Number(e.target.value);
+          if (!Number.isNaN(n)) onChange(Math.min(max, Math.max(min, n)));
         }}
+        className="w-full border-[3px] border-[#ff3300] bg-[#0a0a0a] px-3 py-3 text-base text-[#e0e0e0] outline-none focus:bg-[#111111]"
       />
-    </div>
+    </label>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function ActionButton({
+  children,
+  onClick,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+}) {
   return (
-    <div>
-      <dt className="text-xs text-mist">{label}</dt>
-      <dd className="mt-0.5 font-display text-lg font-semibold">{value}</dd>
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className="border-[3px] border-[#ff3300] bg-[#0a0a0a] px-3 py-1 text-xs text-[#e0e0e0] hover:bg-[#111111]"
+    >
+      {children}
+    </button>
   );
 }

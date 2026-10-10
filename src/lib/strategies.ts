@@ -24,11 +24,18 @@ export type Strategy = {
 
 export const STYLE_META: Record<
   StrategyStyle,
-  { label: string; blurb: string; defaults: Omit<Strategy, "style" | "askBeforeBuy" | "budgetSol" | "maxPerCoinSol" | "maxPositions"> }
+  {
+    label: string;
+    summary: string;
+    defaults: Omit<
+      Strategy,
+      "style" | "askBeforeBuy" | "budgetSol" | "maxPerCoinSol" | "maxPositions"
+    >;
+  }
 > = {
   clips: {
-    label: "Clips",
-    blurb: "Fresh coins, quick entries, fast partial exits when a move turns.",
+    label: "CLIPS",
+    summary: "Age ≤25m · liq ≥18 SOL · top holders ≤28% · velocity ≥1.4×",
     defaults: {
       exit: {
         takeProfitPct: 35,
@@ -45,8 +52,8 @@ export const STYLE_META: Record<
     },
   },
   balanced: {
-    label: "Balanced",
-    blurb: "Coins already moving with volume behind them — steadier handoffs.",
+    label: "BALANCED",
+    summary: "Age ≤90m · liq ≥40 SOL · top holders ≤35% · velocity ≥1.1×",
     defaults: {
       exit: {
         takeProfitPct: 55,
@@ -63,8 +70,8 @@ export const STYLE_META: Record<
     },
   },
   wide: {
-    label: "Wide",
-    blurb: "Broader net, bigger swings — higher variance, more market coverage.",
+    label: "WIDE",
+    summary: "Age ≤180m · liq ≥12 SOL · top holders ≤42% · velocity ≥0.8×",
     defaults: {
       exit: {
         takeProfitPct: 90,
@@ -84,7 +91,12 @@ export const STYLE_META: Record<
 
 export function createStrategy(
   style: StrategyStyle,
-  overrides?: Partial<Pick<Strategy, "budgetSol" | "maxPerCoinSol" | "maxPositions" | "askBeforeBuy">>,
+  overrides?: Partial<
+    Pick<
+      Strategy,
+      "budgetSol" | "maxPerCoinSol" | "maxPositions" | "askBeforeBuy"
+    >
+  >,
 ): Strategy {
   const meta = STYLE_META[style];
   return {
@@ -98,14 +110,8 @@ export function createStrategy(
   };
 }
 
-export function strategyPlainEnglish(s: Strategy): string {
-  const style = STYLE_META[s.style].label;
-  const approval = s.askBeforeBuy
-    ? "Ask before each buy"
-    : "Auto-buy within limits";
-  return [
-    `${style} style — Scout filters coins under ${s.filters.maxAgeMinutes}m old with ≥${s.filters.minLiquiditySol} SOL liquidity and top-holder concentration under ${s.filters.maxTopHolderPct}%.`,
-    `Watch waits for velocity ≥${s.filters.minVelocity.toFixed(1)}× baseline, then Desk sizes up to ${s.maxPerCoinSol} SOL (budget ${s.budgetSol} SOL, max ${s.maxPositions} open).`,
-    `Exits: sell ${s.exit.partialSellPct}% at +${s.exit.takeProfitPct}%, trail ${s.exit.trailingStopPct}% from high, hard stop at −${s.exit.stopLossPct}%. ${approval}.`,
-  ].join(" ");
+/** One-line functional description of the active rules. */
+export function strategyLine(s: Strategy): string {
+  const a = s.askBeforeBuy ? "approve buys" : "auto-buy";
+  return `${STYLE_META[s.style].label}: Scout filters → Watch @ ${s.filters.minVelocity.toFixed(1)}× → Desk ≤${s.maxPerCoinSol} SOL ×${s.maxPositions} (${s.budgetSol} SOL budget, ${a}). Exit +${s.exit.takeProfitPct}% / trail ${s.exit.trailingStopPct}% / stop −${s.exit.stopLossPct}%.`;
 }
