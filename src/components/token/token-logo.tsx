@@ -96,7 +96,9 @@ export function TokenLogo({
 }) {
   const directImage = useMemo(() => allowedImage(imageUrl), [imageUrl]);
   const onMetadataRef = useRef(onMetadata);
-  onMetadataRef.current = onMetadata;
+  useEffect(() => {
+    onMetadataRef.current = onMetadata;
+  }, [onMetadata]);
   const requestKey = `${mint}:${uri ?? ""}`;
   const [loaded, setLoaded] = useState<{
     key: string;
