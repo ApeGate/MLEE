@@ -99,6 +99,12 @@ type WalletPositionsPayload = {
   observedAt: number;
 };
 
+type ManualSellTarget = {
+  mint: string;
+  symbol: string;
+  factsHash?: string;
+};
+
 const FILTERS = ["ALL", "PASS", "WARN", "BLOCK", "WAIT"] as const;
 const PROFILES: Profile[] = ["strict", "standard", "loose"];
 const OFFICIAL_APEGATE_MINT =
@@ -522,7 +528,7 @@ export function FeedApp() {
     }
   }
 
-  async function executeManualSell(launch: FeedLaunch, percent: number) {
+  async function executeManualSell(target: ManualSellTarget, percent: number) {
     setTradeMessage(null);
     if (!activeWallet) {
       setWalletOpen(true);
@@ -536,7 +542,7 @@ export function FeedApp() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           publicKey: activeWallet.address,
-          mint: launch.facts.mint,
+          mint: target.mint,
           side: "sell",
           percent,
           slippagePct: MANUAL_BUY_SLIPPAGE_PCT,
@@ -583,7 +589,7 @@ export function FeedApp() {
       const transaction = VersionedTransaction.deserialize(bytes);
       const inspection = inspectManualSellTransaction(transaction, {
         expectedSigner: activeWallet.address,
-        expectedMint: launch.facts.mint,
+        expectedMint: target.mint,
         maxSellTokenBaseUnits: payload.intent.maxSellTokenBaseUnits,
         minimumOutputLamports: payload.intent.minimumOutputLamports,
         maxAccountFundingLamports:
@@ -607,7 +613,7 @@ export function FeedApp() {
 
       setTradeState("signing");
       setTradeMessage(
-        `Exit ${percent}% of $${launch.facts.symbol}. Independent floor ${(payload.quote.minimumOutputLamports / 1_000_000_000).toFixed(6)} SOL · check the mint in your wallet.`,
+        `Exit ${percent}% of $${target.symbol}. Independent floor ${(payload.quote.minimumOutputLamports / 1_000_000_000).toFixed(6)} SOL · check the mint in your wallet.`,
       );
       const result = await activeWallet.signAndSendTransaction({
         transaction: bytes,
@@ -632,15 +638,16 @@ export function FeedApp() {
         return;
       }
       await addManualFill({
-        mint: launch.facts.mint,
-        symbol: launch.facts.symbol,
+        mint: target.mint,
+        symbol: target.symbol,
         wallet: activeWallet.address,
         side: "SELL",
         percent,
         signature,
-        factsHash: launch.verdict.factsHash,
+        factsHash: target.factsHash,
         slot: confirmation.slot,
       });
+      await refreshPositions(activeWallet.address);
       setTradeState("sent");
       setTradeMessage(`Exit confirmed · ${signature}`);
     } catch (error) {
@@ -864,7 +871,16 @@ export function FeedApp() {
                 tradeState={tradeState}
                 tradeMessage={tradeMessage}
                 onTrade={(amountSol) => void executeManualBuy(selected, amountSol)}
-                onExit={(percent) => void executeManualSell(selected, percent)}
+                onExit={(percent) =>
+                  void executeManualSell(
+                    {
+                      mint: selected.facts.mint,
+                      symbol: selected.facts.symbol,
+                      factsHash: selected.verdict.factsHash,
+                    },
+                    percent,
+                  )
+                }
               />
             ) : (
               <div className="flex min-h-[560px] items-center justify-center p-8 text-center">
@@ -889,6 +905,17 @@ export function FeedApp() {
           error={positionError}
           onConnect={() => setWalletOpen(true)}
           onRefresh={() => void refreshPositions(walletAddress)}
+          tradeState={tradeState}
+          tradeMessage={tradeMessage}
+          onExit={(position, percent) =>
+            void executeManualSell(
+              {
+                mint: position.mint,
+                symbol: position.symbol ?? short(position.mint),
+              },
+              percent,
+            )
+          }
         />
 
         <ReceiptTape receipts={receipts} verified={verified} onClear={clear} />
@@ -1444,6 +1471,9 @@ function WalletPositions({
   error,
   onConnect,
   onRefresh,
+  tradeState,
+  tradeMessage,
+  onExit,
 }: {
   walletAddress: string | null;
   state: "idle" | "loading" | "ready" | "error";
@@ -1451,7 +1481,13 @@ function WalletPositions({
   error: string | null;
   onConnect: () => void;
   onRefresh: () => void;
+  tradeState: "idle" | "preparing" | "signing" | "sent" | "error";
+  tradeMessage: string | null;
+  onExit: (position: WalletPosition, percent: number) => void;
 }) {
+  const tradePending =
+    tradeState === "preparing" || tradeState === "signing";
+
   return (
     <section className="mt-4 overflow-hidden rounded-2xl border border-[#31291f] bg-[#0d0b09]">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#31291f] px-4 py-3.5">
@@ -1540,38 +1576,54 @@ function WalletPositions({
             {data.positions.map((position) => (
               <article
                 key={position.mint}
-                className="flex min-w-0 items-center gap-3 border-[#272119] p-4 sm:border-b sm:[&:nth-child(odd)]:border-r xl:[&:nth-child(odd)]:border-r-0 xl:[&:not(:nth-child(3n))]:border-r"
+                className="min-w-0 border-[#272119] p-4 sm:border-b sm:[&:nth-child(odd)]:border-r xl:[&:nth-child(odd)]:border-r-0 xl:[&:not(:nth-child(3n))]:border-r"
               >
-                <TokenLogo
-                  mint={position.mint}
-                  symbol={position.symbol ?? "COIN"}
-                  imageUrl={position.image}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="truncate text-sm font-extrabold">
-                      {position.symbol ? `$${position.symbol}` : short(position.mint)}
-                    </p>
-                    <p
-                      className="max-w-[55%] truncate font-mono text-[10px] font-bold tabular-nums text-[#ded7cb]"
-                      title={position.uiAmount}
-                    >
-                      {formatTokenBalance(position.uiAmount)}
-                    </p>
+                <div className="flex items-center gap-3">
+                  <TokenLogo
+                    mint={position.mint}
+                    symbol={position.symbol ?? "COIN"}
+                    imageUrl={position.image}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="truncate text-sm font-extrabold">
+                        {position.symbol ? `$${position.symbol}` : short(position.mint)}
+                      </p>
+                      <p
+                        className="max-w-[55%] truncate font-mono text-[10px] font-bold tabular-nums text-[#ded7cb]"
+                        title={position.uiAmount}
+                      >
+                        {formatTokenBalance(position.uiAmount)}
+                      </p>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <p className="truncate text-[9px] text-[#6f685f]">
+                        {position.name ?? "Metadata resolving"}
+                      </p>
+                      <a
+                        href={`https://solscan.io/token/${position.mint}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex shrink-0 items-center gap-1 text-[8px] font-bold text-[#766f65] hover:text-signal"
+                      >
+                        Evidence <ExternalLink className="size-2.5" />
+                      </a>
+                    </div>
                   </div>
-                  <div className="mt-1 flex items-center justify-between gap-2">
-                    <p className="truncate text-[9px] text-[#6f685f]">
-                      {position.name ?? "Metadata resolving"}
-                    </p>
-                    <a
-                      href={`https://solscan.io/token/${position.mint}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex shrink-0 items-center gap-1 text-[8px] font-bold text-[#766f65] hover:text-signal"
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {[50, 100].map((percent) => (
+                    <button
+                      key={percent}
+                      type="button"
+                      disabled={tradePending}
+                      onClick={() => onExit(position, percent)}
+                      aria-label={`${percent === 100 ? "Exit" : "Sell"} ${percent}% of ${position.symbol ? `$${position.symbol}` : position.mint}`}
+                      className="rounded-lg border border-block/25 bg-block/6 px-2 py-2 text-[9px] font-extrabold text-[#ff8f7b] enabled:hover:border-block/55 disabled:cursor-wait disabled:opacity-50"
                     >
-                      Evidence <ExternalLink className="size-2.5" />
-                    </a>
-                  </div>
+                      {percent === 100 ? "Exit 100%" : "Sell 50%"}
+                    </button>
+                  ))}
                 </div>
               </article>
             ))}
@@ -1587,6 +1639,17 @@ function WalletPositions({
                 : "SPL + Token-2022 · confirmed"}
             </span>
           </div>
+          {tradeMessage ? (
+            <p
+              className={cn(
+                "border-t border-[#31291f] px-4 py-2.5 text-[9px]",
+                tradeState === "error" ? "text-block" : "text-[#8da966]",
+              )}
+              role="status"
+            >
+              {tradeMessage}
+            </p>
+          ) : null}
         </>
       ) : (
         <div className="px-5 py-10 text-center">
