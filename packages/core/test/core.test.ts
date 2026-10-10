@@ -74,7 +74,7 @@ describe("canonical JSON and receipt hashing", () => {
       at: { ts: now },
       inputs: { factsHash: "facts", rulesetVersion: "gate-1.0.0" },
       outputs: { verdict: "PASS", score: 100 },
-      evidence: [{ kind: "tx", ref: safeFacts.signature }],
+      evidence: [{ kind: "tx", ref: safeFacts.signature ?? safeFacts.mint }],
       source: "replay",
       prev: null,
     });
