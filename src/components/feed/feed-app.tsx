@@ -99,6 +99,12 @@ type WalletPositionsPayload = {
   observedAt: number;
 };
 
+type ManualSellTarget = {
+  mint: string;
+  symbol: string;
+  factsHash?: string;
+};
+
 const FILTERS = ["ALL", "PASS", "WARN", "BLOCK", "WAIT"] as const;
 const PROFILES: Profile[] = ["strict", "standard", "loose"];
 const OFFICIAL_APEGATE_MINT =
@@ -209,15 +215,17 @@ export function FeedApp() {
   }, []);
 
   useEffect(() => {
-    if (!walletAddress) {
-      queueMicrotask(() => {
+    const refreshTimer = window.setTimeout(() => {
+      if (!walletAddress) {
         setPositionData(null);
         setPositionState("idle");
         setPositionError(null);
-      });
-      return;
-    }
-    queueMicrotask(() => void refreshPositions(walletAddress));
+        return;
+      }
+      void refreshPositions(walletAddress);
+    }, 0);
+
+    return () => window.clearTimeout(refreshTimer);
   }, [refreshPositions, walletAddress]);
 
   const selected =
@@ -520,10 +528,7 @@ export function FeedApp() {
     }
   }
 
-  async function executeManualSell(
-    target: { mint: string; symbol: string; factsHash?: string },
-    percent: number,
-  ) {
+  async function executeManualSell(target: ManualSellTarget, percent: number) {
     setTradeMessage(null);
     if (!activeWallet) {
       setWalletOpen(true);
@@ -1583,51 +1588,54 @@ function WalletPositions({
             {data.positions.map((position) => (
               <article
                 key={position.mint}
-                className="flex min-w-0 items-start gap-3 border-[#272119] p-4 sm:border-b sm:[&:nth-child(odd)]:border-r xl:[&:nth-child(odd)]:border-r-0 xl:[&:not(:nth-child(3n))]:border-r"
+                className="min-w-0 border-[#272119] p-4 sm:border-b sm:[&:nth-child(odd)]:border-r xl:[&:nth-child(odd)]:border-r-0 xl:[&:not(:nth-child(3n))]:border-r"
               >
-                <TokenLogo
-                  mint={position.mint}
-                  symbol={position.symbol ?? "COIN"}
-                  imageUrl={position.image}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="truncate text-sm font-extrabold">
-                      {position.symbol ? `$${position.symbol}` : short(position.mint)}
-                    </p>
-                    <p
-                      className="max-w-[55%] truncate font-mono text-[10px] font-bold tabular-nums text-[#ded7cb]"
-                      title={position.uiAmount}
-                    >
-                      {formatTokenBalance(position.uiAmount)}
-                    </p>
-                  </div>
-                  <div className="mt-1 flex items-center justify-between gap-2">
-                    <p className="truncate text-[9px] text-[#6f685f]">
-                      {position.name ?? "Metadata resolving"}
-                    </p>
-                    <a
-                      href={`https://solscan.io/token/${position.mint}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex shrink-0 items-center gap-1 text-[8px] font-bold text-[#766f65] hover:text-signal"
-                    >
-                      Evidence <ExternalLink className="size-2.5" />
-                    </a>
-                  </div>
-                  <div className="mt-2 flex gap-1.5">
-                    {[50, 100].map((percent) => (
-                      <button
-                        key={percent}
-                        type="button"
-                        disabled={tradePending}
-                        onClick={() => onExit(position, percent)}
-                        className="rounded-md border border-block/20 bg-block/5 px-2 py-1 font-mono text-[7px] font-bold text-[#ff8f7b] enabled:hover:border-block/50 disabled:cursor-wait disabled:opacity-45"
+                <div className="flex items-center gap-3">
+                  <TokenLogo
+                    mint={position.mint}
+                    symbol={position.symbol ?? "COIN"}
+                    imageUrl={position.image}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="truncate text-sm font-extrabold">
+                        {position.symbol ? `$${position.symbol}` : short(position.mint)}
+                      </p>
+                      <p
+                        className="max-w-[55%] truncate font-mono text-[10px] font-bold tabular-nums text-[#ded7cb]"
+                        title={position.uiAmount}
                       >
-                        {percent === 100 ? "EXIT ALL" : "SELL 50%"}
-                      </button>
-                    ))}
+                        {formatTokenBalance(position.uiAmount)}
+                      </p>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <p className="truncate text-[9px] text-[#6f685f]">
+                        {position.name ?? "Metadata resolving"}
+                      </p>
+                      <a
+                        href={`https://solscan.io/token/${position.mint}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex shrink-0 items-center gap-1 text-[8px] font-bold text-[#766f65] hover:text-signal"
+                      >
+                        Evidence <ExternalLink className="size-2.5" />
+                      </a>
+                    </div>
                   </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {[50, 100].map((percent) => (
+                    <button
+                      key={percent}
+                      type="button"
+                      disabled={tradePending}
+                      onClick={() => onExit(position, percent)}
+                      aria-label={`${percent === 100 ? "Exit" : "Sell"} ${percent}% of ${position.symbol ? `$${position.symbol}` : position.mint}`}
+                      className="rounded-lg border border-block/25 bg-block/6 px-2 py-2 text-[9px] font-extrabold text-[#ff8f7b] enabled:hover:border-block/55 disabled:cursor-wait disabled:opacity-50"
+                    >
+                      {percent === 100 ? "Exit 100%" : "Sell 50%"}
+                    </button>
+                  ))}
                 </div>
               </article>
             ))}

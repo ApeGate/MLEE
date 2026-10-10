@@ -45,7 +45,7 @@ export function formatTokenAmount(rawAmount: bigint, decimals: number) {
 export function parseWalletTokenAccounts(
   responses: ReadonlyArray<{
     programId: typeof TOKEN_PROGRAM_ID | typeof TOKEN_2022_PROGRAM_ID;
-    body: ParsedTokenAccountsResponse;
+    body: unknown;
   }>,
 ): WalletPosition[] {
   const aggregated = new Map<
@@ -58,7 +58,8 @@ export function parseWalletTokenAccounts(
   >();
 
   for (const response of responses) {
-    for (const item of response.body.result?.value ?? []) {
+    const body = response.body as ParsedTokenAccountsResponse;
+    for (const item of body?.result?.value ?? []) {
       const info = item.account?.data?.parsed?.info;
       const mint = typeof info?.mint === "string" ? info.mint : "";
       const rawAmount = info?.tokenAmount?.amount;
