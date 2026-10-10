@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { VaultPreview } from "@/components/vault/vault-preview";
+import { readPrivyVaultConfig } from "@/lib/privy/server";
 
 export const metadata: Metadata = {
   title: "Privy Vault preview",
@@ -8,13 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function VaultPage() {
-  return (
-    <VaultPreview
-      appIdConfigured={Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID)}
-      serverCredentialsConfigured={Boolean(
-        process.env.PRIVY_APP_SECRET &&
-          process.env.PRIVY_AUTHORIZATION_PRIVATE_KEY,
-      )}
-    />
-  );
+  return <VaultPreview readiness={readPrivyVaultConfig()} />;
 }

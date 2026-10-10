@@ -110,15 +110,37 @@ reads. `RUGCHECK_API_KEY` is optional.
 Wallet connect is a connect-only path for the future manual-sign flow. No
 transaction can be built, signed, or sent. Manual signing is the default.
 
-Privy Vault is scaffolded in the UI but non-operational. Production Vault work
-still needs:
+Privy Vault is wired to the Worker-compatible `@privy-io/node` server SDK, but
+remains deliberately non-operational. `/api/vault/status` reports
+configuration booleans only; it never returns credential values or calls a
+wallet-mutation endpoint.
+
+Copy these exact values into `.env.local`:
 
 - `NEXT_PUBLIC_PRIVY_APP_ID`
+- `PRIVY_APP_ID`
 - `PRIVY_APP_SECRET`
 - `PRIVY_AUTHORIZATION_PRIVATE_KEY`
-- policy signer implementation, transaction firewall, and canary tests
 
-Never put server secrets in `NEXT_PUBLIC_` variables.
+`NEXT_PUBLIC_PRIVY_APP_ID` and `PRIVY_APP_ID` are the same App ID from the
+Privy dashboard, copied into browser and server scopes. The authorization
+private key must be base64-encoded PKCS8 with no PEM headers. The App Secret
+and authorization private key are server-only and must never use a
+`NEXT_PUBLIC_` name.
+
+For Cloudflare, set both App ID variables in the build environment and store
+the sensitive values as encrypted Worker secrets:
+
+```bash
+npx wrangler secret put PRIVY_APP_SECRET
+npx wrangler secret put PRIVY_AUTHORIZATION_PRIVATE_KEY
+```
+
+Add `http://localhost:43127` as a Privy allowed origin for local integration.
+Add `https://apegate.io` when DNS is active; domain setup does not block the
+current build. Credentials only make the SDK ready: wallet creation remains
+hard-disabled pending the policy signer, transaction firewall, mainnet
+canaries, revoke tests, and external security review.
 
 ## Quality checks
 

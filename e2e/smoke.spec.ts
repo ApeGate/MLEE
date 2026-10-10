@@ -64,6 +64,16 @@ test("plan builder keeps rehearsed versions inactive", async ({ page }) => {
 });
 
 test("Vault creates only a disabled policy preview", async ({ page }) => {
+  const statusResponse = await page.request.get("/api/vault/status");
+  expect(statusResponse.ok()).toBe(true);
+  expect(statusResponse.headers()["cache-control"]).toContain("no-store");
+  const status = (await statusResponse.json()) as Record<string, unknown>;
+  expect(status.sdkInstalled).toBe(true);
+  expect(status.executionEnabled).toBe(false);
+  expect(status.externalSecurityReviewComplete).toBe(false);
+  expect(status).not.toHaveProperty("appSecret");
+  expect(status).not.toHaveProperty("authorizationPrivateKey");
+
   await page.goto("/vault");
   await page
     .getByPlaceholder("Paste your Solana address")

@@ -19,6 +19,7 @@ import {
   type VaultPolicyPreview as VaultPolicy,
   type VaultProgram,
 } from "../../../packages/core/src";
+import type { PrivyVaultReadiness } from "@/lib/privy/config";
 import { cn } from "@/lib/utils";
 import { useReceipts } from "@/lib/use-receipts";
 
@@ -42,11 +43,9 @@ const PROGRAMS: Array<{
 ];
 
 export function VaultPreview({
-  appIdConfigured,
-  serverCredentialsConfigured,
+  readiness,
 }: {
-  appIdConfigured: boolean;
-  serverCredentialsConfigured: boolean;
+  readiness: PrivyVaultReadiness;
 }) {
   const { addVaultPreview } = useReceipts();
   const [draft, setDraft] = useState<VaultPolicyDraft>(DEFAULT_POLICY);
@@ -146,29 +145,69 @@ export function VaultPreview({
 
             <div className="mt-7 space-y-2">
               <StatusLine
-                label="Privy public app ID"
-                ready={appIdConfigured}
-                readyCopy="Detected"
-                missingCopy="Missing"
+                label="Privy server SDK"
+                ready={readiness.sdkInstalled}
+                readyCopy="Wired"
+                missingCopy="Not installed"
               />
               <StatusLine
-                label="Server authorization"
-                ready={serverCredentialsConfigured}
-                readyCopy="Credentials detected"
-                missingCopy="Secrets missing"
+                label="Browser app ID"
+                ready={readiness.browserAppIdConfigured}
+                readyCopy="Configured"
+                missingCopy="Add public ID"
+              />
+              <StatusLine
+                label="Server app ID"
+                ready={readiness.appIdConfigured}
+                readyCopy="Configured"
+                missingCopy="Add server ID"
+              />
+              <StatusLine
+                label="App IDs match"
+                ready={readiness.appIdsMatch}
+                readyCopy="Same app"
+                missingCopy="Check IDs"
+              />
+              <StatusLine
+                label="App secret"
+                ready={readiness.appSecretConfigured}
+                readyCopy="Configured"
+                missingCopy="Add secret"
+              />
+              <StatusLine
+                label="Authorization key"
+                ready={readiness.authorizationKeyConfigured}
+                readyCopy="Configured"
+                missingCopy="Add PKCS8 key"
               />
               <StatusLine
                 label="External security review"
-                ready={false}
+                ready={readiness.externalSecurityReviewComplete}
                 readyCopy="Complete"
                 missingCopy="Not complete"
               />
               <StatusLine
                 label="Execution flag"
-                ready={false}
+                ready={readiness.executionEnabled}
                 readyCopy="Enabled"
                 missingCopy="Hard off"
               />
+            </div>
+
+            <div className="mt-5 rounded-xl border border-[#302a20] bg-[#0d0b09] p-4">
+              <p className="font-mono text-[8px] font-bold uppercase tracking-[0.14em] text-[#86d8ff]">
+                Drop-in credential map
+              </p>
+              <div className="mt-3 space-y-1.5 font-mono text-[7px] text-[#777066]">
+                <p>NEXT_PUBLIC_PRIVY_APP_ID</p>
+                <p>PRIVY_APP_ID</p>
+                <p>PRIVY_APP_SECRET</p>
+                <p>PRIVY_AUTHORIZATION_PRIVATE_KEY</p>
+              </div>
+              <p className="mt-3 text-[8px] leading-relaxed text-[#6f685f]">
+                Copy the same dashboard App ID into both ID fields. Keep the
+                secret and base64 PKCS8 authorization key server-side.
+              </p>
             </div>
 
             <div className="mt-5 rounded-xl border border-[#ffb13c]/25 bg-[#ffb13c]/6 p-4">
