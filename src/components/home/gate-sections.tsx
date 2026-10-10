@@ -542,9 +542,15 @@ export function GateSections() {
               APEGATE · apegate.io
             </span>
           </div>
-          <p>
-            Live Gate · PAPER simulation · Privy manual signing
-          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href="/trust" className="hover:text-[#b6aea1]">
+              Safety & disclosures
+            </Link>
+            <Link href="/status" className="hover:text-[#b6aea1]">
+              Status
+            </Link>
+            <span>Live Gate · PAPER · Privy manual sign</span>
+          </div>
         </footer>
       </section>
     </>

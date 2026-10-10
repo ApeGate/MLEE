@@ -26,6 +26,16 @@ test("official token registry never fabricates a CA", async ({ page }) => {
   await expect(page.getByText(/buy (route|official)/i)).toBeVisible();
 });
 
+test("safety disclosures state custody, fees, and loss risk", async ({ page }) => {
+  await page.goto("/trust");
+  await expect(
+    page.getByRole("heading", { name: /clear limits/i }),
+  ).toBeVisible();
+  await expect(page.getByText("Your wallet signs", { exact: true })).toBeVisible();
+  await expect(page.getByText("0.5% Apegate fee", { exact: true })).toBeVisible();
+  await expect(page.getByText("You can lose everything", { exact: true })).toBeVisible();
+});
+
 test("crew page publishes permissions and boundaries", async ({ page }) => {
   await page.goto("/crew");
   await expect(
