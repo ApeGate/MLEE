@@ -1,4 +1,8 @@
 import { hashCanonical } from "./canonical";
+import {
+  isOfficialApegateMint,
+  resemblesApegateIdentity,
+} from "./official-token";
 import type {
   Evidence,
   GateCheck,
@@ -6,6 +10,10 @@ import type {
   LaunchFacts,
   Profile,
 } from "./types";
+
+export interface GateOptions {
+  officialApegateMint?: string | null;
+}
 
 const THRESHOLDS = {
   strict: {
@@ -116,6 +124,7 @@ export async function evaluateGate(
   facts: LaunchFacts,
   profile: Profile = "standard",
   now = facts.observedAt,
+  options: GateOptions = {},
 ): Promise<GateVerdict> {
   const tx = txEvidence(facts);
   const account: Evidence[] = [
@@ -126,6 +135,40 @@ export async function evaluateGate(
     },
   ];
   const checks: GateCheck[] = [];
+  const protectedIdentity =
+    resemblesApegateIdentity(facts.name) ||
+    resemblesApegateIdentity(facts.symbol);
+  const officialMint = isOfficialApegateMint(
+    facts.mint,
+    options.officialApegateMint,
+  );
+
+  checks.push({
+    id: "impersonation_apegate",
+    label: "Apegate identity",
+    outcome: protectedIdentity && !officialMint ? "fail" : "pass",
+    value: officialMint
+      ? "Official CA"
+      : protectedIdentity
+        ? "Protected match"
+        : "Clear",
+    threshold: "protected names require the exact CA on apegate.io",
+    reason: officialMint
+      ? "Mint exactly matches the official contract address configured by apegate.io"
+      : protectedIdentity
+        ? "Name or ticker resembles Apegate but the mint is not the published official address"
+        : "No protected Apegate name or ticker match",
+    penalty: protectedIdentity && !officialMint ? 100 : 0,
+    hard: true,
+    evidence: [
+      {
+        kind: "url",
+        ref: "https://apegate.io/token",
+        note: "Official Apegate token registry",
+      },
+      ...account,
+    ],
+  });
 
   for (const [id, label, authority] of [
     ["mint_authority", "Mint authority", facts.mintAuthority],
@@ -273,7 +316,7 @@ export async function evaluateGate(
     kind,
     score,
     profile,
-    rulesetVersion: "gate-1.0.0",
+    rulesetVersion: "gate-1.1.0",
     checks,
     topReasons,
     factsHash,

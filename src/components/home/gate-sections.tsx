@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
+  BadgeCheck,
   Ban,
   Binoculars,
   BrainCircuit,
@@ -14,9 +15,11 @@ import {
   LockKeyhole,
   Rocket,
   ScanSearch,
+  ShieldAlert,
   ShieldCheck,
   WalletCards,
 } from "lucide-react";
+import { normalizeOfficialApegateMint } from "../../../packages/core/src";
 
 const CREW = [
   {
@@ -82,6 +85,13 @@ const CREW = [
 ] as const;
 
 export function GateSections() {
+  const officialMint = normalizeOfficialApegateMint(
+    process.env.NEXT_PUBLIC_APEGATE_TOKEN_MINT,
+  );
+  const tokenLive =
+    Boolean(officialMint) &&
+    process.env.OFFICIAL_TOKEN_LAUNCH_ENABLED === "true";
+
   return (
     <>
       <section className="px-5 py-20 sm:px-8 sm:py-28">
@@ -191,7 +201,7 @@ export function GateSections() {
                   <div>
                     <p className="text-sm font-extrabold">Kong · verdict</p>
                     <p className="font-mono text-[8px] uppercase tracking-[0.14em] text-[#6f685f]">
-                      gate-1.0.0 · standard
+                      gate-1.1.0 · standard
                     </p>
                   </div>
                 </div>
@@ -228,6 +238,96 @@ export function GateSections() {
                 </div>
               </div>
             </article>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="token"
+        className="border-b border-[#302a20] bg-[#090806] px-5 py-20 sm:px-8 sm:py-28"
+      >
+        <div className="mx-auto grid max-w-7xl overflow-hidden rounded-[1.8rem] border border-[#3a3328] bg-[#12100c] lg:grid-cols-[0.72fr_1.28fr]">
+          <div className="relative min-h-80 overflow-hidden border-b border-[#302a20] p-7 lg:border-b-0 lg:border-r sm:p-10">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_45%_40%,rgb(255_79_31_/_20%),transparent_54%)]" />
+            <Image
+              src="/apegate-logo.jpg"
+              alt="Official Apegate token mark"
+              width={380}
+              height={380}
+              className="relative mx-auto w-full max-w-72 rotate-[-2deg] rounded-[2rem] border border-[#ff7250]/30 object-cover shadow-[0_34px_90px_rgb(255_79_31_/_14%)]"
+            />
+            <span className="absolute bottom-6 left-6 rounded-full border border-[#c7ff45]/25 bg-[#090806]/85 px-3 py-1.5 font-mono text-[8px] font-bold uppercase tracking-[0.14em] text-[#c7ff45] backdrop-blur">
+              $APEGATE · official only
+            </span>
+          </div>
+
+          <div className="flex flex-col justify-center p-7 sm:p-10 lg:p-14">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#ff7250]/25 bg-[#ff4f1f]/7 px-3 py-1.5 font-mono text-[8px] font-bold uppercase tracking-[0.15em] text-[#ff8a64]">
+                <BadgeCheck className="size-3" />
+                Official Apegate token
+              </span>
+              <span
+                className={`rounded-full border px-3 py-1.5 font-mono text-[8px] font-bold uppercase tracking-[0.12em] ${
+                  tokenLive
+                    ? "border-pass/25 bg-pass/7 text-pass"
+                    : "border-wait/25 bg-wait/7 text-wait"
+                }`}
+              >
+                {tokenLive ? "Live · CA verified" : "Pre-launch · CA pending"}
+              </span>
+            </div>
+            <h2 className="mt-6 text-4xl font-extrabold leading-[0.96] tracking-[-0.06em] sm:text-6xl">
+              One ticker.
+              <br />
+              <span className="text-stroke">One published CA.</span>
+            </h2>
+            <p className="mt-6 max-w-2xl text-sm leading-relaxed text-[#91897e]">
+              Apegate&apos;s utility token is prepared for a clean, single-wallet
+              launch. Kong blocks lookalike names and tickers unless the mint
+              exactly matches the contract address published on apegate.io.
+            </p>
+
+            <div className="mt-6 rounded-xl border border-[#ffb13c]/25 bg-[#ffb13c]/6 p-4">
+              <div className="flex items-start gap-3">
+                <ShieldAlert className="mt-0.5 size-4 shrink-0 text-[#ffb13c]" />
+                <div>
+                  <p className="text-xs font-extrabold text-[#d8b77c]">
+                    {officialMint
+                      ? "Verify the full address before every interaction."
+                      : "No official contract address has been published yet."}
+                  </p>
+                  <p className="mt-1 break-all font-mono text-[9px] leading-relaxed text-[#9e8259]">
+                    {officialMint ??
+                      "Any coin claiming to be Apegate before the CA appears on this site is an impersonator."}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link
+                href="/token"
+                className="group inline-flex items-center gap-2 rounded-full bg-[#f4efe5] px-5 py-3 text-sm font-extrabold text-[#090806] transition-transform hover:-translate-y-0.5"
+              >
+                Verify the official token
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+              {tokenLive && officialMint ? (
+                <a
+                  href={`https://pump.fun/coin/${officialMint}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-[#ff7250]/35 px-5 py-3 text-sm font-bold text-[#ff8a64] hover:border-[#ff7250]"
+                >
+                  Buy on Pump.fun <ArrowRight className="size-4" />
+                </a>
+              ) : (
+                <span className="inline-flex cursor-not-allowed items-center rounded-full border border-[#31291f] px-5 py-3 text-sm font-bold text-[#5f584f]">
+                  Buy link unlocks after CA publication
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </section>

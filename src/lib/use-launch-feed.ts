@@ -18,6 +18,8 @@ export type FeedLaunch = {
 };
 
 type FeedStatus = "connecting" | "live" | "replay" | "error";
+const OFFICIAL_APEGATE_MINT =
+  process.env.NEXT_PUBLIC_APEGATE_TOKEN_MINT ?? null;
 
 function isLaunch(value: unknown): value is RawLaunch {
   if (!value || typeof value !== "object") return false;
@@ -40,7 +42,9 @@ async function buildReplay(): Promise<FeedLaunch[]> {
       const facts = launchToFacts(launch, createdAt, createdAt);
       return {
         facts,
-        verdict: await evaluateGate(facts, "standard", createdAt),
+        verdict: await evaluateGate(facts, "standard", createdAt, {
+          officialApegateMint: OFFICIAL_APEGATE_MINT,
+        }),
         source: "replay" as const,
       };
     }),
@@ -125,7 +129,9 @@ export function useLaunchFeed() {
         const facts = launchToFacts(payload, observedAt);
         setLastMessageAt(observedAt);
         setStatus("live");
-        void evaluateGate(facts, "standard", observedAt).then((verdict) => {
+        void evaluateGate(facts, "standard", observedAt, {
+          officialApegateMint: OFFICIAL_APEGATE_MINT,
+        }).then((verdict) => {
           if (disposed) return;
           setLaunches((current) => [
             { facts, verdict, source: "live" as const },
@@ -166,7 +172,9 @@ export function useLaunchFeed() {
                   ? trade.marketCapSol
                   : launch.facts.marketCapSol,
             };
-            void evaluateGate(facts, "standard", observedAt).then((verdict) => {
+            void evaluateGate(facts, "standard", observedAt, {
+              officialApegateMint: OFFICIAL_APEGATE_MINT,
+            }).then((verdict) => {
               if (!disposed) {
                 updateLaunch(facts.mint, (item) => ({
                   ...item,

@@ -62,7 +62,7 @@ export interface GateVerdict {
   kind: VerdictKind;
   score: number;
   profile: Profile;
-  rulesetVersion: "gate-1.0.0";
+  rulesetVersion: "gate-1.1.0";
   checks: GateCheck[];
   topReasons: string[];
   factsHash: string;

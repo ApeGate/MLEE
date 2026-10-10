@@ -8,6 +8,7 @@ This Phase 0–1 release is deliberately read-only:
 
 - `/` — Gate-first product home
 - `/feed` — real launch discovery with a recorded real-tape fallback
+- `/token` — official $APEGATE status and contract-address registry
 - `/launch` — Launch Bay local preparation and Kong preflight scaffold
 - `/status` — honest capability status
 - `/desk` — redirects to the Gate
@@ -16,6 +17,24 @@ The feed connects to the public Pump launch stream in the browser. Opening a
 launch asks Solana RPC for mint safety and an optional independent risk source
 for holder and creator context. Missing data forces `WAIT`; it never becomes a
 silent `PASS`.
+
+## Official $APEGATE token
+
+The go-to-market token route is staged without inventing a contract address.
+Until `NEXT_PUBLIC_APEGATE_TOKEN_MINT` contains a confirmed Solana mint,
+`/token` says **NOT PUBLISHED** and no buy link is rendered. Kong
+`gate-1.1.0` hard-blocks names and tickers that resemble Apegate—including
+spacing and leetspeak variants—unless the mint exactly matches that configured
+address.
+
+After the official creation is confirmed:
+
+1. set `NEXT_PUBLIC_APEGATE_TOKEN_MINT` to the verified CA;
+2. verify the address rendered at `apegate.io/token`;
+3. set `OFFICIAL_TOKEN_LAUNCH_ENABLED=true` to unlock the Pump.fun buy route.
+
+The production launch still needs `OFFICIAL_CREATOR_WALLET`, `PINATA_JWT`, and
+the creator wallet's manual signature. No key material belongs in git.
 
 Launch Bay is approved and sequenced after the Gate. Its current Phase 1
 surface prepares metadata, token settings, clean-launch guardrails, and a local
@@ -62,6 +81,6 @@ npm run cf-typegen
 ```
 
 The pure TypeScript core in `packages/core` owns canonical JSON, SHA-256 receipt
-chains, `gate-1.0.0`, and the locked 0.5% Apegate fee. Cloudflare deployment is
+chains, `gate-1.1.0`, and the locked 0.5% Apegate fee. Cloudflare deployment is
 pinned to OpenNext via `open-next.config.ts` and `wrangler.jsonc`, with logs and
 traces enabled.

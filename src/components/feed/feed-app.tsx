@@ -62,6 +62,8 @@ type BrowserWallet = {
 const FILTERS = ["ALL", "PASS", "WARN", "BLOCK", "WAIT"] as const;
 const PROFILES: Profile[] = ["strict", "standard", "loose"];
 const FEE_PREVIEW = estimateFees(0.25, 125, 0.000_01);
+const OFFICIAL_APEGATE_MINT =
+  process.env.NEXT_PUBLIC_APEGATE_TOKEN_MINT ?? null;
 
 export function FeedApp() {
   const { launches, status, lastMessageAt, retry, updateLaunch } =
@@ -121,7 +123,9 @@ export function FeedApp() {
           rugScore: risk.rugScore,
           rugRisks: risk.rugRisks,
         };
-        const verdict = await evaluateGate(facts, nextProfile, Date.now());
+        const verdict = await evaluateGate(facts, nextProfile, Date.now(), {
+          officialApegateMint: OFFICIAL_APEGATE_MINT,
+        });
         updateLaunch(facts.mint, (current) => ({
           ...current,
           facts,
@@ -154,7 +158,9 @@ export function FeedApp() {
       await enrich(selected, next);
       return;
     }
-    const verdict = await evaluateGate(selected.facts, next, Date.now());
+    const verdict = await evaluateGate(selected.facts, next, Date.now(), {
+      officialApegateMint: OFFICIAL_APEGATE_MINT,
+    });
     updateLaunch(selected.facts.mint, (current) => ({
       ...current,
       verdict,
@@ -286,7 +292,7 @@ export function FeedApp() {
             value={String(
               launches.filter((item) => item.verdict.kind === "BLOCK").length,
             )}
-            note="gate-1.0.0 decisions"
+            note="gate-1.1.0 decisions"
             source={status === "live" ? "LIVE" : "REPLAY"}
             icon={<ShieldCheck className="size-4" />}
           />

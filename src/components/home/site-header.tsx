@@ -36,10 +36,10 @@ export function SiteHeader() {
             Crew
           </Link>
           <Link
-            href="/#receipts"
+            href="/token"
             className="hidden text-[#a79f92] transition-colors hover:text-[#f4efe5] lg:inline"
           >
-            Receipts
+            $APEGATE
           </Link>
           <Link
             href="/launch"

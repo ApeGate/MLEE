@@ -6,7 +6,10 @@ import {
   estimateFees,
   evaluateGate,
   hashCanonical,
+  isOfficialApegateMint,
+  officialTokenManifestHash,
   preflightLaunch,
+  resemblesApegateIdentity,
   verifyReceipt,
   verifyReceiptChain,
   type LaunchDraft,
@@ -80,7 +83,7 @@ describe("canonical JSON and receipt hashing", () => {
   });
 });
 
-describe("Kong gate-1.0.0", () => {
+describe("Kong gate-1.1.0", () => {
   it("passes complete, safe facts", async () => {
     const verdict = await evaluateGate(safeFacts, "standard", now);
     expect(verdict.kind).toBe("PASS");
@@ -123,6 +126,54 @@ describe("Kong gate-1.0.0", () => {
     );
     expect(authority.kind).toBe("BLOCK");
     expect(concentration.kind).toBe("BLOCK");
+  });
+
+  it("blocks Apegate impersonators unless the exact official CA matches", async () => {
+    const fake = await evaluateGate(
+      { ...safeFacts, name: "Ape Gate", symbol: "APEG8" },
+      "standard",
+      now,
+    );
+    expect(fake.kind).toBe("BLOCK");
+    expect(
+      fake.checks.find((check) => check.id === "impersonation_apegate")
+        ?.outcome,
+    ).toBe("fail");
+
+    const officialMint = "So11111111111111111111111111111111111111112";
+    const official = await evaluateGate(
+      {
+        ...safeFacts,
+        mint: officialMint,
+        name: "Apegate",
+        symbol: "APEGATE",
+      },
+      "standard",
+      now,
+      { officialApegateMint: officialMint },
+    );
+    expect(official.kind).toBe("PASS");
+    expect(
+      official.checks.find((check) => check.id === "impersonation_apegate")
+        ?.value,
+    ).toBe("Official CA");
+  });
+});
+
+describe("official Apegate token identity", () => {
+  it("catches spacing, leetspeak, and close protected variants", () => {
+    expect(resemblesApegateIdentity("Ape Gate")).toBe(true);
+    expect(resemblesApegateIdentity("APEG8")).toBe(true);
+    expect(resemblesApegateIdentity("Apegaet")).toBe(true);
+    expect(resemblesApegateIdentity("Banana Hours")).toBe(false);
+  });
+
+  it("accepts only a valid exact configured mint", async () => {
+    const mint = "So11111111111111111111111111111111111111112";
+    expect(isOfficialApegateMint(mint, mint)).toBe(true);
+    expect(isOfficialApegateMint(`${mint}x`, mint)).toBe(false);
+    expect(isOfficialApegateMint("not-a-mint", "not-a-mint")).toBe(false);
+    await expect(officialTokenManifestHash()).resolves.toMatch(/^[a-f0-9]{64}$/);
   });
 });
 
@@ -186,5 +237,16 @@ describe("Launch Bay preparation", () => {
     expect(
       preflight.checks.filter((check) => check.outcome === "fail").length,
     ).toBeGreaterThanOrEqual(3);
+  });
+
+  it("blocks APEG8 as a protected ticker variant", async () => {
+    const preflight = await preflightLaunch({
+      ...safeLaunch,
+      symbol: "APEG8",
+    });
+    expect(preflight.kind).toBe("BLOCK");
+    expect(
+      preflight.checks.find((check) => check.id === "identity")?.outcome,
+    ).toBe("fail");
   });
 });

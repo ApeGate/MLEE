@@ -1,4 +1,5 @@
 import { hashCanonical } from "./canonical";
+import { resemblesApegateIdentity } from "./official-token";
 
 export type LaunchQuoteAsset = "SOL" | "USDC";
 export type LaunchCheckOutcome = "pass" | "warn" | "fail" | "pending";
@@ -34,10 +35,6 @@ export interface LaunchPreflight {
   readyForBuild: false;
 }
 
-function normalizedIdentity(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
 function isHttpsUrl(value: string): boolean {
   if (!value.trim()) return false;
   try {
@@ -54,8 +51,7 @@ export async function preflightLaunch(
   const symbol = draft.symbol.trim().toUpperCase();
   const description = draft.description.trim();
   const protectedIdentity =
-    normalizedIdentity(name).includes("apegate") ||
-    normalizedIdentity(symbol).includes("apegate");
+    resemblesApegateIdentity(name) || resemblesApegateIdentity(symbol);
   const checks: LaunchPreflightCheck[] = [
     {
       id: "identity",

@@ -34,6 +34,14 @@ const SERVICES = [
       "Local metadata and token draft, deterministic Kong preflight, and receipt preview; no upload, transaction build, or signature",
   },
   {
+    name: "Official $APEGATE registry",
+    state: process.env.NEXT_PUBLIC_APEGATE_TOKEN_MINT
+      ? "CA configured"
+      : "Pre-launch",
+    detail:
+      "Official token page is ready; Kong hard-blocks protected identity variants unless the exact configured mint matches",
+  },
+  {
     name: "Trading and Vault",
     state: "Disabled",
     detail:
@@ -100,10 +108,13 @@ export default function StatusPage() {
                   className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 font-mono text-[7px] font-bold uppercase ${
                     service.state === "Disabled"
                       ? "border-[#6f685f]/25 text-[#6f685f]"
+                      : service.state === "Pre-launch"
+                        ? "border-wait/25 bg-wait/6 text-wait"
                       : "border-pass/25 bg-pass/6 text-pass"
                   }`}
                 >
-                  {service.state === "Disabled" ? (
+                  {service.state === "Disabled" ||
+                  service.state === "Pre-launch" ? (
                     <CircleDot className="size-2.5" />
                   ) : (
                     <CheckCircle2 className="size-2.5" />
