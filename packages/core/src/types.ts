@@ -19,7 +19,7 @@ export interface Evidence {
 
 export interface LaunchFacts {
   mint: string;
-  signature: string;
+  signature?: string | null;
   name: string;
   symbol: string;
   creator: string;
@@ -78,6 +78,7 @@ export interface Receipt {
     | "connect"
     | "block"
     | "paper_fill"
+    | "manual_fill"
     | "plan_change"
     | "vault_preview";
   actor: ApeId | "user" | "system";

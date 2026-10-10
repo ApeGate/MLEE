@@ -3,6 +3,8 @@ import {
   APEGATE_FEE_BPS,
   applyPaperBuy,
   applyPaperSell,
+  assertManualBuyTransactionSafe,
+  authorizeMainnetCanaryBuy,
   buildLabReport,
   canonicalize,
   createPlanSpec,
@@ -200,6 +202,72 @@ describe("fees", () => {
       networkEstimate: 0.001,
       total: 1.0185,
     });
+  });
+});
+
+describe("manual mainnet canary boundaries", () => {
+  it("authorizes only a fresh PASS inside the funded test range", async () => {
+    const verdict = await evaluateGate(safeFacts, "standard", now);
+    expect(
+      authorizeMainnetCanaryBuy({
+        amountSol: 0.01,
+        balanceSol: 0.1,
+        expectedSigner: "wallet",
+        actualSigner: "wallet",
+        verdict,
+        now,
+      }),
+    ).toMatchObject({
+      mint: safeFacts.mint,
+      amountSol: 0.01,
+      factsHash: verdict.factsHash,
+    });
+
+    expect(() =>
+      authorizeMainnetCanaryBuy({
+        amountSol: 0.051,
+        balanceSol: 0.1,
+        expectedSigner: "wallet",
+        actualSigner: "wallet",
+        verdict,
+        now,
+      }),
+    ).toThrow(/between 0.01 and 0.05 SOL/);
+    expect(() =>
+      authorizeMainnetCanaryBuy({
+        amountSol: 0.01,
+        balanceSol: 0.1,
+        expectedSigner: "wallet",
+        actualSigner: "wallet",
+        verdict,
+        now: verdict.freshUntil + 1,
+      }),
+    ).toThrow(/expired/);
+  });
+
+  it("rejects extra signers, lookup tables, and unapproved programs", () => {
+    const base = {
+      feePayer: "wallet",
+      requiredSigners: ["wallet"],
+      addressLookupTableCount: 0,
+      programIds: [
+        "11111111111111111111111111111111",
+        "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+      ],
+    };
+    expect(assertManualBuyTransactionSafe(base).programIds).toHaveLength(2);
+    expect(() =>
+      assertManualBuyTransactionSafe({
+        ...base,
+        programIds: [...base.programIds, "UnknownProgram"],
+      }),
+    ).toThrow(/unapproved programs/);
+    expect(() =>
+      assertManualBuyTransactionSafe({
+        ...base,
+        addressLookupTableCount: 1,
+      }),
+    ).toThrow(/lookup tables/);
   });
 });
 

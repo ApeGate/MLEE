@@ -37,13 +37,21 @@ const THRESHOLDS = {
 } as const;
 
 function txEvidence(facts: LaunchFacts): Evidence[] {
-  return [
-    {
-      kind: "tx",
-      ref: facts.signature,
-      note: "Pump program creation transaction",
-    },
-  ];
+  return facts.signature
+    ? [
+        {
+          kind: "tx",
+          ref: facts.signature,
+          note: "Pump program creation transaction",
+        },
+      ]
+    : [
+        {
+          kind: "account",
+          ref: facts.mint,
+          note: "Mint account; creation signature unavailable",
+        },
+      ];
 }
 
 function numericCheck({

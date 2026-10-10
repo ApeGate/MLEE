@@ -104,8 +104,22 @@ reads. `RUGCHECK_API_KEY` is optional.
 
 ## Wallet and Vault status
 
-Wallet connect is a connect-only path for the future manual-sign flow. No
-transaction can be built, signed, or sent. Manual signing is the default.
+Wallet connect is a connect-only path for the future manual-sign flow. The
+browser cannot build, sign, or send a transaction. Manual signing is the
+default.
+
+The operator-only mainnet canary is separate from the browser app. It requires
+a fresh Kong `PASS`, a 0.01–0.05 SOL amount, the expected local signer, a
+single-signer transaction, approved Pump programs, and a successful simulation:
+
+```bash
+npm run canary:buy -- \
+  --mint <PUMP_MINT> --amount 0.01 --confirm-mainnet
+```
+
+Set `CANARY_EXPECTED_PUBKEY` and `CANARY_WALLET_SECRET_PATH` only in the
+uncommitted `.env.local`. The script prints a hash-chained `manual_fill`
+receipt after confirmation and never prints key material.
 
 Privy Vault is wired to the Worker-compatible `@privy-io/node` server SDK, but
 remains deliberately non-operational. `/api/vault/status` reports

@@ -4,6 +4,7 @@ export * from "./gate";
 export * from "./launch";
 export * from "./launch-bay";
 export * from "./lab";
+export * from "./manual-trading";
 export * from "./official-token";
 export * from "./paper";
 export * from "./plans";
