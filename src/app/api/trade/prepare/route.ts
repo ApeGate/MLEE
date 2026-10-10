@@ -6,8 +6,10 @@ import { assertManualBuyTransactionSafe } from "../../../../../packages/core/src
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const TRADE_ENDPOINT = "https://pumpportal.fun/api/trade-local";
 const MIN_BUY_SOL = 0.01;
-const MAX_BUY_SOL = 0.25;
+const MAX_BUY_SOL = 0.05;
 const MAX_TRANSACTION_BYTES = 64 * 1024;
+const PRIORITY_FEE_SOL = 0.0005;
+const MAX_TIP_LAMPORTS = 100_000;
 
 type PrepareBody = {
   publicKey?: unknown;
@@ -99,7 +101,7 @@ export async function POST(request: Request) {
         amount: amountSol,
         denominatedInSol: "true",
         slippage: slippagePct,
-        priorityFee: 0.0005,
+        priorityFee: PRIORITY_FEE_SOL,
         pool: "auto",
       }),
       signal: AbortSignal.timeout(8_000),
@@ -116,10 +118,30 @@ export async function POST(request: Request) {
         .slice(0, message.header.numRequiredSignatures)
         .map((key) => key.toBase58()),
       addressLookupTableCount: message.addressTableLookups.length,
-      programIds: message.compiledInstructions.map((instruction) => {
-        const key = accountKeys.get(instruction.programIdIndex);
-        if (!key) throw new Error("Transaction contains an unresolved program");
-        return key.toBase58();
+      expectedMint: mint,
+      maxTradeSpendLamports: Math.ceil(
+        amountSol * 1_000_000_000 * (1 + slippagePct / 100),
+      ),
+      maxPriorityFeeLamports: Math.ceil(
+        PRIORITY_FEE_SOL * 1_000_000_000,
+      ),
+      maxTipLamports: MAX_TIP_LAMPORTS,
+      instructions: message.compiledInstructions.map((instruction) => {
+        const program = accountKeys.get(instruction.programIdIndex);
+        if (!program) {
+          throw new Error("Transaction contains an unresolved program");
+        }
+        return {
+          programId: program.toBase58(),
+          accountKeys: Array.from(instruction.accountKeyIndexes).map((index) => {
+            const key = accountKeys.get(index);
+            if (!key) {
+              throw new Error("Transaction contains an unresolved account");
+            }
+            return key.toBase58();
+          }),
+          dataHex: Buffer.from(instruction.data).toString("hex"),
+        };
       }),
     });
     if (summary.feePayer !== publicKey) {

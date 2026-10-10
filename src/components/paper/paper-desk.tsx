@@ -17,7 +17,7 @@ import {
   TrendingUp,
   WalletCards,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   paperPositionValue,
   quotePaperBuy,
@@ -308,29 +308,27 @@ function LaunchLane({
   const [order, setOrder] = useState<string[]>([]);
   const [dragging, setDragging] = useState<string | null>(null);
 
-  useEffect(() => {
-    setOrder((current) => {
-      const available = new Set(launches.map((launch) => launch.facts.mint));
-      const kept = current.filter((mint) => available.has(mint));
-      const added = launches
-        .map((launch) => launch.facts.mint)
-        .filter((mint) => !kept.includes(mint));
-      return [...kept, ...added];
-    });
-  }, [launches]);
-
   const ordered = useMemo(
-    () =>
-      order
+    () => {
+      const launchMints = launches.map((launch) => launch.facts.mint);
+      const fullOrder = [
+        ...order.filter((mint) => launchMints.includes(mint)),
+        ...launchMints.filter((mint) => !order.includes(mint)),
+      ];
+      return fullOrder
         .map((mint) => launches.find((launch) => launch.facts.mint === mint))
-        .filter((launch): launch is FeedLaunch => Boolean(launch)),
+        .filter((launch): launch is FeedLaunch => Boolean(launch));
+    },
     [launches, order],
   );
 
   function dropOn(target: string) {
     if (!dragging || dragging === target) return;
     setOrder((current) => {
-      const next = current.filter((mint) => mint !== dragging);
+      const base = current.length
+        ? current
+        : launches.map((launch) => launch.facts.mint);
+      const next = base.filter((mint) => mint !== dragging);
       const targetIndex = next.indexOf(target);
       next.splice(targetIndex < 0 ? next.length : targetIndex, 0, dragging);
       return next;

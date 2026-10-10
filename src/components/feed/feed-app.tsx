@@ -37,6 +37,7 @@ import {
   indexSessionLaunches,
   type GateTiming,
   type GateVerdict,
+  type ManualBuyTransactionSummary,
   type Profile,
   type Receipt,
 } from "../../../packages/core/src";
@@ -328,12 +329,7 @@ export function FeedApp() {
       const payload = (await response.json()) as
         | {
             transaction: string;
-            summary: {
-              feePayer: string;
-              requiredSigners: string[];
-              addressLookupTableCount: number;
-              programIds: string[];
-            };
+            summary: ManualBuyTransactionSummary;
             expiresAt: number;
           }
         | { error?: string };
