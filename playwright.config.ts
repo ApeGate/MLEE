@@ -7,7 +7,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: "line",
   use: {
-    baseURL: "http://127.0.0.1:43128",
+    baseURL: "http://127.0.0.1:43127",
     trace: "on-first-retry",
   },
   projects: [
@@ -21,8 +21,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npx next dev --turbopack --port 43128",
-    url: "http://127.0.0.1:43128",
+    command: "npm run dev",
+    url: "http://127.0.0.1:43127",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
