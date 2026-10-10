@@ -21,6 +21,7 @@ Bonding-curve sends remain locked while the official Pump v3 decoder is built:
 - `/coin/{mint}` — public, on-demand mint and holder dossier
 - `/crew` — all six jobs with explicit permissions and hard boundaries
 - `/token` — official $APEGATE status and contract-address registry
+- `/trust` — custody, execution, fee, privacy, and loss-risk disclosures
 - `/status` — honest capability status
 - `/desk` — production desk entry point; redirects to the Gate
 
@@ -32,6 +33,10 @@ silent `PASS`.
 The live desk also publishes the operator canary buys and exit. `/api/live-fills`
 re-reads each transaction from mainnet and checks its signature, slot, QA
 wallet, mint, SOL delta, and token delta before the UI labels it confirmed.
+Every connected-wallet position resolves Pump or token metadata with a lazy
+logo fallback and exposes guarded 50% and 100% PumpSwap exits. PASS watches
+persist locally without a wallet and can raise browser notifications while the
+Gate is open.
 
 ## Domain
 
