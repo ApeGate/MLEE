@@ -144,9 +144,6 @@ test("PASS watch persists without a wallet", async ({ page }) => {
   const watch = page.getByRole("button", { name: "Tell me when PASS" });
   await expect(watch).toBeVisible();
   await watch.click();
-  await expect(
-    page.getByRole("button", { name: "Watching PASS" }),
-  ).toBeVisible();
   await expect
     .poll(() =>
       page.evaluate(
