@@ -293,6 +293,7 @@ function DetailsStep({
       <div className="grid gap-4 sm:grid-cols-[1fr_0.45fr]">
         <Field label="Token name" hint="2–32 characters">
           <input
+            aria-label="Token name"
             value={draft.name}
             onChange={(event) => update("name", event.target.value)}
             placeholder="Banana Hours"
@@ -302,6 +303,7 @@ function DetailsStep({
         </Field>
         <Field label="Ticker" hint="2–10 letters or numbers">
           <input
+            aria-label="Ticker"
             value={draft.symbol}
             onChange={(event) =>
               update(
@@ -321,6 +323,7 @@ function DetailsStep({
         hint={`${draft.description.length}/500 · Kong warns on thin metadata`}
       >
         <textarea
+          aria-label="Description"
           value={draft.description}
           onChange={(event) => update("description", event.target.value)}
           placeholder="Say what it is without promises, hype guarantees, or hidden terms."
@@ -334,6 +337,7 @@ function DetailsStep({
         <div className="relative">
           <ImageIcon className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#5f584f]" />
           <input
+            aria-label="Image URL"
             type="url"
             value={draft.imageUrl}
             onChange={(event) => update("imageUrl", event.target.value)}
@@ -346,6 +350,7 @@ function DetailsStep({
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Website" hint="Optional · HTTPS">
           <input
+            aria-label="Website"
             type="url"
             value={draft.website}
             onChange={(event) => update("website", event.target.value)}
@@ -355,6 +360,7 @@ function DetailsStep({
         </Field>
         <Field label="Social" hint="Optional · HTTPS">
           <input
+            aria-label="Social"
             type="url"
             value={draft.socialUrl}
             onChange={(event) => update("socialUrl", event.target.value)}
@@ -429,6 +435,7 @@ function TokenStep({
             <RiskLine value={draft.devBuyPct} />
           </div>
           <input
+            aria-label="Creator buy percentage"
             type="range"
             min={0}
             max={30}
@@ -657,13 +664,13 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
+    <div className="block">
       <span className="flex items-baseline justify-between gap-3">
         <span className="text-xs font-bold">{label}</span>
         <span className="text-right text-[8px] text-[#5f584f]">{hint}</span>
       </span>
       <span className="mt-2 block">{children}</span>
-    </label>
+    </div>
   );
 }
 
