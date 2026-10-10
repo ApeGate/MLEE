@@ -15,6 +15,7 @@ import {
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const TRADE_ENDPOINT = "https://pumpportal.fun/api/trade-local";
+const PRIORITY_FEE_SOL = 0.001;
 
 type CliOptions = {
   mint: string;
@@ -208,6 +209,54 @@ async function tokenBalance(
   }, 0);
 }
 
+async function sendAndConfirm(
+  connection: Connection,
+  transaction: VersionedTransaction,
+): Promise<string> {
+  const rawTransaction = transaction.serialize();
+  const send = () =>
+    connection.sendRawTransaction(rawTransaction, {
+      skipPreflight: true,
+      maxRetries: 2,
+    });
+  const signature = await send();
+
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const status = await connection.getSignatureStatus(signature, {
+      searchTransactionHistory: true,
+    });
+    if (status.value?.err) {
+      throw new Error(
+        `Mainnet transaction failed: ${JSON.stringify(status.value.err)}`,
+      );
+    }
+    if (
+      status.value?.confirmationStatus === "confirmed" ||
+      status.value?.confirmationStatus === "finalized"
+    ) {
+      return signature;
+    }
+
+    const validity = await connection.isBlockhashValid(
+      transaction.message.recentBlockhash,
+      "confirmed",
+    );
+    if (!validity.value) {
+      throw new Error(
+        `Transaction ${signature} expired without landing; balances are unchanged`,
+      );
+    }
+    if (attempt > 0 && attempt % 2 === 0) {
+      await send();
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+  }
+
+  throw new Error(
+    `Transaction ${signature} was not confirmed while its blockhash remained valid`,
+  );
+}
+
 async function main() {
   const options = parseOptions(process.argv.slice(2));
   if (!options.confirmed) {
@@ -283,7 +332,7 @@ async function main() {
       amount: options.amountSol,
       denominatedInSol: "true",
       slippage: 5,
-      priorityFee: 0.0001,
+      priorityFee: PRIORITY_FEE_SOL,
       pool: "auto",
     }),
     signal: AbortSignal.timeout(8_000),
@@ -338,23 +387,7 @@ async function main() {
     now: Date.now(),
   });
   transaction.sign([signer]);
-  const signature = await connection.sendRawTransaction(
-    transaction.serialize(),
-    {
-      skipPreflight: false,
-      preflightCommitment: "confirmed",
-      maxRetries: 3,
-    },
-  );
-  const confirmation = await connection.confirmTransaction(
-    signature,
-    "confirmed",
-  );
-  if (confirmation.value.err) {
-    throw new Error(
-      `Mainnet transaction failed: ${JSON.stringify(confirmation.value.err)}`,
-    );
-  }
+  const signature = await sendAndConfirm(connection, transaction);
 
   const [newBalanceLamports, afterTokens, slot] = await Promise.all([
     connection.getBalance(signer.publicKey, "confirmed"),
@@ -374,6 +407,7 @@ async function main() {
         side: "BUY",
         amountSol: options.amountSol,
         approval: "mainnet-canary",
+        priorityFeeSol: PRIORITY_FEE_SOL,
       },
     },
     outputs: {
