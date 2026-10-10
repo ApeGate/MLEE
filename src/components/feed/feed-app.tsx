@@ -50,13 +50,19 @@ import { useReceipts } from "@/lib/use-receipts";
 import { TokenLogo } from "@/components/token/token-logo";
 import { inspectManualBuyTransaction } from "@/lib/manual-buy-transaction";
 import { inspectManualSellTransaction } from "@/lib/manual-sell-transaction";
+import { isBrandSafeLaunchLabel } from "@/lib/brand-safety";
 
 type RiskPayload = {
   mintAuthority?: string | null;
   freezeAuthority?: string | null;
+  creator: string | null;
   devPct: number | null;
   top10Pct: number | null;
   rugScore: number | null;
+  clusterRetainedPct: number | null;
+  launchSecondBuyout: boolean | null;
+  deployerPulledPool: boolean | null;
+  manufacturedCap: boolean | null;
   rugRisks: Array<{
     name: string;
     value?: string;
@@ -66,10 +72,22 @@ type RiskPayload = {
   sources: {
     mintSafety: string | null;
     concentration: string | null;
+    market: string | null;
   };
+  market: {
+    pool: "pump-amm";
+    tradeCount: number;
+    marketCapSol: number | null;
+    graduatedAt: number;
+    openingPriceHoldPct: number | null;
+    liquidityUsd: number;
+  } | null;
 };
 
 type MetaPayload = {
+  name: string | null;
+  symbol: string | null;
+  image: string | null;
   websiteUrl: string | null;
   websiteHost: string | null;
   websiteReachable: boolean | null;
@@ -202,6 +220,7 @@ export function FeedApp() {
     useState<WalletPositionsPayload | null>(null);
   const [positionError, setPositionError] = useState<string | null>(null);
   const recordedWallet = useRef<string | null>(null);
+  const autoEvidenceRequests = useRef(new Set<string>());
   const activeWallet = wallets[0] ?? null;
   const walletAddress = wallets[0]?.address ?? null;
 
@@ -312,12 +331,14 @@ export function FeedApp() {
     async (launch: FeedLaunch, nextProfile: Profile = profile) => {
       setRiskState("loading");
       try {
-        const curve = launch.facts.bondingCurve
-          ? `?curve=${encodeURIComponent(launch.facts.bondingCurve)}`
-          : "";
+        const riskQuery = new URLSearchParams();
+        if (launch.facts.bondingCurve) {
+          riskQuery.set("curve", launch.facts.bondingCurve);
+        }
+        riskQuery.set("pool", launch.facts.pool);
         const metadataQuery = `?uri=${encodeURIComponent(launch.facts.uri)}`;
         const [riskResult, metaResult] = await Promise.allSettled([
-          fetch(`/api/risk/${launch.facts.mint}${curve}`).then(
+          fetch(`/api/risk/${launch.facts.mint}?${riskQuery}`).then(
             async (response) => {
               if (!response.ok) throw new Error("Risk sources unavailable");
               return (await response.json()) as RiskPayload;
@@ -347,14 +368,42 @@ export function FeedApp() {
             ? {
                 mintAuthority: risk.mintAuthority,
                 freezeAuthority: risk.freezeAuthority,
+                ...(risk.creator ? { creator: risk.creator } : {}),
                 devPct: risk.devPct,
                 top10Pct: risk.top10Pct,
+                clusterRetainedPct: risk.clusterRetainedPct,
+                launchSecondBuyout: risk.launchSecondBuyout,
+                deployerPulledPool: risk.deployerPulledPool,
+                manufacturedCap: risk.manufacturedCap,
                 rugScore: risk.rugScore,
                 rugRisks: risk.rugRisks,
+                ...(risk.market
+                  ? {
+                      pool: risk.market.pool,
+                      tradeCount: Math.max(
+                        launch.facts.tradeCount ?? 1,
+                        risk.market.tradeCount,
+                      ),
+                      marketCapSol:
+                        risk.market.marketCapSol ??
+                        launch.facts.marketCapSol,
+                      graduatedAt: risk.market.graduatedAt,
+                      openingPriceHoldPct:
+                        risk.market.openingPriceHoldPct,
+                    }
+                  : {}),
               }
             : {}),
           ...(metadata
             ? {
+                ...(metadata.name &&
+                metadata.symbol &&
+                isBrandSafeLaunchLabel(metadata.name, metadata.symbol)
+                  ? {
+                      name: metadata.name,
+                      symbol: metadata.symbol,
+                    }
+                  : {}),
                 websiteUrl: metadata.websiteUrl,
                 websiteHost: metadata.websiteHost,
                 websiteReachable: metadata.websiteReachable,
@@ -402,6 +451,14 @@ export function FeedApp() {
     },
     [addVerdict, launches, profile, updateLaunch],
   );
+
+  useEffect(() => {
+    if (!selected || selected.facts.mintAuthority !== undefined) return;
+    const key = `${selected.source}:${selected.facts.mint}`;
+    if (autoEvidenceRequests.current.has(key)) return;
+    autoEvidenceRequests.current.add(key);
+    void enrich(selected);
+  }, [enrich, selected]);
 
   async function selectLaunch(launch: FeedLaunch) {
     setSelectedMint(launch.facts.mint);
@@ -765,12 +822,15 @@ export function FeedApp() {
             <button
               type="button"
               onClick={() => setWalletOpen(true)}
+              aria-label={
+                walletAddress
+                  ? `Wallet connected ${walletAddress}`
+                  : "Connect Solana wallet"
+              }
               className="inline-flex h-9 items-center gap-2 rounded-full border border-[#3a3328] bg-[#12100c] px-3 text-xs font-bold hover:border-ape-cornelius/60"
             >
               <WalletCards className="size-3.5 text-ape-cornelius" />
-              <span className="hidden sm:inline">
-                {walletAddress ? short(walletAddress) : "Connect wallet"}
-              </span>
+              <span>{walletAddress ? short(walletAddress) : "Connect"}</span>
             </button>
           </div>
         </div>
@@ -845,6 +905,21 @@ export function FeedApp() {
             icon={<Activity className="size-4" />}
           />
         </section>
+
+        <TradeJourney
+          connected={Boolean(walletAddress)}
+          verdict={selected?.verdict ?? null}
+          routeSupported={
+            selected?.facts.pool === "pump-amm" ||
+            selected?.facts.pool === "pumpswap"
+          }
+          hasPosition={Boolean(
+            selected &&
+              positionData?.positions.some(
+                (position) => position.mint === selected.facts.mint,
+              ),
+          )}
+        />
 
         {gateAlerts.alerts.length ? (
           <PassAlert
@@ -2132,6 +2207,112 @@ function ReceiptTape({
           </p>
         </div>
       )}
+    </section>
+  );
+}
+
+function TradeJourney({
+  connected,
+  verdict,
+  routeSupported,
+  hasPosition,
+}: {
+  connected: boolean;
+  verdict: GateVerdict | null;
+  routeSupported: boolean;
+  hasPosition: boolean;
+}) {
+  const gateCleared =
+    verdict?.kind === "PASS" && verdict.timing.entryAllowed;
+  const steps = [
+    {
+      number: "01",
+      label: "Connect",
+      detail: connected ? "Wallet linked" : "External Solana wallet",
+      state: connected ? "done" : "active",
+    },
+    {
+      number: "02",
+      label: "Gate",
+      detail: verdict
+        ? `${verdict.kind} · ${verdict.timing.label}`
+        : "Pick a coin",
+      state: gateCleared ? "done" : connected ? "active" : "locked",
+    },
+    {
+      number: "03",
+      label: "Buy",
+      detail: !routeSupported
+        ? "PumpSwap only"
+        : gateCleared
+          ? "Review & sign"
+          : "Needs fresh PASS",
+      state:
+        connected && routeSupported && gateCleared ? "active" : "locked",
+    },
+    {
+      number: "04",
+      label: "Exit",
+      detail: hasPosition ? "50% / 100% ready" : "After confirmed fill",
+      state: hasPosition ? "active" : "locked",
+    },
+  ] as const;
+
+  return (
+    <section
+      aria-label="Manual trade path"
+      className="mb-5 overflow-hidden rounded-2xl border border-[#31291f] bg-[linear-gradient(90deg,rgb(199_255_69_/_5%),transparent_42%),#0d0b09]"
+    >
+      <div className="flex items-center justify-between gap-3 border-b border-[#31291f] px-4 py-3">
+        <div>
+          <p className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-ape-caesar">
+            Browser trade path
+          </p>
+          <p className="mt-0.5 text-[10px] text-[#766f65]">
+            Connect → clear Kong&apos;s Gate → sign a buy → exit 50% or 100%
+          </p>
+        </div>
+        <span className="hidden rounded-full border border-ape-cornelius/25 bg-ape-cornelius/7 px-2.5 py-1 font-mono text-[7px] font-bold uppercase text-ape-cornelius sm:inline">
+          Your wallet signs
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-px bg-[#272119] lg:grid-cols-4">
+        {steps.map((step) => (
+          <div
+            key={step.number}
+            className={cn(
+              "relative bg-[#0d0b09] px-3 py-3.5 sm:px-4",
+              step.state === "active" &&
+                "bg-[linear-gradient(135deg,rgb(199_255_69_/_8%),transparent_70%),#0d0b09]",
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "flex size-6 items-center justify-center rounded-full border font-mono text-[7px] font-black",
+                  step.state === "done"
+                    ? "border-pass/35 bg-pass/10 text-pass"
+                    : step.state === "active"
+                      ? "journey-pulse border-ape-caesar/40 bg-ape-caesar/10 text-ape-caesar"
+                      : "border-[#3a3328] bg-[#17130e] text-[#5f584f]",
+                )}
+              >
+                {step.state === "done" ? (
+                  <Check className="size-3" />
+                ) : (
+                  step.number
+                )}
+              </span>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.08em]">
+                {step.label}
+              </p>
+            </div>
+            <p className="mt-2 truncate font-mono text-[8px] text-[#766f65]">
+              {step.detail}
+            </p>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }

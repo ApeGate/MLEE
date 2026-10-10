@@ -122,6 +122,9 @@
   .live-dot {
     animation: live-dot 1.8s ease-in-out infinite;
   }
+  .journey-pulse {
+    animation: journey-pulse 1.8s ease-in-out infinite;
+  }
   .scan-line {
     animation: scan-line 4.5s ease-in-out infinite;
   }
@@ -201,6 +204,16 @@
   }
 }
 
+@keyframes journey-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(199 255 69 / 0%);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgb(199 255 69 / 8%);
+  }
+}
+
 @keyframes scan-line {
   0%,
   100% {
@@ -241,6 +254,7 @@
   .agent-float,
   .agent-glow,
   .live-dot,
+  .journey-pulse,
   .scan-line,
   .chart-path,
   .shimmer,

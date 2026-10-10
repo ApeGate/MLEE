@@ -198,6 +198,21 @@ describe("Kong gate-1.2.0", () => {
     ).toBe("unknown");
   });
 
+  it("waits when critical holder evidence is unresolved", async () => {
+    const verdict = await evaluateGate(
+      {
+        ...safeFacts,
+        devPct: null,
+        top10Pct: null,
+        clusterRetainedPct: null,
+      },
+      "standard",
+      now,
+    );
+    expect(verdict.kind).toBe("WAIT");
+    expect(verdict.topReasons.join(" ")).toContain("creator holding");
+  });
+
   it("hard-blocks a retained launch-second buyout", async () => {
     const verdict = await evaluateGate(
       {

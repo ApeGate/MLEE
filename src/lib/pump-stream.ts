@@ -122,3 +122,33 @@ export function parsePumpTrade(value: unknown): {
     ...(marketCapSol === undefined ? {} : { marketCapSol }),
   };
 }
+
+export function parsePumpMigration(value: unknown): {
+  mint: string;
+  name: string | null;
+  symbol: string | null;
+  signature: string;
+} | null {
+  if (!value || typeof value !== "object") return null;
+  const migration = value as Record<string, unknown>;
+  const mint = cleanText(migration.mint, 44);
+  const name = cleanText(migration.name, 96);
+  const symbol = cleanText(migration.symbol, 24);
+  const signature = cleanText(migration.signature, 88);
+  if (
+    migration.txType !== "migrate" ||
+    migration.pool !== "pump-amm" ||
+    !mint ||
+    !BASE58_KEY.test(mint) ||
+    !signature ||
+    !BASE58_SIGNATURE.test(signature)
+  ) {
+    return null;
+  }
+  return {
+    mint,
+    name,
+    symbol,
+    signature,
+  };
+}

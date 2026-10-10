@@ -46,6 +46,12 @@ const CATEGORY_CAPS: Record<CheckCategory, number> = {
   social: 10,
 };
 
+const REQUIRED_EVIDENCE_CHECKS = new Set([
+  "dev_pct",
+  "top10_pct",
+  "cluster_retained_pct",
+]);
+
 function txEvidence(facts: LaunchFacts): Evidence[] {
   return facts.signature
     ? [
@@ -300,9 +306,12 @@ export async function evaluateGate(
 
   const ageSec = Math.max(0, (now - facts.createdAt) / 1_000);
   const notEnoughTape = ageSec < 10 || (facts.tradeCount ?? 1) < 5;
-  const requiredUnknown = checks.some(
-    (check) => check.hard && check.outcome === "unknown",
+  const unresolvedRequiredChecks = checks.filter(
+    (check) =>
+      check.outcome === "unknown" &&
+      (check.hard || REQUIRED_EVIDENCE_CHECKS.has(check.id)),
   );
+  const requiredUnknown = unresolvedRequiredChecks.length > 0;
   const hardFail = checks.some(
     (check) => check.hard && check.outcome === "fail",
   );
@@ -355,7 +364,12 @@ export async function evaluateGate(
           ageSec < 10
             ? `Only ${Math.floor(ageSec)}s old`
             : `${facts.tradeCount ?? 1} trades observed`,
-          requiredUnknown ? "Safety reads still resolving" : "Kong is collecting tape",
+          requiredUnknown
+            ? `Waiting on ${unresolvedRequiredChecks
+                .slice(0, 2)
+                .map((check) => check.label.toLowerCase())
+                .join(" and ")}`
+            : "Kong is collecting tape",
         ]
       : ranked.slice(0, 3).map((check) => check.reason);
 

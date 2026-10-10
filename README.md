@@ -67,10 +67,6 @@ After the official creation is confirmed:
 The production launch still needs `OFFICIAL_CREATOR_WALLET`, `PINATA_JWT`, and
 the creator wallet's manual signature. No key material belongs in git.
 
-Launch Bay is parked for v1 and hidden by default. The retained internal
-scaffold is available only when `NEXT_PUBLIC_LAUNCH_BAY_ENABLED=true`; real
-trading, transaction safety, and exit behavior take priority.
-
 ## PAPER mode
 
 The paper desk consumes the same live/replay launch feed and Kong verdicts as

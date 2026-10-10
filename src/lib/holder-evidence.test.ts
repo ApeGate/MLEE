@@ -6,7 +6,7 @@ describe("selectHolderEvidence", () => {
     const result = selectHolderEvidence({
       reportHolders: [
         { owner: "curve", pct: 80 },
-        { owner: "creator", pct: 7 },
+        { owner: "creator", pct: 7, insider: true },
         { owner: "holder", pct: 5 },
       ],
       rpcHolders: [{ owner: "rpc-holder", pct: 4 }],
@@ -21,6 +21,7 @@ describe("selectHolderEvidence", () => {
       "holder",
     ]);
     expect(result.devPct).toBe(7);
+    expect(result.insiderPct).toBe(7);
     expect(result.top10Pct).toBe(12);
     expect(result.source).toBe("external risk scan");
   });
@@ -37,6 +38,7 @@ describe("selectHolderEvidence", () => {
 
     expect(result.holders).toEqual([{ owner: "live-holder", pct: 3.25 }]);
     expect(result.devPct).toBeNull();
+    expect(result.insiderPct).toBeNull();
     expect(result.top10Pct).toBe(3.25);
     expect(result.source).toBe("Helius mainnet RPC");
   });
@@ -54,6 +56,7 @@ describe("selectHolderEvidence", () => {
     ).toMatchObject({
       holders: [],
       devPct: null,
+      insiderPct: null,
       top10Pct: null,
       source: null,
     });

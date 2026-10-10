@@ -50,12 +50,6 @@ const SERVICES = [
       "Tell-me-when-PASS watches persist in this browser and fire in-app while the Gate is open; desktop notifications fire when the browser has permission. Push and Telegram delivery are not active",
   },
   {
-    name: "Launch Bay",
-    state: "Parked",
-    detail:
-      "Removed from the v1 product surface while Gate intelligence, manual trading, and exit safety take priority",
-  },
-  {
     name: "Official $APEGATE registry",
     state: process.env.NEXT_PUBLIC_APEGATE_TOKEN_MINT
       ? "CA configured"
@@ -148,7 +142,6 @@ export default function StatusPage() {
                   className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 font-mono text-[7px] font-bold uppercase ${
                     service.state === "Pre-launch" ||
                           service.state === "Account action" ||
-                          service.state === "Parked" ||
                           service.state === "Preview only" ||
                           service.state === "Limited" ||
                           service.state === "Local only"
@@ -158,7 +151,6 @@ export default function StatusPage() {
                 >
                   {service.state === "Pre-launch" ||
                   service.state === "Account action" ||
-                  service.state === "Parked" ||
                   service.state === "Preview only" ||
                   service.state === "Limited" ||
                   service.state === "Local only" ? (

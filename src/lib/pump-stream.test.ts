@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { parsePumpLaunch, parsePumpTrade } from "./pump-stream";
+import {
+  parsePumpLaunch,
+  parsePumpMigration,
+  parsePumpTrade,
+} from "./pump-stream";
 
 const launch = {
   signature:
@@ -60,6 +64,30 @@ describe("Pump stream boundary", () => {
         mint: launch.mint,
         txType: "sell",
         marketCapSol: Number.POSITIVE_INFINITY,
+      }),
+    ).toBeNull();
+  });
+
+  it("accepts a bounded PumpSwap migration event", () => {
+    expect(
+      parsePumpMigration({
+        txType: "migrate",
+        mint: launch.mint,
+        signature: launch.signature,
+        pool: "pump-amm",
+      }),
+    ).toMatchObject({
+      mint: launch.mint,
+      signature: launch.signature,
+      name: null,
+      symbol: null,
+    });
+    expect(
+      parsePumpMigration({
+        txType: "migrate",
+        mint: launch.mint,
+        signature: launch.signature,
+        pool: "pump",
       }),
     ).toBeNull();
   });

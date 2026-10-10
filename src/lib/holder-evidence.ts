@@ -41,6 +41,12 @@ export function selectHolderEvidence(input: {
     devPct: input.creator
       ? holders.find((holder) => holder.owner === input.creator)?.pct ?? null
       : null,
+    insiderPct:
+      reportHolders.length > 0
+        ? reportHolders
+            .filter((holder) => holder.insider)
+            .reduce((sum, holder) => sum + holder.pct, 0)
+        : null,
     top10Pct:
       holders.length > 0
         ? holders

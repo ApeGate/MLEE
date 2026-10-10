@@ -393,18 +393,18 @@ export function GateSections() {
                 <span className="text-stroke">Your signature.</span>
               </h2>
               <p className="mt-6 max-w-xl text-sm leading-relaxed text-[#91897e]">
-                Practice against live or recorded launches in PAPER mode.
-                On a cleared PumpSwap entry, Apegate decodes the mint, spend,
-                tip, token, and compute limits in both runtimes before Privy
-                opens your external wallet. Bonding-curve sends and Privy Vault
-                stay disabled until their decoders and independent review are
-                ready.
+                Open the Gate, connect an external Solana wallet, and wait for
+                a fresh PASS plus Cheeta&apos;s entry timing. For cleared
+                PumpSwap coins, Apegate decodes the mint, spend, tip, token, and
+                compute limits in both runtimes before Privy opens your wallet.
+                After a confirmed fill, Cornelius exposes guarded 50% and 100%
+                exits. Bonding-curve sends stay PAPER-only.
               </p>
               <Link
-                href="/paper"
+                href="/feed"
                 className="mt-6 inline-flex items-center gap-2 rounded-full border border-[#c7ff45]/30 bg-[#c7ff45]/7 px-4 py-2.5 text-xs font-bold text-[#c7ff45] hover:border-[#c7ff45]/55"
               >
-                Open PAPER desk
+                Open the browser trade path
                 <ArrowRight className="size-3.5" />
               </Link>
               <div className="mt-6 rounded-xl border border-[#302a20] bg-[#12100c] p-4 text-xs leading-relaxed text-[#a79f92]">

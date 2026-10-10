@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { configuredSolanaRpc } from "@/lib/solana-rpc";
 import { selectHolderEvidence } from "@/lib/holder-evidence";
 import { safePublicUrl } from "@/lib/token-metadata";
+import { deriveOpeningPriceHoldPct } from "../../../../../packages/core/src";
 
 type RugHolder = {
   owner: string;
@@ -46,7 +47,21 @@ type RugReport = {
   }>;
   totalHolders?: number;
   graphInsidersDetected?: number;
+  insiderNetworks?: unknown[];
   detectedAt?: string;
+};
+
+type DexPair = {
+  chainId?: string;
+  dexId?: string;
+  priceNative?: string;
+  priceUsd?: string;
+  marketCap?: number;
+  fdv?: number;
+  pairCreatedAt?: number;
+  liquidity?: { usd?: number };
+  priceChange?: { h24?: number };
+  txns?: Record<string, { buys?: number; sells?: number }>;
 };
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -180,6 +195,54 @@ async function readRiskReport(mint: string): Promise<RugReport> {
   return (await response.json()) as RugReport;
 }
 
+async function readPumpSwapPair(mint: string) {
+  const response = await fetch(
+    `https://api.dexscreener.com/latest/dex/tokens/${mint}`,
+    {
+      signal: AbortSignal.timeout(4_000),
+      next: { revalidate: 10 },
+    },
+  );
+  if (!response.ok) throw new Error(`Market source ${response.status}`);
+  const body = (await response.json()) as { pairs?: DexPair[] };
+  const pair = (body.pairs ?? [])
+    .filter((candidate) => {
+      return candidate.chainId === "solana" && candidate.dexId === "pumpswap";
+    })
+    .sort(
+      (left, right) =>
+        (right.liquidity?.usd ?? 0) - (left.liquidity?.usd ?? 0),
+    )[0];
+  if (!pair?.pairCreatedAt) {
+    throw new Error("No PumpSwap market was found");
+  }
+
+  const shortestWindow =
+    pair.txns?.m5 ?? pair.txns?.h1 ?? pair.txns?.h6 ?? pair.txns?.h24;
+  const tradeCount =
+    (shortestWindow?.buys ?? 0) + (shortestWindow?.sells ?? 0);
+  const nativePrice = Number(pair.priceNative);
+  const usdPrice = Number(pair.priceUsd);
+  const marketCapUsd = pair.marketCap ?? pair.fdv ?? 0;
+  const marketCapSol =
+    nativePrice > 0 && usdPrice > 0 && marketCapUsd > 0
+      ? marketCapUsd / (usdPrice / nativePrice)
+      : null;
+  const observedAt = Date.now();
+
+  return {
+    pairCreatedAt: pair.pairCreatedAt,
+    tradeCount,
+    marketCapSol,
+    liquidityUsd: pair.liquidity?.usd ?? 0,
+    openingPriceHoldPct: deriveOpeningPriceHoldPct({
+      pairCreatedAt: pair.pairCreatedAt,
+      priceChange24hPct: pair.priceChange?.h24,
+      observedAt,
+    }),
+  };
+}
+
 export async function GET(
   request: Request,
   context: { params: Promise<{ mint: string }> },
@@ -191,14 +254,21 @@ export async function GET(
   const requestedCurve = new URL(request.url).searchParams.get("curve");
   const bondingCurve =
     requestedCurve && BASE58.test(requestedCurve) ? requestedCurve : null;
+  const requestedPool = new URL(request.url).searchParams.get("pool");
+  const shouldReadMarket =
+    requestedPool === "pump-amm" || requestedPool === "pumpswap";
 
-  const [rpcResult, reportResult] = await Promise.allSettled([
+  const [rpcResult, reportResult, pairResult] = await Promise.allSettled([
     readMintFromRpc(mint, bondingCurve),
     readRiskReport(mint),
+    shouldReadMarket
+      ? readPumpSwapPair(mint)
+      : Promise.reject(new Error("Market read not requested")),
   ]);
   const rpc = rpcResult.status === "fulfilled" ? rpcResult.value : null;
   const report =
     reportResult.status === "fulfilled" ? reportResult.value : null;
+  const pair = pairResult.status === "fulfilled" ? pairResult.value : null;
 
   if (!rpc && !report) {
     return NextResponse.json(
@@ -220,6 +290,21 @@ export async function GET(
     creator: creator ?? null,
     rpcSource: rpc?.source ?? null,
   });
+  const insiderGraphResolved =
+    typeof report?.graphInsidersDetected === "number" &&
+    Array.isArray(report.insiderNetworks);
+  const launchSecondBuyout = insiderGraphResolved
+    ? report.graphInsidersDetected > 0 || report.insiderNetworks!.length > 0
+    : null;
+  const creatorHistoryResolved = Array.isArray(report?.creatorTokens);
+  const liquidityPullRisk = report?.risks?.some((risk) => {
+    const text = `${risk.name} ${risk.description}`.toLowerCase();
+    return (
+      risk.level === "danger" &&
+      text.includes("liquidity") &&
+      (text.includes("pull") || text.includes("remov"))
+    );
+  });
 
   return NextResponse.json(
     {
@@ -237,6 +322,17 @@ export async function GET(
             : undefined,
       devPct: holderEvidence.devPct,
       top10Pct: holderEvidence.top10Pct,
+      clusterRetainedPct: holderEvidence.insiderPct,
+      launchSecondBuyout,
+      deployerPulledPool: liquidityPullRisk
+        ? true
+        : creatorHistoryResolved && report!.creatorTokens!.length === 0
+          ? false
+          : null,
+      manufacturedCap:
+        pair && pair.liquidityUsd >= 50_000 && pair.tradeCount >= 50
+          ? false
+          : null,
       rugScore: report?.score_normalised ?? null,
       rugged: report?.rugged ?? null,
       creator: report?.creator ?? null,
@@ -257,6 +353,16 @@ export async function GET(
       totalHolders: report?.totalHolders ?? null,
       graphInsidersDetected: report?.graphInsidersDetected ?? null,
       detectedAt: report?.detectedAt ?? null,
+      market: pair
+        ? {
+            pool: "pump-amm",
+            tradeCount: pair.tradeCount,
+            marketCapSol: pair.marketCapSol,
+            graduatedAt: pair.pairCreatedAt,
+            openingPriceHoldPct: pair.openingPriceHoldPct,
+            liquidityUsd: pair.liquidityUsd,
+          }
+        : null,
       topHolders: holderEvidence.holders.slice(0, 20).map((holder) => ({
           owner: holder.owner,
           pct: holder.pct,
@@ -277,6 +383,7 @@ export async function GET(
       sources: {
         mintSafety: rpc ? rpc.source : report ? "external risk scan" : null,
         concentration: holderEvidence.source,
+        market: pair ? "DexScreener PumpSwap snapshot" : null,
       },
     },
     {
