@@ -8,6 +8,8 @@ export const metadata: Metadata = {
     "Preview Apegate's bounded Privy Vault policy without creating a signer or moving funds.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default function VaultPage() {
   return <VaultPreview readiness={readPrivyVaultConfig()} />;
 }
