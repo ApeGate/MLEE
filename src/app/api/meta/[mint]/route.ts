@@ -198,7 +198,9 @@ export async function GET(
     return NextResponse.json({ error: "Invalid Solana mint" }, { status: 400 });
   }
 
-  const requestedUri = new URL(request.url).searchParams.get("uri");
+  const url = new URL(request.url);
+  const requestedUri = url.searchParams.get("uri");
+  const logoOnly = url.searchParams.get("logo") === "1";
   let resolved;
   try {
     resolved = await resolveMetadata(mint, requestedUri);
@@ -248,6 +250,22 @@ export async function GET(
   }
 
   const metadata = extractMetadataSignals(resolved.metadata);
+  if (logoOnly) {
+    return NextResponse.json(
+      {
+        name: metadata.name,
+        symbol: metadata.symbol,
+        image: metadata.imageUrl,
+        imageUrl: metadata.imageUrl,
+        sources: { metadata: resolved.source },
+      },
+      {
+        headers: {
+          "cache-control": "public, max-age=300, stale-while-revalidate=900",
+        },
+      },
+    );
+  }
   const website = await checkWebsite(
     metadata.websiteUrl,
     { mint, name: metadata.name, symbol: metadata.symbol },

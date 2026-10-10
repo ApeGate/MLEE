@@ -40,8 +40,11 @@ function requestMetadata(mint: string, uri?: string | null) {
   const existing = pendingMetadata.get(key);
   if (existing) return existing;
 
-  const query = uri ? `?uri=${encodeURIComponent(uri)}` : "";
-  const request = fetch(`/api/meta/${encodeURIComponent(mint)}${query}`)
+  const query = new URLSearchParams({ logo: "1" });
+  if (uri) query.set("uri", uri);
+  const request = fetch(
+    `/api/meta/${encodeURIComponent(mint)}?${query.toString()}`,
+  )
     .then(async (response) => {
       if (!response.ok) {
         return { image: null, name: null, symbol: null };
