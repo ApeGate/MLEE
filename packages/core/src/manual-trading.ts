@@ -172,10 +172,10 @@ export function assertManualBuyTransactionSafe(
   }
 
   let swapCount = 0;
-  let fundedLamports = 0n;
-  let tippedLamports = 0n;
-  let computeUnitLimit = 0n;
-  let computeUnitPrice = 0n;
+  let fundedLamports = BigInt(0);
+  let tippedLamports = BigInt(0);
+  let computeUnitLimit = BigInt(0);
+  let computeUnitPrice = BigInt(0);
 
   for (const instruction of summary.instructions) {
     const bytes = parseHex(instruction.dataHex);
@@ -183,7 +183,10 @@ export function assertManualBuyTransactionSafe(
       case ASSOCIATED_TOKEN_PROGRAM_ID:
         break;
       case SYSTEM_PROGRAM_ID: {
-        if (bytes.length !== 12 || readUnsignedLE(bytes, 0, 4) !== 2n) {
+        if (
+          bytes.length !== 12 ||
+          readUnsignedLE(bytes, 0, 4) !== BigInt(2)
+        ) {
           throw new Error("Canary contains an unknown system instruction");
         }
         const [from, to] = instruction.accountKeys;
@@ -274,7 +277,8 @@ export function assertManualBuyTransactionSafe(
     throw new Error("Canary transfers exceed the tip cap");
   }
   const priorityFeeLamports =
-    (computeUnitLimit * computeUnitPrice + 999_999n) / 1_000_000n;
+    (computeUnitLimit * computeUnitPrice + BigInt(999_999)) /
+    BigInt(1_000_000);
   if (priorityFeeLamports > BigInt(summary.maxPriorityFeeLamports)) {
     throw new Error("Canary compute-unit fee exceeds the priority cap");
   }
@@ -307,9 +311,9 @@ function readUnsignedLE(
   if (offset < 0 || offset + length > bytes.length) {
     throw new Error("Canary instruction data is truncated");
   }
-  let result = 0n;
+  let result = BigInt(0);
   for (let index = length - 1; index >= 0; index -= 1) {
-    result = (result << 8n) | BigInt(bytes[offset + index]!);
+    result = (result << BigInt(8)) | BigInt(bytes[offset + index]!);
   }
   return result;
 }
