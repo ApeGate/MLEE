@@ -3,6 +3,8 @@ import type { GateVerdict } from "./types";
 export const CANARY_BUY_MIN_SOL = 0.01;
 export const CANARY_BUY_MAX_SOL = 0.05;
 export const CANARY_WALLET_RESERVE_SOL = 0.005;
+export const CANARY_SELL_MIN_PERCENT = 1;
+export const CANARY_SELL_MAX_PERCENT = 100;
 
 export const PUMP_PROGRAM_ID =
   "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
@@ -53,6 +55,29 @@ export interface ManualBuyInstructionSummary {
   programId: string;
   accountKeys: string[];
   dataHex: string;
+}
+
+export interface MainnetCanarySellAuthorizationInput {
+  percent: number;
+  balanceSol: number;
+  tokenBalance: number;
+  mint: string;
+  expectedSigner: string;
+  actualSigner: string;
+  now: number;
+}
+
+export interface ManualSellTransactionSummary {
+  feePayer: string;
+  requiredSigners: string[];
+  addressLookupTableCount: number;
+  expectedMint: string;
+  maxSellTokenBaseUnits: string;
+  minimumOutputLamports: string;
+  maxAccountFundingLamports: number;
+  maxPriorityFeeLamports: number;
+  maxTipLamports: number;
+  instructions: ManualBuyInstructionSummary[];
 }
 
 export function deriveOpeningPriceHoldPct(input: {
@@ -115,6 +140,37 @@ export function authorizeMainnetCanaryBuy(
     rulesetVersion: input.verdict.rulesetVersion,
     authorizedAt: input.now,
     expiresAt: input.verdict.freshUntil,
+  });
+}
+
+export function authorizeMainnetCanarySell(
+  input: MainnetCanarySellAuthorizationInput,
+) {
+  if (
+    !Number.isFinite(input.percent) ||
+    input.percent < CANARY_SELL_MIN_PERCENT ||
+    input.percent > CANARY_SELL_MAX_PERCENT
+  ) {
+    throw new Error(
+      `Canary sell must stay between ${CANARY_SELL_MIN_PERCENT}% and ${CANARY_SELL_MAX_PERCENT}%`,
+    );
+  }
+  if (input.expectedSigner !== input.actualSigner) {
+    throw new Error("Loaded signer does not match the expected canary wallet");
+  }
+  if (!Number.isFinite(input.tokenBalance) || input.tokenBalance <= 0) {
+    throw new Error("Canary wallet has no token balance to exit");
+  }
+  if (!Number.isFinite(input.balanceSol) || input.balanceSol < 0.002) {
+    throw new Error("Canary wallet needs at least 0.002 SOL for exit fees");
+  }
+
+  return Object.freeze({
+    side: "SELL" as const,
+    percent: input.percent,
+    mint: input.mint,
+    signer: input.actualSigner,
+    authorizedAt: input.now,
   });
 }
 
@@ -286,6 +342,194 @@ export function assertManualBuyTransactionSafe(
   return Object.freeze({
     ...summary,
     decodedSwap: "pumpswap-buy" as const,
+    fundedLamports: Number(fundedLamports),
+    tippedLamports: Number(tippedLamports),
+    priorityFeeLamports: Number(priorityFeeLamports),
+  });
+}
+
+export function assertManualSellTransactionSafe(
+  summary: ManualSellTransactionSummary,
+) {
+  if (summary.addressLookupTableCount !== 0) {
+    throw new Error("Canary exit cannot use address lookup tables");
+  }
+  if (
+    summary.requiredSigners.length !== 1 ||
+    summary.requiredSigners[0] !== summary.feePayer
+  ) {
+    throw new Error("Canary exit must have one signer and fee payer");
+  }
+  for (const [label, value] of [
+    ["max token amount", summary.maxSellTokenBaseUnits],
+    ["minimum output", summary.minimumOutputLamports],
+  ] as const) {
+    if (!/^\d+$/.test(value)) {
+      throw new Error(`Canary exit ${label} must be integer base units`);
+    }
+  }
+  const maxSellTokenBaseUnits = BigInt(summary.maxSellTokenBaseUnits);
+  const minimumOutputLamports = BigInt(summary.minimumOutputLamports);
+  if (maxSellTokenBaseUnits <= BigInt(0)) {
+    throw new Error("Canary exit token cap must be positive");
+  }
+  if (minimumOutputLamports <= BigInt(0)) {
+    throw new Error("Canary exit minimum output must be positive");
+  }
+  for (const [label, value] of [
+    ["account funding", summary.maxAccountFundingLamports],
+    ["priority fee", summary.maxPriorityFeeLamports],
+    ["tip", summary.maxTipLamports],
+  ] as const) {
+    if (!Number.isSafeInteger(value) || value < 0) {
+      throw new Error(
+        `Canary exit ${label} cap must be safe non-negative lamports`,
+      );
+    }
+  }
+
+  const allowed = new Set<string>(MANUAL_BUY_PROGRAM_ALLOWLIST);
+  const unexpected = [
+    ...new Set(summary.instructions.map((instruction) => instruction.programId)),
+  ].filter((programId) => !allowed.has(programId));
+  if (unexpected.length > 0) {
+    throw new Error(
+      `Canary exit contains unapproved programs: ${unexpected.join(", ")}`,
+    );
+  }
+
+  const createdWrappedAccounts = new Set<string>();
+  for (const instruction of summary.instructions) {
+    if (instruction.programId !== ASSOCIATED_TOKEN_PROGRAM_ID) continue;
+    if (
+      !["00", "01"].includes(instruction.dataHex) ||
+      instruction.accountKeys.length < 6
+    ) {
+      throw new Error("Canary exit has an unknown associated-token instruction");
+    }
+    const [payer, tokenAccount, owner, mint] = instruction.accountKeys;
+    if (
+      payer !== summary.feePayer ||
+      owner !== summary.feePayer ||
+      mint !== WRAPPED_SOL_MINT
+    ) {
+      throw new Error("Canary exit associated-token instruction escapes intent");
+    }
+    createdWrappedAccounts.add(tokenAccount!);
+  }
+
+  let swapCount = 0;
+  let fundedLamports = BigInt(0);
+  let tippedLamports = BigInt(0);
+  let computeUnitLimit = BigInt(0);
+  let computeUnitPrice = BigInt(0);
+  let soldTokenBaseUnits = BigInt(0);
+  let minOutputLamports = BigInt(0);
+
+  for (const instruction of summary.instructions) {
+    const bytes = parseHex(instruction.dataHex);
+    switch (instruction.programId) {
+      case ASSOCIATED_TOKEN_PROGRAM_ID:
+        break;
+      case SYSTEM_PROGRAM_ID: {
+        if (
+          bytes.length !== 12 ||
+          readUnsignedLE(bytes, 0, 4) !== BigInt(2)
+        ) {
+          throw new Error("Canary exit has an unknown system instruction");
+        }
+        const [from, to] = instruction.accountKeys;
+        if (from !== summary.feePayer || !to) {
+          throw new Error("Canary exit transfer has an unexpected source");
+        }
+        const lamports = readUnsignedLE(bytes, 4, 8);
+        if (createdWrappedAccounts.has(to)) fundedLamports += lamports;
+        else tippedLamports += lamports;
+        break;
+      }
+      case TOKEN_PROGRAM_ID:
+      case TOKEN_2022_PROGRAM_ID: {
+        if (
+          instruction.dataHex === "09" &&
+          instruction.accountKeys.length === 3 &&
+          createdWrappedAccounts.has(instruction.accountKeys[0]!) &&
+          instruction.accountKeys[1] === summary.feePayer &&
+          instruction.accountKeys[2] === summary.feePayer
+        ) {
+          break;
+        }
+        throw new Error("Canary exit has an unknown or unsafe token instruction");
+      }
+      case COMPUTE_BUDGET_PROGRAM_ID: {
+        if (bytes.length === 5 && bytes[0] === 2) {
+          computeUnitLimit = readUnsignedLE(bytes, 1, 4);
+          break;
+        }
+        if (bytes.length === 9 && bytes[0] === 3) {
+          computeUnitPrice = readUnsignedLE(bytes, 1, 8);
+          break;
+        }
+        throw new Error("Canary exit has an unknown compute-budget instruction");
+      }
+      case PUMPSWAP_PROGRAM_ID: {
+        if (
+          instruction.accountKeys.length < 7 ||
+          instruction.accountKeys[1] !== summary.feePayer ||
+          instruction.accountKeys[3] !== summary.expectedMint ||
+          instruction.accountKeys[4] !== WRAPPED_SOL_MINT
+        ) {
+          throw new Error("PumpSwap sell accounts do not match the intent");
+        }
+        if (
+          instruction.dataHex.slice(0, 16) !== "33e685a4017f83ad" ||
+          bytes.length < 24
+        ) {
+          throw new Error("Canary exit has an unsupported PumpSwap instruction");
+        }
+        soldTokenBaseUnits = readUnsignedLE(bytes, 8, 8);
+        minOutputLamports = readUnsignedLE(bytes, 16, 8);
+        if (
+          soldTokenBaseUnits <= BigInt(0) ||
+          soldTokenBaseUnits > maxSellTokenBaseUnits
+        ) {
+          throw new Error("PumpSwap sell amount exceeds the token cap");
+        }
+        if (minOutputLamports < minimumOutputLamports) {
+          throw new Error("PumpSwap minimum output is below the exit floor");
+        }
+        swapCount += 1;
+        break;
+      }
+      case PUMP_PROGRAM_ID:
+        throw new Error(
+          "Curve exits stay locked until the Pump v3 instruction decoder is enabled",
+        );
+      default:
+        throw new Error("Canary exit contains an unsupported instruction");
+    }
+  }
+
+  if (swapCount !== 1) {
+    throw new Error("Canary exit must contain exactly one decoded swap");
+  }
+  if (fundedLamports > BigInt(summary.maxAccountFundingLamports)) {
+    throw new Error("Canary exit account funding exceeds the cap");
+  }
+  if (tippedLamports > BigInt(summary.maxTipLamports)) {
+    throw new Error("Canary exit transfers exceed the tip cap");
+  }
+  const priorityFeeLamports =
+    (computeUnitLimit * computeUnitPrice + BigInt(999_999)) /
+    BigInt(1_000_000);
+  if (priorityFeeLamports > BigInt(summary.maxPriorityFeeLamports)) {
+    throw new Error("Canary exit compute-unit fee exceeds the priority cap");
+  }
+
+  return Object.freeze({
+    ...summary,
+    decodedSwap: "pumpswap-sell" as const,
+    soldTokenBaseUnits: soldTokenBaseUnits.toString(),
+    minOutputLamports: minOutputLamports.toString(),
     fundedLamports: Number(fundedLamports),
     tippedLamports: Number(tippedLamports),
     priorityFeeLamports: Number(priorityFeeLamports),
