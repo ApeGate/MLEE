@@ -17,7 +17,6 @@ the local PAPER loop are exercised:
 - `/coin/{mint}` — public, on-demand mint and holder dossier
 - `/crew` — all six jobs with explicit permissions and hard boundaries
 - `/token` — official $APEGATE status and contract-address registry
-- `/launch` — Launch Bay local preparation and Kong preflight scaffold
 - `/status` — honest capability status
 - `/desk` — redirects to the Gate
 
@@ -44,11 +43,9 @@ After the official creation is confirmed:
 The production launch still needs `OFFICIAL_CREATOR_WALLET`, `PINATA_JWT`, and
 the creator wallet's manual signature. No key material belongs in git.
 
-Launch Bay is approved and sequenced after the Gate. Its current Phase 1
-surface prepares metadata, token settings, clean-launch guardrails, and a local
-receipt preview. It cannot upload metadata or build, sign, or send a
-`create_v2` transaction; those controls stay locked until the trading and
-transaction-safety foundations are complete.
+Launch Bay is parked for v1 and hidden by default. The retained internal
+scaffold is available only when `NEXT_PUBLIC_LAUNCH_BAY_ENABLED=true`; real
+trading, transaction safety, and exit behavior take priority.
 
 ## PAPER mode
 
