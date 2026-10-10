@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import {
   Connection,
   Keypair,
@@ -95,15 +94,12 @@ function requiredEnv(name: string): string {
   return value;
 }
 
-async function loadKeypair(path: string): Promise<Keypair> {
-  const parsed = JSON.parse(await readFile(path, "utf8")) as
-    | number[]
-    | { secretKey?: number[] };
-  const values = Array.isArray(parsed) ? parsed : parsed.secretKey;
-  if (!values || values.length !== 64) {
-    throw new Error("Canary wallet secret must contain a 64-byte JSON array");
+function loadKeypair(encoded: string): Keypair {
+  const values = Buffer.from(encoded, "base64");
+  if (values.length !== 64) {
+    throw new Error("Canary wallet secret must be a base64-encoded 64-byte key");
   }
-  return Keypair.fromSecretKey(Uint8Array.from(values));
+  return Keypair.fromSecretKey(values);
 }
 
 async function readDexPair(mint: string): Promise<DexPair> {
@@ -282,7 +278,7 @@ async function main() {
   const mint = new PublicKey(options.mint);
   const signer = options.dryRun
     ? null
-    : await loadKeypair(requiredEnv("CANARY_WALLET_SECRET_PATH"));
+    : loadKeypair(requiredEnv("CANARY_WALLET_SECRET_KEY_BASE64"));
   const signerAddress = signer?.publicKey.toBase58() ?? expectedWallet;
   if (signerAddress !== expectedWallet) {
     throw new Error("Loaded wallet does not match CANARY_EXPECTED_PUBKEY");

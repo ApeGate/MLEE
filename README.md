@@ -133,6 +133,15 @@ fees are still charged by the prepared transaction. A `manual_fill` receipt is
 written only after server-side RPC reports a confirmed slot; a broadcast alone
 is shown as pending. Fresh bonding-curve rows remain PAPER-only.
 
+### Safe manual smoke flow
+
+Keep test SOL in Phantom or Solflare; Apegate never needs the seed phrase.
+Start in PAPER mode, then use a connected wallet for one 0.01 SOL PumpSwap buy
+only after Kong shows a fresh `PASS` and Cheeta permits entry. Read the wallet
+preview, verify the mint and total outflow, sign manually, and wait for the
+confirmed receipt before testing an independently quoted exit. Use a dedicated
+wallet with 0.2 SOL initially; never fund an early test wallet above 0.5 SOL.
+
 The operator-only mainnet canary is separate from the browser app. It requires
 a fresh Kong `PASS`, a Cheeta timing chip that permits entry, a 0.01–0.05 SOL
 amount, the expected local signer, a single-signer transaction, and a successful
@@ -158,8 +167,10 @@ npm run canary:sell -- \
 
 Set `CANARY_EXPECTED_PUBKEY` in the uncommitted `.env.local`. Dry-run mode
 does not read a private key and cannot sign or send. A real canary additionally
-requires `CANARY_WALLET_SECRET_PATH`; the script then prints a hash-chained
-`manual_fill` receipt after confirmation and never prints key material.
+requires `CANARY_WALLET_SECRET_KEY_BASE64` in that ignored local env; the script
+then prints a hash-chained `manual_fill` receipt after confirmation and never
+prints key material. Do not upload this operator key to the browser-facing
+Worker or reuse it as a personal wallet.
 The sell canary also requires an operator-supplied minimum SOL output and
 rejects any prepared swap whose on-chain minimum is lower.
 Bonding-curve browser sends remain locked until their Pump v3 bytes have
