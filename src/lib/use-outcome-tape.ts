@@ -38,22 +38,39 @@ export function useOutcomeTape(launches: readonly FeedLaunch[]) {
   );
 
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (saved) setEntries(JSON.parse(saved) as OutcomeTapeEntry[]);
-    } catch {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } finally {
-      setHydrated(true);
-    }
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      try {
+        const saved = window.localStorage.getItem(STORAGE_KEY);
+        if (saved) setEntries(JSON.parse(saved) as OutcomeTapeEntry[]);
+      } catch {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } finally {
+        setHydrated(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     if (!hydrated || samples.length === 0) return;
-    setEntries((current) => {
-      const next = mergeOutcomeTape(current, samples, Date.now());
-      return JSON.stringify(next) === JSON.stringify(current) ? current : next;
+    let cancelled = false;
+    const now = Date.now();
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setEntries((current) => {
+        const next = mergeOutcomeTape(current, samples, now);
+        return JSON.stringify(next) === JSON.stringify(current)
+          ? current
+          : next;
+      });
     });
+    return () => {
+      cancelled = true;
+    };
   }, [hydrated, samples]);
 
   useEffect(() => {
