@@ -217,7 +217,7 @@ export function FeedApp() {
       });
       return;
     }
-    void refreshPositions(walletAddress);
+    queueMicrotask(() => void refreshPositions(walletAddress));
   }, [refreshPositions, walletAddress]);
 
   const selected =
