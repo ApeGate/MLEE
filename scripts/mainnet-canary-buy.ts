@@ -9,6 +9,7 @@ import {
   assertManualBuyTransactionSafe,
   authorizeMainnetCanaryBuy,
   createReceipt,
+  deriveOpeningPriceHoldPct,
   evaluateGate,
   type LaunchFacts,
 } from "../packages/core/src/index";
@@ -34,6 +35,7 @@ type DexPair = {
   fdv?: number;
   pairCreatedAt?: number;
   liquidity?: { usd?: number };
+  priceChange?: { h24?: number };
   txns?: Record<string, { buys?: number; sells?: number }>;
 };
 
@@ -299,6 +301,11 @@ async function main() {
   const holderFacts = concentration(report);
   const currentMarketCapSol = marketCapSol(pair);
   const recentTrades = countRecentTrades(pair);
+  const openingPriceHoldPct = deriveOpeningPriceHoldPct({
+    pairCreatedAt: pair.pairCreatedAt,
+    priceChange24hPct: pair.priceChange?.h24,
+    observedAt,
+  });
   const creatorTokens = report.creatorTokens;
   const launchFlowResolved =
     report.graphInsidersDetected === 0 &&
@@ -336,8 +343,7 @@ async function main() {
         : null,
     manufacturedCap: canonicalMarketResolved ? false : null,
     graduatedAt: pair.pairCreatedAt,
-    openingPriceHoldPct:
-      currentMarketCapSol > 0 ? (currentMarketCapSol / 85) * 100 : null,
+    openingPriceHoldPct,
     rugRisks:
       report.risks
         ?.filter((risk) => risk.level === "warn" || risk.level === "danger")

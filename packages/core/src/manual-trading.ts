@@ -29,6 +29,23 @@ export interface ManualBuyTransactionSummary {
   programIds: string[];
 }
 
+export function deriveOpeningPriceHoldPct(input: {
+  pairCreatedAt: number | null | undefined;
+  priceChange24hPct: number | null | undefined;
+  observedAt: number;
+}): number | null {
+  if (
+    !input.pairCreatedAt ||
+    !Number.isFinite(input.pairCreatedAt) ||
+    !Number.isFinite(input.priceChange24hPct)
+  ) {
+    return null;
+  }
+  const ageMs = input.observedAt - input.pairCreatedAt;
+  if (ageMs < 0 || ageMs > 24 * 60 * 60 * 1_000) return null;
+  return Math.max(0, 100 + (input.priceChange24hPct ?? 0));
+}
+
 export function authorizeMainnetCanaryBuy(
   input: MainnetCanaryAuthorizationInput,
 ) {

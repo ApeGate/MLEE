@@ -11,6 +11,7 @@ import {
   createPaperPortfolio,
   createReceipt,
   createVaultPolicyPreview,
+  deriveOpeningPriceHoldPct,
   estimateFees,
   evaluateGate,
   explainReceiptDeterministically,
@@ -289,6 +290,30 @@ describe("fees", () => {
 });
 
 describe("manual mainnet canary boundaries", () => {
+  it("derives opening-price hold only inside the available 24-hour window", () => {
+    expect(
+      deriveOpeningPriceHoldPct({
+        pairCreatedAt: now - 2 * 60 * 60 * 1_000,
+        priceChange24hPct: -60,
+        observedAt: now,
+      }),
+    ).toBe(40);
+    expect(
+      deriveOpeningPriceHoldPct({
+        pairCreatedAt: now - 2 * 60 * 60 * 1_000,
+        priceChange24hPct: 125,
+        observedAt: now,
+      }),
+    ).toBe(225);
+    expect(
+      deriveOpeningPriceHoldPct({
+        pairCreatedAt: now - 25 * 60 * 60 * 1_000,
+        priceChange24hPct: 20,
+        observedAt: now,
+      }),
+    ).toBeNull();
+  });
+
   it("authorizes only a fresh PASS inside the funded test range", async () => {
     const verdict = await evaluateGate(safeFacts, "standard", now);
     const allowedVerdict = {
