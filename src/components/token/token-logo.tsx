@@ -21,7 +21,10 @@ type ResolvedMetadata = {
   symbol: string | null;
 };
 
-const resolvedMetadata = new Map<string, ResolvedMetadata>();
+const resolvedMetadata = new Map<
+  string,
+  { metadata: ResolvedMetadata; expiresAt: number }
+>();
 const pendingMetadata = new Map<string, Promise<ResolvedMetadata>>();
 const queuedMetadata = new Map<
   string,
@@ -129,9 +132,11 @@ async function flushMetadataQueue() {
 function requestMetadata(mint: string, uri?: string | null) {
   const item = { mint, uri: uri ?? null };
   const key = tokenLogoBatchKey(item);
-  if (resolvedMetadata.has(key)) {
-    return Promise.resolve(resolvedMetadata.get(key)!);
+  const cached = resolvedMetadata.get(key);
+  if (cached && cached.expiresAt > Date.now()) {
+    return Promise.resolve(cached.metadata);
   }
+  resolvedMetadata.delete(key);
   const existing = pendingMetadata.get(key);
   if (existing) return existing;
 
@@ -141,7 +146,11 @@ function requestMetadata(mint: string, uri?: string | null) {
       flushTimer = setTimeout(() => void flushMetadataQueue(), 12);
     }
   }).then((metadata) => {
-    resolvedMetadata.set(key, metadata);
+    resolvedMetadata.set(key, {
+      metadata,
+      expiresAt:
+        Date.now() + (metadata.image ? 5 * 60_000 : 10_000),
+    });
     pendingMetadata.delete(key);
     return metadata;
   });
@@ -178,6 +187,8 @@ export function TokenLogo({
     key: string;
     metadata: ResolvedMetadata;
   } | null>(null);
+  const [retry, setRetry] = useState({ key: requestKey, count: 0 });
+  const retryAttempt = retry.key === requestKey ? retry.count : 0;
   const [failedSource, setFailedSource] = useState<string | null>(null);
   const resolved =
     directImage ??
@@ -187,15 +198,23 @@ export function TokenLogo({
   useEffect(() => {
     if (directImage && !onMetadataRef.current) return;
     let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
     void requestMetadata(mint, uri).then((metadata) => {
       if (cancelled) return;
       setLoaded({ key: requestKey, metadata });
       onMetadataRef.current?.(metadata);
+      if (!metadata.image && retryAttempt < 2) {
+        retryTimer = setTimeout(() => {
+          resolvedMetadata.delete(requestKey);
+          setRetry({ key: requestKey, count: retryAttempt + 1 });
+        }, (retryAttempt + 1) * 10_000);
+      }
     });
     return () => {
       cancelled = true;
+      if (retryTimer !== null) clearTimeout(retryTimer);
     };
-  }, [directImage, mint, requestKey, uri]);
+  }, [directImage, mint, requestKey, retryAttempt, uri]);
 
   const dimensions = {
     sm: "size-8 rounded-lg text-[9px]",
