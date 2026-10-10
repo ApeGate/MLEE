@@ -543,6 +543,16 @@ function CoinPanel({
           >
             <ExternalLink className="size-3" />
           </a>
+          <Link
+            href={`/coin/${facts.mint}${
+              facts.bondingCurve
+                ? `?curve=${encodeURIComponent(facts.bondingCurve)}`
+                : ""
+            }`}
+            className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border border-[#31291f] px-2.5 py-1.5 text-[9px] font-bold text-[#91897e] hover:border-[#ff7250]/40 hover:text-[#f4efe5]"
+          >
+            Public dossier <ExternalLink className="size-2.5" />
+          </Link>
         </div>
       </div>
 

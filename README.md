@@ -8,6 +8,8 @@ This Phase 0–1 release is deliberately read-only:
 
 - `/` — Gate-first product home
 - `/feed` — real launch discovery with a recorded real-tape fallback
+- `/coin/{mint}` — public, on-demand mint and holder dossier
+- `/crew` — all six jobs with explicit permissions and hard boundaries
 - `/token` — official $APEGATE status and contract-address registry
 - `/launch` — Launch Bay local preparation and Kong preflight scaffold
 - `/status` — honest capability status

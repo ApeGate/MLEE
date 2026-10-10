@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 type RugHolder = {
   owner: string;
   pct: number;
+  insider?: boolean;
 };
 
 type RugReport = {
@@ -19,6 +20,25 @@ type RugReport = {
   }>;
   topHolders?: RugHolder[];
   knownAccounts?: Record<string, { name: string; type: string }>;
+  tokenMeta?: {
+    name?: string;
+    symbol?: string;
+    uri?: string;
+    mutable?: boolean;
+    updateAuthority?: string;
+  };
+  fileMeta?: {
+    description?: string;
+    image?: string;
+  };
+  creatorTokens?: Array<{
+    mint: string;
+    marketCap?: number;
+    createdAt?: string;
+  }>;
+  totalHolders?: number;
+  graphInsidersDetected?: number;
+  detectedAt?: string;
 };
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -142,6 +162,35 @@ export async function GET(
       top10Pct: report ? top10Pct : null,
       rugScore: report?.score_normalised ?? null,
       rugged: report?.rugged ?? null,
+      creator: report?.creator ?? null,
+      metadata: report
+        ? {
+            name: report.tokenMeta?.name ?? null,
+            symbol: report.tokenMeta?.symbol ?? null,
+            uri: report.tokenMeta?.uri ?? null,
+            mutable: report.tokenMeta?.mutable ?? null,
+            updateAuthority: report.tokenMeta?.updateAuthority ?? null,
+            description: report.fileMeta?.description ?? null,
+            image: report.fileMeta?.image ?? null,
+          }
+        : null,
+      totalHolders: report?.totalHolders ?? null,
+      graphInsidersDetected: report?.graphInsidersDetected ?? null,
+      detectedAt: report?.detectedAt ?? null,
+      topHolders:
+        report?.topHolders?.slice(0, 20).map((holder) => ({
+          owner: holder.owner,
+          pct: holder.pct,
+          insider: Boolean(holder.insider),
+          label: known[holder.owner]?.name ?? null,
+          type: known[holder.owner]?.type ?? null,
+        })) ?? [],
+      creatorHistory:
+        report?.creatorTokens?.slice(0, 12).map((token) => ({
+          mint: token.mint,
+          marketCap: token.marketCap ?? null,
+          createdAt: token.createdAt ?? null,
+        })) ?? [],
       rugRisks:
         report?.risks
           ?.filter((risk) => risk.level === "warn" || risk.level === "danger")

@@ -30,7 +30,7 @@ export function SiteHeader() {
             Live gate
           </Link>
           <Link
-            href="/#crew"
+            href="/crew"
             className="hidden text-[#a79f92] transition-colors hover:text-[#f4efe5] sm:inline"
           >
             Crew

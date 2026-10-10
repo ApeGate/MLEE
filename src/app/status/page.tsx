@@ -13,7 +13,8 @@ const SERVICES = [
   {
     name: "Web application",
     state: "Operational",
-    detail: "Homepage, feed, local receipts, and wallet connect path",
+    detail:
+      "Homepage, live feed, public coin dossiers, crew roster, local receipts, and wallet connect path",
   },
   {
     name: "Launch discovery",

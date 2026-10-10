@@ -569,6 +569,15 @@ export function GateSections() {
               );
             })}
           </div>
+          <div className="mt-6 flex justify-center">
+            <Link
+              href="/crew"
+              className="inline-flex items-center gap-2 rounded-full border border-[#3a3328] px-5 py-3 text-sm font-bold text-[#b6aea1] hover:border-[#ff7250]/45 hover:text-[#f4efe5]"
+            >
+              See every role and boundary
+              <ArrowRight className="size-4" />
+            </Link>
+          </div>
         </div>
       </section>
 
