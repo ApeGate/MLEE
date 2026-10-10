@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { PublicKey } from "@solana/web3.js";
 import {
   APEGATE_FEE_BPS,
+  MANUAL_BUY_PROGRAM_ALLOWLIST,
+  PUMP_PROGRAM_ID,
+  PUMPSWAP_PROGRAM_ID,
   applyPaperBuy,
   applyPaperSell,
   assertManualBuyTransactionSafe,
@@ -290,6 +294,20 @@ describe("fees", () => {
 });
 
 describe("manual mainnet canary boundaries", () => {
+  it("uses valid official Pump program addresses", () => {
+    expect(PUMP_PROGRAM_ID).toBe(
+      "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
+    );
+    expect(PUMPSWAP_PROGRAM_ID).toBe(
+      "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+    );
+    expect(
+      MANUAL_BUY_PROGRAM_ALLOWLIST.map(
+        (programId) => new PublicKey(programId).toBase58(),
+      ),
+    ).toEqual(MANUAL_BUY_PROGRAM_ALLOWLIST);
+  });
+
   it("derives opening-price hold only inside the available 24-hour window", () => {
     expect(
       deriveOpeningPriceHoldPct({

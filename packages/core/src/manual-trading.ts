@@ -4,13 +4,19 @@ export const CANARY_BUY_MIN_SOL = 0.01;
 export const CANARY_BUY_MAX_SOL = 0.05;
 export const CANARY_WALLET_RESERVE_SOL = 0.005;
 
+export const PUMP_PROGRAM_ID =
+  "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
+export const PUMPSWAP_PROGRAM_ID =
+  "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA";
+
 export const MANUAL_BUY_PROGRAM_ALLOWLIST = [
   "11111111111111111111111111111111",
   "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
   "ComputeBudget111111111111111111111111111111",
   "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-  "6EF8rrecthR5DkZJbQJ7JzTt2AUVTwbLsJCR6VwACF6P",
-  "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+  "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+  PUMP_PROGRAM_ID,
+  PUMPSWAP_PROGRAM_ID,
 ] as const;
 
 export interface MainnetCanaryAuthorizationInput {
