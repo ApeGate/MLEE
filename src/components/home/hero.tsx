@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
-import { SAMPLE_TAPE } from "@/lib/strategies";
 
 export function HomeHero() {
   return (
@@ -38,14 +37,14 @@ export function HomeHero() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/desk"
-              className="group inline-flex items-center gap-2 rounded-lg bg-[#ff4f1f] px-5 py-3.5 text-sm font-extrabold text-[#0b0906] transition-transform hover:-translate-y-0.5 hover:bg-[#ff6438]"
+              className="group inline-flex items-center gap-2 rounded-full bg-[#ff4f1f] px-5 py-3.5 text-sm font-extrabold text-[#0b0906] transition-transform hover:-translate-y-0.5 hover:bg-[#ff6438]"
             >
               Run the simulation
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
             </Link>
             <Link
               href="/#crew"
-              className="rounded-lg border border-[#3a3328] bg-[#12100c]/75 px-5 py-3.5 text-sm font-semibold text-[#f4efe5] hover:border-[#ff4f1f]/65"
+              className="rounded-full border border-[#3a3328] bg-[#12100c]/75 px-5 py-3.5 text-sm font-semibold text-[#f4efe5] hover:border-[#ff4f1f]/65"
             >
               Meet your apes
             </Link>
@@ -55,70 +54,75 @@ export function HomeHero() {
           </p>
         </div>
 
-        <div className="rise-delay relative mx-auto w-full max-w-lg">
-          <div className="absolute -inset-3 -z-10 rotate-2 rounded-[2rem] border border-[#ff4f1f]/25 bg-[#ff4f1f]/5" />
-          <div className="ape-card overflow-hidden rounded-[1.5rem] border border-[#3a3328] shadow-[0_30px_90px_rgb(0_0_0_/_55%)]">
-            <div className="flex items-center gap-4 border-b border-[#302a20] p-4 sm:p-5">
+        <div className="rise-delay relative mx-auto h-[500px] w-full max-w-[560px] sm:h-[580px]">
+          <div className="agent-glow absolute inset-x-[12%] bottom-[3%] h-[54%] rounded-full bg-[#ff4f1f]/25 blur-[100px]" />
+          <div className="absolute inset-x-[3%] bottom-[2%] h-[74%] rounded-[2rem] border border-[#3a3328] bg-[radial-gradient(circle_at_50%_75%,rgb(255_79_31_/_14%),transparent_58%),linear-gradient(180deg,rgb(18_16_12_/_20%),rgb(18_16_12_/_80%))] shadow-[inset_0_1px_0_rgb(255_255_255_/_6%),0_35px_100px_rgb(0_0_0_/_58%)]" />
+          <div className="scan-line absolute inset-x-[9%] top-[26%] z-20 h-px bg-gradient-to-r from-transparent via-[#ff7250] to-transparent shadow-[0_0_18px_#ff4f1f]" />
+
+          <article className="agent-float absolute bottom-[4%] left-1/2 z-10 w-[57%] -translate-x-1/2 overflow-hidden rounded-[1.6rem] border border-[#ff4f1f]/30 bg-[#0c0a08] shadow-[0_28px_70px_rgb(0_0_0_/_70%)]">
+            <div className="relative aspect-square overflow-hidden">
               <Image
-                src="/apegate-logo.jpg"
-                alt="Apegate ape mark"
-                width={76}
-                height={76}
+                src="/agents/kong.jpg"
+                alt="Kong, Apegate scout"
+                fill
                 priority
-                className="size-16 rounded-xl border border-[#ff4f1f]/35 object-cover sm:size-[76px]"
+                sizes="(max-width: 768px) 60vw, 320px"
+                className="object-cover transition-transform duration-700 hover:scale-[1.03]"
               />
-              <div className="min-w-0">
-                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ff7250]">
-                  Apegate decision tape
+              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#090806] to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+                <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-[#ff7250]">
+                  Lead scout
                 </p>
-                <p className="mt-1 text-lg font-bold tracking-tight">
-                  Crew has the floor
-                </p>
-                <p className="mt-0.5 text-xs text-[#8f877b]">
-                  Sample run · simulated data
-                </p>
+                <div className="mt-1 flex items-center justify-between">
+                  <h2 className="text-2xl font-extrabold tracking-[-0.04em]">Kong</h2>
+                  <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase text-[#b8b0a4]">
+                    <span className="live-dot size-1.5 rounded-full bg-[#c7ff45] text-[#c7ff45]" />
+                    Scanning
+                  </span>
+                </div>
               </div>
-              <span className="ml-auto hidden size-2 rounded-full bg-[#c7ff45] shadow-[0_0_14px_#c7ff45] sm:block" />
             </div>
-            <ul className="divide-y divide-[#302a20]">
-              {SAMPLE_TAPE.map((row, index) => (
-                <li
-                  key={`${row.coin}-${row.action}`}
-                  className="grid grid-cols-[78px_1fr] gap-3 px-4 py-3.5 sm:grid-cols-[92px_1fr] sm:px-5"
-                >
-                  <div>
-                    <span
-                      className={`inline-flex rounded-md px-2 py-1 font-mono text-[10px] font-bold uppercase ${
-                        index === 0
-                          ? "bg-[#30251e] text-[#ff8a64]"
-                          : index === 1
-                            ? "bg-[#202816] text-[#c7ff45]"
-                            : "bg-[#201c16] text-[#b6aea1]"
-                      }`}
-                    >
-                      {row.who}
-                    </span>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-baseline gap-2">
-                      <span className="text-sm font-bold text-[#f4efe5]">
-                        {row.action}
-                      </span>
-                      <span className="font-mono text-xs text-[#ff7250]">
-                        {row.coin}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs leading-relaxed text-[#8f877b]">
-                      {row.why}
-                    </p>
-                  </div>
-                </li>
+          </article>
+
+          <AgentMini
+            name="Cheeta"
+            role="Watching"
+            image="/agents/cheeta.jpg"
+            color="#ffb13c"
+            className="agent-float agent-float-delay-1 left-[0%] top-[8%]"
+          />
+          <AgentMini
+            name="Caesar"
+            role="Trade ready"
+            image="/agents/caesar.jpg"
+            color="#c7ff45"
+            className="agent-float agent-float-delay-2 right-[0%] top-[2%]"
+          />
+          <AgentMini
+            name="Cornelius"
+            role="Limits armed"
+            image="/agents/cornelius.jpg"
+            color="#9ab7ff"
+            className="agent-float agent-float-delay-3 bottom-[8%] right-[0%]"
+          />
+
+          <div className="glass-panel absolute bottom-[8%] left-[0%] z-20 hidden rounded-xl border border-[#3a3328] px-3 py-2.5 sm:block">
+            <div className="flex -space-x-1.5">
+              {["kong", "cheeta", "caesar", "cornelius"].map((ape) => (
+                <Image
+                  key={ape}
+                  src={`/agents/${ape}.jpg`}
+                  alt=""
+                  width={24}
+                  height={24}
+                  className="size-6 rounded-full border-2 border-[#15120e] object-cover"
+                />
               ))}
-            </ul>
-            <div className="flex items-center justify-between border-t border-[#302a20] bg-[#0d0b09] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.12em] text-[#6f685f]">
-              <span>Gate status</span>
-              <span className="text-[#c7ff45]">Human approval armed</span>
             </div>
+            <p className="mt-2 font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-[#c7ff45]">
+              4 apes on your plan
+            </p>
           </div>
         </div>
       </div>
@@ -137,5 +141,51 @@ export function HomeHero() {
         </div>
       </div>
     </section>
+  );
+}
+
+function AgentMini({
+  name,
+  role,
+  image,
+  color,
+  className,
+}: {
+  name: string;
+  role: string;
+  image: string;
+  color: string;
+  className: string;
+}) {
+  return (
+    <article
+      className={`glass-panel absolute z-20 w-[32%] overflow-hidden rounded-2xl border border-[#3a3328] p-1.5 sm:w-[29%] ${className}`}
+    >
+      <div className="relative aspect-square overflow-hidden rounded-xl">
+        <Image
+          src={image}
+          alt={`${name}, Apegate agent`}
+          fill
+          sizes="180px"
+          className="object-cover"
+        />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#090806] to-transparent" />
+      </div>
+      <div className="px-1.5 pb-1 pt-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-xs font-bold sm:text-sm">{name}</p>
+          <span
+            className="live-dot size-1.5 shrink-0 rounded-full"
+            style={{ backgroundColor: color, color }}
+          />
+        </div>
+        <p
+          className="mt-0.5 truncate font-mono text-[7px] font-bold uppercase tracking-wider sm:text-[8px]"
+          style={{ color }}
+        >
+          {role}
+        </p>
+      </div>
+    </article>
   );
 }

@@ -10,12 +10,8 @@ import {
   type ReactNode,
 } from "react";
 import {
-  Binoculars,
-  Crosshair,
   Home,
   RotateCcw,
-  Search,
-  ShieldCheck,
 } from "lucide-react";
 import {
   STYLE_META,
@@ -67,11 +63,18 @@ const KIND_LABEL: Record<DeskEvent["kind"], string> = {
 };
 
 const CREW = [
-  { name: "Kong", role: "Scout", icon: Search, color: "#ff7250" },
-  { name: "Cheeta", role: "Watch", icon: Binoculars, color: "#ffb13c" },
-  { name: "Caesar", role: "Trade", icon: Crosshair, color: "#c7ff45" },
-  { name: "Cornelius", role: "Risk", icon: ShieldCheck, color: "#9ab7ff" },
+  { name: "Kong", role: "Scout", image: "/agents/kong.jpg", color: "#ff7250" },
+  { name: "Cheeta", role: "Watch", image: "/agents/cheeta.jpg", color: "#ffb13c" },
+  { name: "Caesar", role: "Trade", image: "/agents/caesar.jpg", color: "#c7ff45" },
+  { name: "Cornelius", role: "Risk", image: "/agents/cornelius.jpg", color: "#9ab7ff" },
 ] as const;
+
+const AGENT_IMAGE: Record<DeskEvent["specialist"], string> = {
+  scout: "/agents/kong.jpg",
+  watch: "/agents/cheeta.jpg",
+  desk: "/agents/caesar.jpg",
+  system: "/agents/cornelius.jpg",
+};
 
 export function DeskApp() {
   const [strategy, setStrategy] = useState<Strategy>(() =>
@@ -295,28 +298,35 @@ function Setup({
         </p>
 
         <div className="mt-8 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {CREW.map((ape) => {
-            const Icon = ape.icon;
-            return (
-              <div
-                key={ape.name}
-                className="ape-card flex items-center gap-2.5 rounded-xl border border-[#302a20] px-3 py-2.5"
-              >
-                <div
-                  className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-current/10"
-                  style={{ color: ape.color }}
-                >
-                  <Icon className="size-4" />
-                </div>
+          {CREW.map((ape, index) => (
+            <div
+              key={ape.name}
+              className={`ape-card agent-float agent-float-delay-${index} group overflow-hidden rounded-xl border border-[#302a20]`}
+            >
+              <div className="relative aspect-[1.55/1] overflow-hidden">
+                <Image
+                  src={ape.image}
+                  alt={`${ape.name}, ${ape.role} agent`}
+                  fill
+                  sizes="180px"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#12100c] to-transparent" />
+                <span
+                  className="live-dot absolute right-2 top-2 size-1.5 rounded-full"
+                  style={{ backgroundColor: ape.color, color: ape.color }}
+                />
+              </div>
+              <div className="relative -mt-5 px-3 pb-3">
                 <div className="min-w-0">
                   <p className="truncate text-xs font-bold">{ape.name}</p>
-                  <p className="font-mono text-[9px] uppercase tracking-wider text-[#6f685f]">
+                  <p className="font-mono text-[8px] uppercase tracking-wider" style={{ color: ape.color }}>
                     {ape.role}
                   </p>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
 
         <div className="mt-9">
@@ -648,11 +658,11 @@ function Pipeline({
   phase: Phase;
   stats: SimState["stats"];
 }) {
-  const stages: { id: Phase; name: string; role: string }[] = [
-    { id: "scouting", name: "Kong", role: "Scout" },
-    { id: "watching", name: "Cheeta", role: "Watch" },
-    { id: "awaiting_approval", name: "Caesar", role: "Trade" },
-    { id: "managing", name: "Cornelius", role: "Risk" },
+  const stages: { id: Phase; name: string; role: string; image: string }[] = [
+    { id: "scouting", name: "Kong", role: "Scout", image: "/agents/kong.jpg" },
+    { id: "watching", name: "Cheeta", role: "Watch", image: "/agents/cheeta.jpg" },
+    { id: "awaiting_approval", name: "Caesar", role: "Trade", image: "/agents/caesar.jpg" },
+    { id: "managing", name: "Cornelius", role: "Risk", image: "/agents/cornelius.jpg" },
   ];
   const active: Phase | null =
     phase === "blocked" || phase === "paused" || phase === "idle"
@@ -675,14 +685,23 @@ function Pipeline({
               <div
                 key={s.id}
                 className={cn(
-                  "px-2 py-2 text-center",
+                  "flex items-center justify-center gap-2 px-2 py-2",
                   i > 0 && "border-l border-[#302a20]",
                   on ? "bg-[#ff4f1f] text-[#0b0906]" : "text-[#6f685f]",
                 )}
               >
-                <span className="block text-[10px] font-bold sm:text-xs">{s.name}</span>
-                <span className="block font-mono text-[8px] uppercase tracking-wider opacity-70">
-                  {s.role}
+                <Image
+                  src={s.image}
+                  alt=""
+                  width={26}
+                  height={26}
+                  className="hidden size-6 rounded-md border border-current/15 object-cover min-[460px]:block"
+                />
+                <span>
+                  <span className="block text-[9px] font-bold sm:text-[11px]">{s.name}</span>
+                  <span className="block font-mono text-[7px] uppercase tracking-wider opacity-70">
+                    {s.role}
+                  </span>
                 </span>
               </div>
             );
@@ -716,36 +735,47 @@ function TapeLine({ event }: { event: DeskEvent }) {
     event.kind === "sell";
   return (
     <li className="border-b border-[#302a20] px-4 py-3.5">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="font-mono text-[10px] text-[#6f685f]">
-          {formatTime(event.at)}
-        </span>
-        <span
-          className={cn(
-            "rounded px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wide",
-            event.specialist === "scout" && "bg-[#ff7250]/10 text-[#ff7250]",
-            event.specialist === "watch" && "bg-[#ffb13c]/10 text-[#ffb13c]",
-            event.specialist === "desk" && "bg-[#c7ff45]/10 text-[#c7ff45]",
-            event.specialist === "system" && "bg-[#9ab7ff]/10 text-[#9ab7ff]",
-          )}
-        >
-          {WHO_LABEL[event.specialist]}
-        </span>
-        <span
-          className={cn(
-            "text-xs font-semibold",
-            hot ? "text-[#f4efe5]" : "text-[#b6aea1]",
-          )}
-        >
-          {KIND_LABEL[event.kind]}
-        </span>
-        {event.ticker ? (
-          <span className="font-mono text-sm font-semibold">
-            ${event.ticker}
-          </span>
-        ) : null}
+      <div className="flex gap-3">
+        <Image
+          src={AGENT_IMAGE[event.specialist]}
+          alt=""
+          width={36}
+          height={36}
+          className="size-9 shrink-0 rounded-lg border border-[#302a20] object-cover"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="font-mono text-[10px] text-[#6f685f]">
+              {formatTime(event.at)}
+            </span>
+            <span
+              className={cn(
+                "rounded px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wide",
+                event.specialist === "scout" && "bg-[#ff7250]/10 text-[#ff7250]",
+                event.specialist === "watch" && "bg-[#ffb13c]/10 text-[#ffb13c]",
+                event.specialist === "desk" && "bg-[#c7ff45]/10 text-[#c7ff45]",
+                event.specialist === "system" && "bg-[#9ab7ff]/10 text-[#9ab7ff]",
+              )}
+            >
+              {WHO_LABEL[event.specialist]}
+            </span>
+            <span
+              className={cn(
+                "text-xs font-semibold",
+                hot ? "text-[#f4efe5]" : "text-[#b6aea1]",
+              )}
+            >
+              {KIND_LABEL[event.kind]}
+            </span>
+            {event.ticker ? (
+              <span className="font-mono text-sm font-semibold">
+                ${event.ticker}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1.5 text-xs leading-relaxed text-[#91897e]">{event.detail}</p>
+        </div>
       </div>
-      <p className="mt-1.5 text-xs leading-relaxed text-[#91897e]">{event.detail}</p>
     </li>
   );
 }
