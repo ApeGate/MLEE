@@ -28,7 +28,7 @@ test("crew page publishes permissions and boundaries", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Kong" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Rafiki" })).toBeVisible();
-  await expect(page.getByText(/cannot trade, size, approve/i)).toBeVisible();
+  await expect(page.getByText(/trade, size, approve, or change exits/i)).toBeVisible();
 });
 
 test("coin dossier has an honest unavailable state", async ({ page }) => {
