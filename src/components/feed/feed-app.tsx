@@ -1622,7 +1622,19 @@ function LiveFillTape() {
                     <Check className="size-3" /> Confirmed
                   </span>
                 </div>
-                <p className="mt-3 text-sm font-extrabold">${fill.symbol}</p>
+                <div className="mt-3 flex items-center gap-2.5">
+                  <TokenLogo
+                    mint={fill.mint}
+                    symbol={fill.symbol}
+                    size="sm"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-extrabold">${fill.symbol}</p>
+                    <p className="truncate font-mono text-[8px] text-[#5f584f]">
+                      {fill.mint}
+                    </p>
+                  </div>
+                </div>
                 <div className="mt-2 space-y-1 font-mono text-[9px] tabular-nums text-[#91897e]">
                   <p>
                     {fill.solDelta > 0 ? "+" : ""}
