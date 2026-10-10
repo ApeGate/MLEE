@@ -73,7 +73,7 @@ const SERVICES = [
     name: "Real trading and Vault",
     state: "Manual sign live",
     detail:
-      "Privy browser buys require a fresh PASS, entry timing, one user signer, no lookup tables, and approved programs; automated Vault signing stays off",
+      "Privy browser buys require a fresh PASS and timing clearance; PumpSwap canaries decode mint, spend, tip, token, and compute limits before signing; Vault automation stays off",
   },
 ] as const;
 
