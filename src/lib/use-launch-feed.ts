@@ -10,6 +10,7 @@ import {
   type Source,
 } from "../../packages/core/src";
 import tape from "../../fixtures/tapes/pump-launches.json";
+import { isBrandSafeLaunchLabel } from "./brand-safety";
 
 export type FeedLaunch = {
   facts: LaunchFacts;
@@ -124,7 +125,11 @@ export function useLaunchFeed() {
         return;
       }
 
-      if (isLaunch(payload) && payload.txType === "create") {
+      if (
+        isLaunch(payload) &&
+        payload.txType === "create" &&
+        isBrandSafeLaunchLabel(payload.name, payload.symbol)
+      ) {
         const observedAt = Date.now();
         const facts = launchToFacts(payload, observedAt);
         setLastMessageAt(observedAt);

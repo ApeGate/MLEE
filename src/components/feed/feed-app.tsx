@@ -972,8 +972,8 @@ function TokenMark({
         "relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl border text-xs font-black",
         large ? "size-12 text-sm" : "size-9",
         mayhem
-          ? "border-warn/35 bg-warn/8 text-warn"
-          : "border-signal/25 bg-signal/8 text-signal",
+          ? "border-line-strong bg-surface-3 text-fg-2"
+          : "border-line bg-surface-2 text-muted",
       )}
     >
       <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgb(255_255_255_/_14%),transparent_45%)]" />
