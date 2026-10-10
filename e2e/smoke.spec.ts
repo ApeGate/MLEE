@@ -13,6 +13,8 @@ test("home exposes the Gate-first paths", async ({ page }) => {
     "/feed",
   );
   await expect(page.getByText("Official Apegate token", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /launch bay|prepare a launch/i })).toHaveCount(0);
+  expect((await page.goto("/launch"))?.status()).toBe(404);
 });
 
 test("official token registry never fabricates a CA", async ({ page }) => {

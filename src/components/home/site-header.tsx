@@ -60,12 +60,6 @@ export function SiteHeader() {
             Lab
           </Link>
           <Link
-            href="/launch"
-            className="hidden text-[#a79f92] transition-colors hover:text-[#f4efe5] xl:inline"
-          >
-            Launch Bay
-          </Link>
-          <Link
             href="/feed"
             className="rounded-full bg-fg px-4 py-2.5 font-bold text-[#0b0906] transition-transform hover:-translate-y-0.5 hover:bg-fg-2"
           >

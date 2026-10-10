@@ -153,10 +153,10 @@ export default async function TokenPage() {
                 </span>
               )}
               <Link
-                href="/launch"
+                href="/status"
                 className="inline-flex items-center gap-2 rounded-full border border-[#3a3328] px-5 py-3.5 text-sm font-bold text-[#b6aea1] hover:border-[#ff7250]/50"
               >
-                See clean-launch guardrails
+                Review launch status
               </Link>
             </div>
           </div>

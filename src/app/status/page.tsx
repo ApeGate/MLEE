@@ -30,9 +30,9 @@ const SERVICES = [
   },
   {
     name: "Launch Bay",
-    state: "Prepare only",
+    state: "Parked",
     detail:
-      "Local metadata and token draft, deterministic Kong preflight, and receipt preview; no upload, transaction build, or signature",
+      "Removed from the v1 product surface while Gate intelligence, manual trading, and exit safety take priority",
   },
   {
     name: "Official $APEGATE registry",
@@ -128,6 +128,7 @@ export default function StatusPage() {
                     service.state === "Disabled"
                       ? "border-[#6f685f]/25 text-[#6f685f]"
                       : service.state === "Pre-launch" ||
+                          service.state === "Parked" ||
                           service.state === "Preview only" ||
                           service.state === "Limited"
                         ? "border-wait/25 bg-wait/6 text-wait"
@@ -136,6 +137,7 @@ export default function StatusPage() {
                 >
                   {service.state === "Disabled" ||
                   service.state === "Pre-launch" ||
+                  service.state === "Parked" ||
                   service.state === "Preview only" ||
                   service.state === "Limited" ? (
                     <CircleDot className="size-2.5" />

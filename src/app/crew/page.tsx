@@ -57,7 +57,7 @@ const CREW = [
     can: "Prepare paper and manual-sign actions",
     cannot: "Send around Kong or your configured caps",
     status: "PREVIEW",
-    statusCopy: "Fee preview and Launch Bay preparation",
+    statusCopy: "Fee previews and bounded manual-trade preparation",
     color: "#c7ff45",
     image: "/agents/caesar.jpg",
     icon: Crosshair,

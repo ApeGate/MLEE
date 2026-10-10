@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { LaunchBay } from "@/components/launch/launch-bay";
 
 export const metadata: Metadata = {
@@ -11,5 +12,9 @@ export const metadata: Metadata = {
 };
 
 export default function LaunchPage() {
+  if (process.env.NEXT_PUBLIC_LAUNCH_BAY_ENABLED !== "true") {
+    notFound();
+  }
+
   return <LaunchBay />;
 }

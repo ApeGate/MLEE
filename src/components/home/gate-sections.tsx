@@ -9,11 +9,9 @@ import {
   Check,
   CircleOff,
   Crosshair,
-  FileCheck2,
   Fingerprint,
   FlaskConical,
   LockKeyhole,
-  Rocket,
   ScanSearch,
   ShieldAlert,
   ShieldCheck,
@@ -418,91 +416,6 @@ export function GateSections() {
         </div>
       </section>
 
-      <section className="border-y border-[#302a20] bg-[#0d0b09] px-5 py-20 sm:px-8 sm:py-28">
-        <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#ff7250]/25 bg-[#ff4f1f]/7 px-3 py-1.5 font-mono text-[8px] font-bold uppercase tracking-[0.15em] text-[#ff8a64]">
-              <Rocket className="size-3" />
-              Launch Bay · approved
-            </div>
-            <h2 className="mt-5 text-4xl font-extrabold leading-[0.96] tracking-[-0.06em] sm:text-6xl">
-              Launching?
-              <br />
-              <span className="text-stroke">Go through first.</span>
-            </h2>
-            <p className="mt-6 max-w-xl text-sm leading-relaxed text-[#91897e]">
-              Prepare metadata, surface the creator buy, and run Kong&apos;s
-              local preflight now. Transaction building stays locked behind the
-              Gate, trading fundamentals, and build-time guardrails.
-            </p>
-            <Link
-              href="/launch"
-              className="group mt-8 inline-flex items-center gap-2 rounded-full bg-[#ff4f1f] px-5 py-3.5 text-sm font-extrabold text-[#090806] transition-transform hover:-translate-y-0.5 hover:bg-[#ff6438]"
-            >
-              Prepare a launch
-              <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-            </Link>
-            <p className="mt-3 text-[10px] text-[#5f584f]">
-              Local draft only · no upload · no transaction · no signature
-            </p>
-          </div>
-
-          <div className="overflow-hidden rounded-[1.6rem] border border-[#3a3328] bg-[#090806] shadow-[0_32px_90px_rgb(0_0_0_/_35%)]">
-            <div className="flex items-center justify-between border-b border-[#31291f] bg-[#12100c] px-5 py-4">
-              <div className="flex items-center gap-3">
-                <Image
-                  src="/agents/kong.jpg"
-                  alt=""
-                  width={38}
-                  height={38}
-                  className="size-9 rounded-xl border border-[#ff7250]/25 object-cover"
-                />
-                <div>
-                  <p className="text-xs font-extrabold">Kong preflight</p>
-                  <p className="font-mono text-[7px] uppercase tracking-wider text-[#6f685f]">
-                    Draft preparation
-                  </p>
-                </div>
-              </div>
-              <span className="rounded border border-[#c7ff45]/25 bg-[#c7ff45]/7 px-2 py-1 font-mono text-[7px] font-bold text-[#c7ff45]">
-                PREPARED
-              </span>
-            </div>
-            <div className="grid sm:grid-cols-[1fr_0.9fr]">
-              <div className="border-b border-[#31291f] p-5 sm:border-b-0 sm:border-r">
-                <p className="font-mono text-[8px] font-bold uppercase tracking-[0.15em] text-[#ff7250]">
-                  Local checks
-                </p>
-                <div className="mt-4 space-y-2">
-                  <LaunchIntroCheck label="Protected identity" value="Clear" />
-                  <LaunchIntroCheck label="Metadata" value="Complete" />
-                  <LaunchIntroCheck label="Creator buy" value="Under warn" />
-                  <LaunchIntroCheck label="Clean guardrails" value="Accepted" />
-                </div>
-              </div>
-              <div className="p-5">
-                <p className="font-mono text-[8px] font-bold uppercase tracking-[0.15em] text-[#c7ff45]">
-                  Receipt preview
-                </p>
-                <div className="mt-4 flex items-center gap-3 rounded-xl border border-[#31291f] bg-[#12100c] p-3">
-                  <FileCheck2 className="size-5 shrink-0 text-[#c7ff45]" />
-                  <div>
-                    <p className="text-[10px] font-bold">Metadata hashed</p>
-                    <p className="mt-1 font-mono text-[7px] text-[#5f584f]">
-                      Chain facts pending
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-3 rounded-xl border border-[#ffb13c]/20 bg-[#ffb13c]/6 p-3 text-[9px] leading-relaxed text-[#b89965]">
-                  A preview is not a Clean Launch Receipt or endorsement. The
-                  real receipt follows a confirmed single-signer creation.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section id="crew" className="border-y border-[#302a20] bg-[#0d0b09] px-5 py-20 sm:px-8 sm:py-28">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -778,25 +691,5 @@ function LimitChip({ children }: { children: React.ReactNode }) {
       <Ban className="size-2.5 text-ape-cornelius" />
       {children}
     </span>
-  );
-}
-
-function LaunchIntroCheck({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-[#272119] px-3 py-2.5">
-      <span className="flex items-center gap-2 text-[9px]">
-        <Check className="size-3 text-[#c7ff45]" />
-        {label}
-      </span>
-      <span className="font-mono text-[7px] uppercase text-[#6f685f]">
-        {value}
-      </span>
-    </div>
   );
 }
