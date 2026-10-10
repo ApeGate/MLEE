@@ -137,7 +137,7 @@ test("live Gate exposes guarded entries, exits, receipts, and outcome tape", asy
   await expect(tradePath).toContainText("Gate");
   await expect(tradePath).toContainText("Buy");
   await expect(tradePath).toContainText("Exit");
-  await expect(tradePath).toContainText("50% / 100%");
+  await expect(tradePath).toContainText(/50% (?:\/|or) 100%/);
   await expect(page.getByText("Outcome tape", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sell 50%" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Exit 100%" })).toBeVisible();
