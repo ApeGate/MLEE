@@ -129,8 +129,9 @@ PumpSwap transaction. It verifies the fee payer, signer count, mint, max quote,
 wrapped-SOL funding, bounded tip, token-account close, and compute fee from the
 bytes in both runtimes before the connected wallet can sign. The locked 0.5%
 Apegate fee is displayed but waived during this guarded beta; Pump and priority
-fees are still charged by the prepared transaction. Fresh bonding-curve rows
-remain PAPER-only.
+fees are still charged by the prepared transaction. A `manual_fill` receipt is
+written only after server-side RPC reports a confirmed slot; a broadcast alone
+is shown as pending. Fresh bonding-curve rows remain PAPER-only.
 
 The operator-only mainnet canary is separate from the browser app. It requires
 a fresh Kong `PASS`, a Cheeta timing chip that permits entry, a 0.01–0.05 SOL
@@ -147,12 +148,20 @@ npm run canary:buy -- \
 # Explicit real send after the dry run passes:
 npm run canary:buy -- \
   --mint <PUMP_MINT> --amount 0.01 --confirm-mainnet
+
+# Exit an existing PumpSwap position. The minimum output must come from an
+# independent current quote, never from the transaction builder being checked:
+npm run canary:sell -- \
+  --mint <PUMP_MINT> --percent 100 \
+  --minimum-output-lamports <MIN_SOL_LAMPORTS> --dry-run
 ```
 
 Set `CANARY_EXPECTED_PUBKEY` in the uncommitted `.env.local`. Dry-run mode
 does not read a private key and cannot sign or send. A real canary additionally
 requires `CANARY_WALLET_SECRET_PATH`; the script then prints a hash-chained
 `manual_fill` receipt after confirmation and never prints key material.
+The sell canary also requires an operator-supplied minimum SOL output and
+rejects any prepared swap whose on-chain minimum is lower.
 Bonding-curve browser sends remain locked until their Pump v3 bytes have
 equivalent instruction-level decoding; an allowlisted program ID alone is not
 treated as sufficient authorization.

@@ -87,6 +87,26 @@ const MANUAL_BUY_SLIPPAGE_PCT = 8;
 const MANUAL_BUY_PRIORITY_FEE_SOL = 0.0005;
 const MANUAL_BUY_MAX_TIP_LAMPORTS = 100_000;
 
+async function waitForManualTradeConfirmation(signature: string) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const response = await fetch(
+      `/api/trade/status?signature=${encodeURIComponent(signature)}`,
+      { cache: "no-store" },
+    );
+    if (response.ok) {
+      const payload = (await response.json()) as {
+        state: "confirmed" | "failed" | "pending" | "unknown";
+        slot: number | null;
+      };
+      if (payload.state === "confirmed" || payload.state === "failed") {
+        return payload;
+      }
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 1_500));
+  }
+  return { state: "pending" as const, slot: null };
+}
+
 export function FeedApp() {
   const { launches, status, lastMessageAt, retry, updateLaunch } =
     useLaunchFeed();
@@ -394,6 +414,20 @@ export function FeedApp() {
         },
       });
       const signature = bs58.encode(result.signature);
+      setTradeState("sent");
+      setTradeMessage(`Submitted · ${signature} · waiting for confirmation`);
+      const confirmation = await waitForManualTradeConfirmation(signature);
+      if (confirmation.state === "failed") {
+        throw new Error(
+          `Transaction landed but failed · ${signature}`,
+        );
+      }
+      if (confirmation.state !== "confirmed") {
+        setTradeMessage(
+          `Submitted · confirmation still pending · ${signature}`,
+        );
+        return;
+      }
       await addManualFill({
         mint: launch.facts.mint,
         symbol: launch.facts.symbol,
@@ -402,6 +436,7 @@ export function FeedApp() {
         amountSol,
         signature,
         factsHash: launch.verdict.factsHash,
+        slot: confirmation.slot,
       });
       setTradeState("sent");
       setTradeMessage(`Confirmed · ${signature}`);
@@ -828,7 +863,7 @@ function LaunchRow({
         label="Creator buy"
       />
       <div className="hidden sm:block">
-        <VerdictStamp verdict={launch.verdict} compact />
+        <VerdictStamp verdict={launch.verdict} />
       </div>
     </button>
   );
