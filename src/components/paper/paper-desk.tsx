@@ -189,7 +189,7 @@ export function PaperDesk() {
       </div>
 
       <main className="mx-auto max-w-[1540px] px-4 py-5 sm:px-6 sm:py-7">
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
           <Metric
             icon={<WalletCards className="size-4" />}
             label="Paper cash"
@@ -873,14 +873,14 @@ function Metric({
   tone?: "neutral" | "pass" | "fail";
 }) {
   return (
-    <article className="rounded-2xl border border-[#31291f] bg-[#0d0b09] p-4">
+    <article className="rounded-2xl border border-[#31291f] bg-[#0d0b09] p-3 sm:p-4">
       <div className="flex items-start justify-between">
         <span className="text-[#c7ff45]">{icon}</span>
         <SourceBadge source={source} />
       </div>
       <p
         className={cn(
-          "mt-4 text-2xl font-extrabold tracking-[-0.04em]",
+          "mt-3 text-base font-extrabold tracking-[-0.04em] sm:mt-4 sm:text-2xl",
           tone === "pass" && "text-pass",
           tone === "fail" && "text-block",
         )}
