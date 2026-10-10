@@ -80,7 +80,7 @@ test("Lab replay leaves unsupported accuracy metrics blank", async ({ page }) =>
   await page
     .getByRole("button", { name: "Run deterministic replay" })
     .click();
-  await expect(page.getByText("Replay hash")).toBeVisible();
+  await expect(page.getByText("Replay hash", { exact: true })).toBeVisible();
   await expect(page.getByText("Unavailable").first()).toBeVisible();
 });
 
