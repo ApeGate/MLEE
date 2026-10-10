@@ -29,8 +29,9 @@ silent `PASS`.
 ## Domain
 
 `apegate.io` is owned and is the canonical production domain. The current
-Cloudflare Worker remains available while its custom-domain DNS and certificate
-propagate; domain readiness never blocks the locally signed mainnet canary.
+Cloudflare Worker remains available while the zone is attached to the Worker
+account and its custom-domain DNS and certificate propagate; domain readiness
+never blocks the locally signed mainnet canary.
 
 See [`docs/domain-and-dns.md`](docs/domain-and-dns.md) for the exact Workers
 Custom Domain setup, the Pages alternative, apex and `www` DNS records, redirect
