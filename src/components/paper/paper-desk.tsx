@@ -758,6 +758,7 @@ function FillTape({
 }: {
   fills: Array<{
     id: string;
+    mint: string;
     side: "BUY" | "SELL";
     symbol: string;
     quoteAmountSol: number;
@@ -788,9 +789,16 @@ function FillTape({
             .map((fill) => (
               <article key={fill.id} className="p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-extrabold">
-                    {fill.side} ${fill.symbol}
-                  </p>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <TokenLogo
+                      mint={fill.mint}
+                      symbol={fill.symbol}
+                      size="sm"
+                    />
+                    <p className="truncate text-xs font-extrabold">
+                      {fill.side} ${fill.symbol}
+                    </p>
+                  </div>
                   <ReceiptText className="size-3 text-[#c7ff45]" />
                 </div>
                 <p className="mt-2 font-mono text-[10px] text-[#b6aea1]">

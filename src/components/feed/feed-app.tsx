@@ -2030,21 +2030,34 @@ function ReceiptTape({
                   </span>
                   <SourceBadge source={receipt.source.toUpperCase()} compact />
                 </div>
-                <p className="mt-2 text-xs font-bold">
-                  {receipt.kind === "verdict"
-                    ? `${String(receipt.outputs.verdict)} · score ${String(receipt.outputs.score)}`
-                    : receipt.kind === "paper_fill"
-                      ? `${String(receipt.outputs.side)} $${String(receipt.outputs.symbol)} · PAPER`
-                      : receipt.kind === "manual_fill"
-                        ? receipt.outputs.side === "SELL"
-                          ? `SELL $${String(receipt.outputs.symbol)} · ${String(receipt.outputs.percent)}%`
-                          : `BUY $${String(receipt.outputs.symbol)} · ${String(receipt.outputs.amountSol)} SOL`
-                      : receipt.kind === "plan_change"
-                        ? `${String(receipt.outputs.name)} · plan saved`
-                        : receipt.kind === "vault_preview"
-                          ? "Privy policy preview"
-                          : "Manual wallet connected"}
-                </p>
+                <div className="mt-2 flex items-center gap-2.5">
+                  {receipt.subject.mint ? (
+                    <TokenLogo
+                      mint={receipt.subject.mint}
+                      symbol={
+                        typeof receipt.outputs.symbol === "string"
+                          ? receipt.outputs.symbol
+                          : "COIN"
+                      }
+                      size="sm"
+                    />
+                  ) : null}
+                  <p className="min-w-0 text-xs font-bold">
+                    {receipt.kind === "verdict"
+                      ? `${String(receipt.outputs.verdict)} · score ${String(receipt.outputs.score)}`
+                      : receipt.kind === "paper_fill"
+                        ? `${String(receipt.outputs.side)} $${String(receipt.outputs.symbol)} · PAPER`
+                        : receipt.kind === "manual_fill"
+                          ? receipt.outputs.side === "SELL"
+                            ? `SELL $${String(receipt.outputs.symbol)} · ${String(receipt.outputs.percent)}%`
+                            : `BUY $${String(receipt.outputs.symbol)} · ${String(receipt.outputs.amountSol)} SOL`
+                        : receipt.kind === "plan_change"
+                          ? `${String(receipt.outputs.name)} · plan saved`
+                          : receipt.kind === "vault_preview"
+                            ? "Privy policy preview"
+                            : "Manual wallet connected"}
+                  </p>
+                </div>
                 <div className="mt-3 space-y-1 font-mono text-[8px] text-[#5f584f]">
                   <p className="truncate">HASH {receipt.hash}</p>
                   <p className="truncate">

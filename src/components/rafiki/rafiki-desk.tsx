@@ -18,6 +18,7 @@ import type {
 } from "../../../packages/core/src";
 import { cn } from "@/lib/utils";
 import { useReceipts } from "@/lib/use-receipts";
+import { TokenLogo } from "@/components/token/token-logo";
 
 type RafikiResponse = {
   mode: "ai" | "deterministic";
@@ -280,12 +281,27 @@ function ReceiptRow({
           {receipt.source}
         </span>
       </div>
-      <p className="mt-2 truncate font-mono text-[7px] text-[#4f4941]">
-        {receipt.hash}
-      </p>
-      <p className="mt-1 text-[7px] text-[#5f584f]">
-        {new Date(receipt.at.ts).toLocaleString()}
-      </p>
+      <div className="mt-2 flex items-center gap-2">
+        {receipt.subject.mint ? (
+          <TokenLogo
+            mint={receipt.subject.mint}
+            symbol={
+              typeof receipt.outputs.symbol === "string"
+                ? receipt.outputs.symbol
+                : "COIN"
+            }
+            size="sm"
+          />
+        ) : null}
+        <div className="min-w-0">
+          <p className="truncate font-mono text-[7px] text-[#4f4941]">
+            {receipt.hash}
+          </p>
+          <p className="mt-1 text-[7px] text-[#5f584f]">
+            {new Date(receipt.at.ts).toLocaleString()}
+          </p>
+        </div>
+      </div>
     </button>
   );
 }
