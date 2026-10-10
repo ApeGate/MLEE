@@ -12,8 +12,10 @@ export interface PrivyVaultReadiness {
   appIdsMatch: boolean;
   appSecretConfigured: boolean;
   authorizationKeyConfigured: boolean;
+  clientConfigured: boolean;
   credentialsConfigured: boolean;
   readyForIntegration: boolean;
+  readyForVaultAuthorization: boolean;
   executionEnabled: false;
   externalSecurityReviewComplete: false;
 }
@@ -35,8 +37,9 @@ export function readPrivyVaultConfig(
   const authorizationKeyConfigured = configured(
     env.PRIVY_AUTHORIZATION_PRIVATE_KEY,
   );
+  const clientConfigured = appIdConfigured && appSecretConfigured;
   const credentialsConfigured =
-    appIdConfigured && appSecretConfigured && authorizationKeyConfigured;
+    clientConfigured && authorizationKeyConfigured;
 
   return {
     sdkInstalled: true,
@@ -45,8 +48,10 @@ export function readPrivyVaultConfig(
     appIdsMatch,
     appSecretConfigured,
     authorizationKeyConfigured,
+    clientConfigured,
     credentialsConfigured,
-    readyForIntegration:
+    readyForIntegration: browserAppIdConfigured && appIdsMatch && clientConfigured,
+    readyForVaultAuthorization:
       browserAppIdConfigured && appIdsMatch && credentialsConfigured,
     executionEnabled: PRIVY_VAULT_EXECUTION_ENABLED,
     externalSecurityReviewComplete: PRIVY_EXTERNAL_REVIEW_COMPLETE,

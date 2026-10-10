@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Archivo, Plus_Jakarta_Sans, IBM_Plex_Mono } from "next/font/google";
+import { ApegatePrivyProvider } from "@/components/providers/apegate-privy-provider";
 import "./globals.css";
 
 const display = Archivo({
@@ -65,7 +66,7 @@ export default function RootLayout({
       <body
         className={`${display.variable} ${sans.variable} ${mono.variable} antialiased`}
       >
-        {children}
+        <ApegatePrivyProvider>{children}</ApegatePrivyProvider>
       </body>
     </html>
   );

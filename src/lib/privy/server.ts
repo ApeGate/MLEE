@@ -25,26 +25,22 @@ function requireValue(
   return value;
 }
 
-function requireServerCredentials(env: PrivyVaultEnvironment) {
+function requireServerClientCredentials(env: PrivyVaultEnvironment) {
   const readiness = readPrivyVaultConfig(env);
-  if (!readiness.credentialsConfigured) {
-    throw new Error("Privy Vault server credentials are incomplete");
+  if (!readiness.clientConfigured) {
+    throw new Error("Privy server client credentials are incomplete");
   }
 
   return {
     appId: requireValue(env, "PRIVY_APP_ID"),
     appSecret: requireValue(env, "PRIVY_APP_SECRET"),
-    authorizationPrivateKey: requireValue(
-      env,
-      "PRIVY_AUTHORIZATION_PRIVATE_KEY",
-    ),
   };
 }
 
 export function getPrivyClient(
   env: PrivyVaultEnvironment = process.env,
 ): PrivyClient {
-  const credentials = requireServerCredentials(env);
+  const credentials = requireServerClientCredentials(env);
   return new PrivyClient({
     appId: credentials.appId,
     appSecret: credentials.appSecret,
@@ -54,8 +50,13 @@ export function getPrivyClient(
 export function getPrivyAuthorizationContext(
   env: PrivyVaultEnvironment = process.env,
 ): AuthorizationContext {
-  const credentials = requireServerCredentials(env);
+  const readiness = readPrivyVaultConfig(env);
+  if (!readiness.authorizationKeyConfigured) {
+    throw new Error("Privy Vault authorization key is not configured");
+  }
   return {
-    authorization_private_keys: [credentials.authorizationPrivateKey],
+    authorization_private_keys: [
+      requireValue(env, "PRIVY_AUTHORIZATION_PRIVATE_KEY"),
+    ],
   };
 }
