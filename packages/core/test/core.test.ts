@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { PublicKey } from "@solana/web3.js";
 import {
   APEGATE_FEE_BPS,
+  MANUAL_BUY_PROGRAM_ALLOWLIST,
+  PUMP_PROGRAM_ID,
+  PUMPSWAP_PROGRAM_ID,
   applyPaperBuy,
   applyPaperSell,
   assertManualBuyTransactionSafe,
@@ -11,6 +15,7 @@ import {
   createPaperPortfolio,
   createReceipt,
   createVaultPolicyPreview,
+  deriveOpeningPriceHoldPct,
   estimateFees,
   evaluateGate,
   explainReceiptDeterministically,
@@ -289,6 +294,44 @@ describe("fees", () => {
 });
 
 describe("manual mainnet canary boundaries", () => {
+  it("uses valid official Pump program addresses", () => {
+    expect(PUMP_PROGRAM_ID).toBe(
+      "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
+    );
+    expect(PUMPSWAP_PROGRAM_ID).toBe(
+      "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+    );
+    expect(
+      MANUAL_BUY_PROGRAM_ALLOWLIST.map(
+        (programId) => new PublicKey(programId).toBase58(),
+      ),
+    ).toEqual(MANUAL_BUY_PROGRAM_ALLOWLIST);
+  });
+
+  it("derives opening-price hold only inside the available 24-hour window", () => {
+    expect(
+      deriveOpeningPriceHoldPct({
+        pairCreatedAt: now - 2 * 60 * 60 * 1_000,
+        priceChange24hPct: -60,
+        observedAt: now,
+      }),
+    ).toBe(40);
+    expect(
+      deriveOpeningPriceHoldPct({
+        pairCreatedAt: now - 2 * 60 * 60 * 1_000,
+        priceChange24hPct: 125,
+        observedAt: now,
+      }),
+    ).toBe(225);
+    expect(
+      deriveOpeningPriceHoldPct({
+        pairCreatedAt: now - 25 * 60 * 60 * 1_000,
+        priceChange24hPct: 20,
+        observedAt: now,
+      }),
+    ).toBeNull();
+  });
+
   it("authorizes only a fresh PASS inside the funded test range", async () => {
     const verdict = await evaluateGate(safeFacts, "standard", now);
     const allowedVerdict = {
@@ -347,16 +390,34 @@ describe("manual mainnet canary boundaries", () => {
       feePayer: "wallet",
       requiredSigners: ["wallet"],
       addressLookupTableCount: 0,
-      programIds: [
-        "11111111111111111111111111111111",
-        "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+      expectedMint: "mint",
+      maxTradeSpendLamports: 10_500_000,
+      maxPriorityFeeLamports: 1_000_000,
+      maxTipLamports: 100_000,
+      instructions: [
+        {
+          programId: PUMPSWAP_PROGRAM_ID,
+          accountKeys: [
+            "pool",
+            "wallet",
+            "global",
+            "mint",
+            "So11111111111111111111111111111111111111112",
+          ],
+          dataHex: "66063d1201daebea0000000000000000a037a00000000000",
+        },
       ],
     };
-    expect(assertManualBuyTransactionSafe(base).programIds).toHaveLength(2);
+    expect(assertManualBuyTransactionSafe(base).decodedSwap).toBe(
+      "pumpswap-buy",
+    );
     expect(() =>
       assertManualBuyTransactionSafe({
         ...base,
-        programIds: [...base.programIds, "UnknownProgram"],
+        instructions: [
+          ...base.instructions,
+          { programId: "UnknownProgram", accountKeys: [], dataHex: "" },
+        ],
       }),
     ).toThrow(/unapproved programs/);
     expect(() =>
@@ -365,6 +426,18 @@ describe("manual mainnet canary boundaries", () => {
         addressLookupTableCount: 1,
       }),
     ).toThrow(/lookup tables/);
+    expect(() =>
+      assertManualBuyTransactionSafe({
+        ...base,
+        expectedMint: "different-mint",
+      }),
+    ).toThrow(/do not match the intent/);
+    expect(() =>
+      assertManualBuyTransactionSafe({
+        ...base,
+        maxTradeSpendLamports: 10_000_000,
+      }),
+    ).toThrow(/max quote exceeds/);
   });
 });
 
