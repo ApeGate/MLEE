@@ -15,6 +15,9 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:43127",
+  ),
   title: {
     default: "Apegate — Your ape crew for Pump.fun",
     template: "%s · Apegate",
@@ -39,7 +42,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body className={`${sans.variable} ${mono.variable} antialiased`}>
         {children}
       </body>
