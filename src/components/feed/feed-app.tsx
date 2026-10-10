@@ -737,7 +737,7 @@ function LaunchRow({
         label="Creator buy"
       />
       <div className="hidden sm:block">
-        <VerdictStamp verdict={launch.verdict} compact />
+        <VerdictStamp verdict={launch.verdict} />
       </div>
     </button>
   );
