@@ -199,7 +199,7 @@ export function GateSections() {
                   <div>
                     <p className="text-sm font-extrabold">Kong · verdict</p>
                     <p className="font-mono text-[8px] uppercase tracking-[0.14em] text-[#6f685f]">
-                      gate-1.1.0 · standard
+                      gate-1.2.0 · standard
                     </p>
                   </div>
                 </div>

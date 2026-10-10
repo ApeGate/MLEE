@@ -307,7 +307,7 @@ export function FeedApp() {
             value={String(
               launches.filter((item) => item.verdict.kind === "BLOCK").length,
             )}
-            note="gate-1.1.0 decisions"
+            note="gate-1.2.0 decisions"
             source={status === "live" ? "LIVE" : "REPLAY"}
             icon={<ShieldCheck className="size-4" />}
           />

@@ -3,7 +3,9 @@ import {
   isOfficialApegateMint,
   resemblesApegateIdentity,
 } from "./official-token";
+import { evaluateTiming, evaluateTrenchChecks } from "./trench-checks";
 import type {
+  CheckCategory,
   Evidence,
   GateCheck,
   GateVerdict,
@@ -36,14 +38,30 @@ const THRESHOLDS = {
   },
 } as const;
 
+const CATEGORY_CAPS: Record<CheckCategory, number> = {
+  safety: 100,
+  supply: 40,
+  provenance: 30,
+  market: 20,
+  social: 10,
+};
+
 function txEvidence(facts: LaunchFacts): Evidence[] {
-  return [
-    {
-      kind: "tx",
-      ref: facts.signature,
-      note: "Pump program creation transaction",
-    },
-  ];
+  return facts.signature
+    ? [
+        {
+          kind: "tx",
+          ref: facts.signature,
+          note: "Pump program creation transaction",
+        },
+      ]
+    : [
+        {
+          kind: "account",
+          ref: facts.mint,
+          note: "Mint account; creation signature unavailable",
+        },
+      ];
 }
 
 function numericCheck({
@@ -52,6 +70,7 @@ function numericCheck({
   value,
   thresholds,
   maxPenalty,
+  category,
   evidence,
 }: {
   id: string;
@@ -59,6 +78,7 @@ function numericCheck({
   value: number | null | undefined;
   thresholds: readonly [number, number];
   maxPenalty: number;
+  category: CheckCategory;
   evidence: Evidence[];
 }): GateCheck {
   if (value === null || value === undefined) {
@@ -71,6 +91,7 @@ function numericCheck({
       reason: `${label} is still being resolved`,
       penalty: 0,
       hard: false,
+      category,
       evidence,
     };
   }
@@ -85,6 +106,7 @@ function numericCheck({
       reason: `${label} ${value.toFixed(1)}% is over the ${thresholds[1]}% block line`,
       penalty: maxPenalty,
       hard: false,
+      category,
       evidence,
     };
   }
@@ -103,6 +125,7 @@ function numericCheck({
         Math.round(((value - thresholds[0]) / range) * maxPenalty),
       ),
       hard: false,
+      category,
       evidence,
     };
   }
@@ -116,6 +139,7 @@ function numericCheck({
     reason: `${label} is under the warning line`,
     penalty: 0,
     hard: false,
+    category,
     evidence,
   };
 }
@@ -160,6 +184,7 @@ export async function evaluateGate(
         : "No protected Apegate name or ticker match",
     penalty: protectedIdentity && !officialMint ? 100 : 0,
     hard: true,
+    category: "safety",
     evidence: [
       {
         kind: "url",
@@ -198,6 +223,7 @@ export async function evaluateGate(
             : `${label} is still active`,
       penalty: authority ? 100 : 0,
       hard: true,
+      category: "safety",
       evidence: account,
     });
   }
@@ -209,6 +235,7 @@ export async function evaluateGate(
       value: facts.devPct,
       thresholds: THRESHOLDS[profile].devPct,
       maxPenalty: 15,
+      category: "supply",
       evidence: account,
     }),
     numericCheck({
@@ -217,6 +244,7 @@ export async function evaluateGate(
       value: facts.top10Pct,
       thresholds: THRESHOLDS[profile].top10Pct,
       maxPenalty: 10,
+      category: "supply",
       evidence: account,
     }),
   );
@@ -244,6 +272,7 @@ export async function evaluateGate(
           : "Independent scan found no high-risk flags",
     penalty: 0,
     hard: false,
+    category: "market",
     evidence: [
       {
         kind: "url",
@@ -263,8 +292,11 @@ export async function evaluateGate(
       : "Standard Pump lifecycle",
     penalty: 0,
     hard: false,
+    category: "market",
     evidence: tx,
   });
+
+  checks.push(...evaluateTrenchChecks(facts, profile, tx));
 
   const ageSec = Math.max(0, (now - facts.createdAt) / 1_000);
   const notEnoughTape = ageSec < 10 || (facts.tradeCount ?? 1) < 5;
@@ -277,7 +309,24 @@ export async function evaluateGate(
   const softFail = checks.some(
     (check) => !check.hard && check.outcome === "fail",
   );
-  const penalty = checks.reduce((sum, check) => sum + check.penalty, 0);
+  const penaltyByCategory = checks.reduce(
+    (totals, check) => {
+      totals[check.category] += check.penalty;
+      return totals;
+    },
+    {
+      safety: 0,
+      supply: 0,
+      provenance: 0,
+      market: 0,
+      social: 0,
+    } satisfies Record<CheckCategory, number>,
+  );
+  const penalty = Object.entries(penaltyByCategory).reduce(
+    (sum, [category, value]) =>
+      sum + Math.min(value, CATEGORY_CAPS[category as CheckCategory]),
+    0,
+  );
   const score = Math.max(0, 100 - penalty);
   const lines = THRESHOLDS[profile];
 
@@ -316,9 +365,10 @@ export async function evaluateGate(
     kind,
     score,
     profile,
-    rulesetVersion: "gate-1.1.0",
+    rulesetVersion: "gate-1.2.0",
     checks,
     topReasons,
+    timing: evaluateTiming(facts, now),
     factsHash,
     computedAt: now,
     freshUntil: now + 2_000,

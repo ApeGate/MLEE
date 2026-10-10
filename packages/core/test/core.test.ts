@@ -3,6 +3,8 @@ import {
   APEGATE_FEE_BPS,
   applyPaperBuy,
   applyPaperSell,
+  assertManualBuyTransactionSafe,
+  authorizeMainnetCanaryBuy,
   buildLabReport,
   canonicalize,
   createPlanSpec,
@@ -50,6 +52,10 @@ const safeFacts: LaunchFacts = {
   devPct: 2,
   top10Pct: 18,
   rugScore: 4,
+  launchSecondBuyout: false,
+  clusterRetainedPct: 0,
+  deployerPulledPool: false,
+  manufacturedCap: false,
   rugRisks: [],
 };
 
@@ -72,7 +78,7 @@ describe("canonical JSON and receipt hashing", () => {
       at: { ts: now },
       inputs: { factsHash: "facts", rulesetVersion: "gate-1.0.0" },
       outputs: { verdict: "PASS", score: 100 },
-      evidence: [{ kind: "tx", ref: safeFacts.signature }],
+      evidence: [{ kind: "tx", ref: safeFacts.signature ?? safeFacts.mint }],
       source: "replay",
       prev: null,
     });
@@ -96,11 +102,13 @@ describe("canonical JSON and receipt hashing", () => {
   });
 });
 
-describe("Kong gate-1.1.0", () => {
+describe("Kong gate-1.2.0", () => {
   it("passes complete, safe facts", async () => {
     const verdict = await evaluateGate(safeFacts, "standard", now);
     expect(verdict.kind).toBe("PASS");
     expect(verdict.score).toBe(100);
+    expect(verdict.rulesetVersion).toBe("gate-1.2.0");
+    expect(verdict.timing.kind).toBe("CHASE_WINDOW");
     expect(verdict.checks.every((check) => check.evidence.length > 0)).toBe(true);
   });
 
@@ -171,6 +179,83 @@ describe("Kong gate-1.1.0", () => {
         ?.value,
     ).toBe("Official CA");
   });
+
+  it("waits on unresolved hard trench facts", async () => {
+    const verdict = await evaluateGate(
+      { ...safeFacts, launchSecondBuyout: null },
+      "standard",
+      now,
+    );
+    expect(verdict.kind).toBe("WAIT");
+    expect(
+      verdict.checks.find((check) => check.id === "launch_second_buyout")
+        ?.outcome,
+    ).toBe("unknown");
+  });
+
+  it("hard-blocks a retained launch-second buyout", async () => {
+    const verdict = await evaluateGate(
+      {
+        ...safeFacts,
+        launchSecondBuyout: true,
+        clusterRetainedPct: 61,
+      },
+      "standard",
+      now,
+    );
+    expect(verdict.kind).toBe("BLOCK");
+    expect(verdict.topReasons.join(" ")).toContain("Insiders still hold");
+  });
+
+  it("blocks serial creators and keeps social positives from rescuing them", async () => {
+    const risky = {
+      ...safeFacts,
+      creatorLaunches1h: 3,
+      creatorLaunches24h: 7,
+    };
+    const bare = await evaluateGate(risky, "standard", now);
+    const polished = await evaluateGate(
+      {
+        ...risky,
+        websiteUrl: "https://example.com",
+        websiteReachable: true,
+        websiteMentionsToken: true,
+        websiteMatchesX: true,
+        xLinkType: "profile" as const,
+        telegramPresent: true,
+        originatorConfirmed: true,
+      },
+      "standard",
+      now,
+    );
+    expect(bare.kind).toBe("BLOCK");
+    expect(polished.kind).toBe("BLOCK");
+  });
+
+  it("separates second-leg timing from the Gate verdict", async () => {
+    const verdict = await evaluateGate(
+      {
+        ...safeFacts,
+        createdAt: now - 20 * 60_000,
+        drawdownFromFirstPeakPct: 45,
+        reclaimedFiveMinuteVwap: true,
+        newOutsideBuyers: 38,
+      },
+      "standard",
+      now,
+    );
+    expect(verdict.kind).toBe("PASS");
+    expect(verdict.timing).toMatchObject({
+      kind: "SECOND_LEG",
+      entryAllowed: true,
+    });
+  });
+
+  it("is deterministic for the same facts and clock", async () => {
+    const first = await evaluateGate(safeFacts, "standard", now);
+    const second = await evaluateGate(safeFacts, "standard", now);
+    expect(second).toEqual(first);
+  });
 });
 
 describe("official Apegate token identity", () => {
@@ -200,6 +285,72 @@ describe("fees", () => {
       networkEstimate: 0.001,
       total: 1.0185,
     });
+  });
+});
+
+describe("manual mainnet canary boundaries", () => {
+  it("authorizes only a fresh PASS inside the funded test range", async () => {
+    const verdict = await evaluateGate(safeFacts, "standard", now);
+    expect(
+      authorizeMainnetCanaryBuy({
+        amountSol: 0.01,
+        balanceSol: 0.1,
+        expectedSigner: "wallet",
+        actualSigner: "wallet",
+        verdict,
+        now,
+      }),
+    ).toMatchObject({
+      mint: safeFacts.mint,
+      amountSol: 0.01,
+      factsHash: verdict.factsHash,
+    });
+
+    expect(() =>
+      authorizeMainnetCanaryBuy({
+        amountSol: 0.051,
+        balanceSol: 0.1,
+        expectedSigner: "wallet",
+        actualSigner: "wallet",
+        verdict,
+        now,
+      }),
+    ).toThrow(/between 0.01 and 0.05 SOL/);
+    expect(() =>
+      authorizeMainnetCanaryBuy({
+        amountSol: 0.01,
+        balanceSol: 0.1,
+        expectedSigner: "wallet",
+        actualSigner: "wallet",
+        verdict,
+        now: verdict.freshUntil + 1,
+      }),
+    ).toThrow(/expired/);
+  });
+
+  it("rejects extra signers, lookup tables, and unapproved programs", () => {
+    const base = {
+      feePayer: "wallet",
+      requiredSigners: ["wallet"],
+      addressLookupTableCount: 0,
+      programIds: [
+        "11111111111111111111111111111111",
+        "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+      ],
+    };
+    expect(assertManualBuyTransactionSafe(base).programIds).toHaveLength(2);
+    expect(() =>
+      assertManualBuyTransactionSafe({
+        ...base,
+        programIds: [...base.programIds, "UnknownProgram"],
+      }),
+    ).toThrow(/unapproved programs/);
+    expect(() =>
+      assertManualBuyTransactionSafe({
+        ...base,
+        addressLookupTableCount: 1,
+      }),
+    ).toThrow(/lookup tables/);
   });
 });
 
