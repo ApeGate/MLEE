@@ -1,13 +1,13 @@
 import { SiteHeader } from "@/components/home/site-header";
-import { HomeHero } from "@/components/home/hero";
-import { HomeSections } from "@/components/home/sections";
+import { GateHero } from "@/components/home/gate-hero";
+import { GateSections } from "@/components/home/gate-sections";
 
 export default function HomePage() {
   return (
     <main>
       <SiteHeader />
-      <HomeHero />
-      <HomeSections />
+      <GateHero />
+      <GateSections />
     </main>
   );
 }

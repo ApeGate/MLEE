@@ -16,22 +16,35 @@ const mono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:43127",
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://apegate.io",
   ),
   title: {
-    default: "Apegate — Your ape crew for Pump.fun",
+    default: "Apegate — Ape through the gate",
     template: "%s · Apegate",
   },
   description:
-    "Apegate puts four ape agents on your Pump.fun plan: scout launches, watch entries, line up trades, and guard every exit.",
+    "Fresh Pump.fun launches pass through Kong's evidence-backed risk checks, with a receipt behind every call and manual wallet signing by default.",
+  alternates: {
+    canonical: "https://apegate.io",
+  },
   icons: {
     icon: "/apegate-logo.jpg",
     apple: "/apegate-logo.jpg",
   },
   openGraph: {
-    title: "Apegate — Your ape crew for Pump.fun",
+    type: "website",
+    url: "https://apegate.io",
+    siteName: "Apegate",
+    title: "Apegate — Ape through the gate",
     description:
-      "Scout launches, watch entries, line up trades, and guard every exit with a readable decision tape.",
+      "See fresh Pump.fun launches, Kong's evidence-backed verdict, and the receipt behind every call.",
+    images: ["/apegate-logo.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Apegate — Ape through the gate",
+    description:
+      "Fresh Pump.fun launch intelligence with evidence-backed verdicts and decision receipts.",
     images: ["/apegate-logo.jpg"],
   },
 };

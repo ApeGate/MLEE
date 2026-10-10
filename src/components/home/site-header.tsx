@@ -24,16 +24,28 @@ export function SiteHeader() {
         </Link>
         <nav className="flex items-center gap-3 text-sm">
           <Link
+            href="/feed"
+            className="hidden text-[#a79f92] transition-colors hover:text-[#f4efe5] md:inline"
+          >
+            Live gate
+          </Link>
+          <Link
             href="/#crew"
             className="hidden text-[#a79f92] transition-colors hover:text-[#f4efe5] sm:inline"
           >
-            Meet the crew
+            Crew
           </Link>
           <Link
-            href="/desk"
+            href="/#receipts"
+            className="hidden text-[#a79f92] transition-colors hover:text-[#f4efe5] lg:inline"
+          >
+            Receipts
+          </Link>
+          <Link
+            href="/feed"
             className="rounded-full bg-[#ff4f1f] px-4 py-2.5 font-bold text-[#0b0906] transition-transform hover:-translate-y-0.5 hover:bg-[#ff6438]"
           >
-            Enter the gate
+            Open Apegate
           </Link>
         </nav>
       </div>
