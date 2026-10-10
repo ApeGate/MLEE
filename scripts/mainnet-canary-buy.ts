@@ -239,7 +239,7 @@ async function sendAndConfirm(
 
     const validity = await connection.isBlockhashValid(
       transaction.message.recentBlockhash,
-      "confirmed",
+      { commitment: "confirmed" },
     );
     if (!validity.value) {
       throw new Error(
