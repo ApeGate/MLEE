@@ -182,7 +182,7 @@ describe("Kong gate-1.2.0", () => {
 
   it("waits on unresolved hard trench facts", async () => {
     const verdict = await evaluateGate(
-      { ...safeFacts, launchSecondBuyout: undefined },
+      { ...safeFacts, launchSecondBuyout: null },
       "standard",
       now,
     );
