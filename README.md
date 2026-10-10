@@ -130,13 +130,19 @@ amount, the expected local signer, a single-signer transaction, approved Pump
 programs, and a successful simulation:
 
 ```bash
+# Build, decode, firewall-check, and simulate without loading a private key:
+npm run canary:buy -- \
+  --mint <PUMP_MINT> --amount 0.01 --dry-run
+
+# Explicit real send after the dry run passes:
 npm run canary:buy -- \
   --mint <PUMP_MINT> --amount 0.01 --confirm-mainnet
 ```
 
-Set `CANARY_EXPECTED_PUBKEY` and `CANARY_WALLET_SECRET_PATH` only in the
-uncommitted `.env.local`. The script prints a hash-chained `manual_fill`
-receipt after confirmation and never prints key material.
+Set `CANARY_EXPECTED_PUBKEY` in the uncommitted `.env.local`. Dry-run mode
+does not read a private key and cannot sign or send. A real canary additionally
+requires `CANARY_WALLET_SECRET_PATH`; the script then prints a hash-chained
+`manual_fill` receipt after confirmation and never prints key material.
 
 Privy Vault is also wired to the Worker-compatible `@privy-io/node` server SDK.
 The App ID and App Secret are enough to initialize that client. The separate

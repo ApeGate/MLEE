@@ -21,6 +21,7 @@ type CliOptions = {
   mint: string;
   amountSol: number;
   confirmed: boolean;
+  dryRun: boolean;
 };
 
 type DexPair = {
@@ -80,6 +81,7 @@ function parseOptions(argv: string[]): CliOptions {
     mint,
     amountSol,
     confirmed: argv.includes("--confirm-mainnet"),
+    dryRun: argv.includes("--dry-run"),
   };
 }
 
@@ -263,28 +265,33 @@ async function sendAndConfirm(
 
 async function main() {
   const options = parseOptions(process.argv.slice(2));
-  if (!options.confirmed) {
+  if (!options.dryRun && !options.confirmed) {
     throw new Error("Refusing mainnet send without --confirm-mainnet");
+  }
+  if (options.dryRun && options.confirmed) {
+    throw new Error("Choose either --dry-run or --confirm-mainnet");
   }
 
   const rpcUrl = requiredEnv("HELIUS_RPC_URL");
   const expectedWallet = requiredEnv("CANARY_EXPECTED_PUBKEY");
-  const secretPath = requiredEnv("CANARY_WALLET_SECRET_PATH");
   const connection = new Connection(rpcUrl, "confirmed");
   const mint = new PublicKey(options.mint);
-  const signer = await loadKeypair(secretPath);
-  const signerAddress = signer.publicKey.toBase58();
+  const signer = options.dryRun
+    ? null
+    : await loadKeypair(requiredEnv("CANARY_WALLET_SECRET_PATH"));
+  const signerAddress = signer?.publicKey.toBase58() ?? expectedWallet;
   if (signerAddress !== expectedWallet) {
     throw new Error("Loaded wallet does not match CANARY_EXPECTED_PUBKEY");
   }
+  const signerPublicKey = new PublicKey(signerAddress);
 
   const [pair, report, authorities, balanceLamports, beforeTokens] =
     await Promise.all([
       readDexPair(options.mint),
       readRiskReport(options.mint),
       readMintAuthorities(connection, mint),
-      connection.getBalance(signer.publicKey, "confirmed"),
-      tokenBalance(connection, signer.publicKey, mint),
+      connection.getBalance(signerPublicKey, "confirmed"),
+      tokenBalance(connection, signerPublicKey, mint),
     ]);
   if (report.rugged) throw new Error("Risk source marks this mint rugged");
 
@@ -419,6 +426,39 @@ async function main() {
     verdict,
     now: Date.now(),
   });
+  if (options.dryRun) {
+    console.log(
+      JSON.stringify(
+        {
+          status: "simulation-passed",
+          sendEnabled: false,
+          mint: options.mint,
+          symbol: facts.symbol,
+          amountSol: options.amountSol,
+          signer: signerAddress,
+          gate: {
+            verdict: verdict.kind,
+            timing: verdict.timing.kind,
+            score: verdict.score,
+            rulesetVersion: verdict.rulesetVersion,
+            factsHash: verdict.factsHash,
+          },
+          firewall: {
+            feePayer,
+            requiredSigners,
+            programIds: message.compiledInstructions.map((instruction) => {
+              const key = accountKeys.get(instruction.programIdIndex);
+              return key?.toBase58() ?? "unresolved";
+            }),
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+  if (!signer) throw new Error("Canary signer was not loaded");
   transaction.sign([signer]);
   const signature = await sendAndConfirm(connection, transaction);
 
