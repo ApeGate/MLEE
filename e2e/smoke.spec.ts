@@ -1,7 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 test("home exposes the Gate-first paths", async ({ page }) => {
-  await page.goto("/");
+  const response = await page.goto("/");
+  expect(response?.headers()["content-security-policy"]).toContain(
+    "frame-ancestors 'none'",
+  );
   await expect(
     page.getByRole("heading", { name: /ape through the gate/i }),
   ).toBeVisible();
