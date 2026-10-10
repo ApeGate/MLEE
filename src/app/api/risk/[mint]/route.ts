@@ -98,7 +98,7 @@ async function readRpcHolders(
     (entry): entry is { address: string; amount: string } =>
       Boolean(entry.address && entry.amount),
   );
-  if (supplyAmount <= 0n || accounts.length === 0) return [];
+  if (supplyAmount <= BigInt(0) || accounts.length === 0) return [];
 
   const accountInfo = await rpcCall<{
     value?: Array<{
@@ -119,7 +119,7 @@ async function readRpcHolders(
     if (!owner || owner === bondingCurve) return;
     amountsByOwner.set(
       owner,
-      (amountsByOwner.get(owner) ?? 0n) + BigInt(entry.amount),
+      (amountsByOwner.get(owner) ?? BigInt(0)) + BigInt(entry.amount),
     );
   });
 
@@ -128,7 +128,8 @@ async function readRpcHolders(
     .slice(0, 20)
     .map(([owner, amount]) => ({
       owner,
-      pct: Number((amount * 1_000_000n) / supplyAmount) / 10_000,
+      pct:
+        Number((amount * BigInt(1_000_000)) / supplyAmount) / 10_000,
     }));
 }
 
