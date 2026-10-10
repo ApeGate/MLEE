@@ -291,10 +291,9 @@ export async function GET(
     rpcSource: rpc?.source ?? null,
   });
   const graphInsidersDetected = report?.graphInsidersDetected;
-  const insiderNetworks = report?.insiderNetworks;
+  const insiderNetworks = report?.insiderNetworks ?? [];
   const insiderGraphResolved =
-    typeof graphInsidersDetected === "number" &&
-    Array.isArray(insiderNetworks);
+    typeof graphInsidersDetected === "number";
   const launchSecondBuyout = insiderGraphResolved
     ? graphInsidersDetected > 0 || insiderNetworks.length > 0
     : null;
