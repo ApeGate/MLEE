@@ -146,6 +146,23 @@
   .rise-delay-2 {
     animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
   }
+  .launch-input {
+    width: 100%;
+    border: 1px solid #31291f;
+    border-radius: 0.75rem;
+    background: #090806;
+    padding: 0.75rem;
+    font-size: 0.75rem;
+    color: #f4efe5;
+    transition: border-color 160ms ease;
+  }
+  .launch-input::placeholder {
+    color: #4f4941;
+  }
+  .launch-input:focus {
+    border-color: #ff7250;
+    outline: none;
+  }
 }
 
 @keyframes agent-float {

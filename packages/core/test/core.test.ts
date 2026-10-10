@@ -6,8 +6,10 @@ import {
   estimateFees,
   evaluateGate,
   hashCanonical,
+  preflightLaunch,
   verifyReceipt,
   verifyReceiptChain,
+  type LaunchDraft,
   type LaunchFacts,
 } from "../src";
 
@@ -134,5 +136,55 @@ describe("fees", () => {
       networkEstimate: 0.001,
       total: 1.0185,
     });
+  });
+});
+
+const safeLaunch: LaunchDraft = {
+  name: "Banana Hours",
+  symbol: "BNNA",
+  description:
+    "A transparent community coin with a complete launch description.",
+  imageUrl: "https://example.com/banana.png",
+  website: "https://example.com",
+  socialUrl: "",
+  quoteAsset: "SOL",
+  holderRewards: false,
+  mayhemMode: false,
+  devBuyPct: 4,
+  guardrailsAccepted: true,
+};
+
+describe("Launch Bay preparation", () => {
+  it("prepares a complete low-allocation draft without enabling a build", async () => {
+    const preflight = await preflightLaunch(safeLaunch);
+    expect(preflight.kind).toBe("PREPARED");
+    expect(preflight.readyForBuild).toBe(false);
+    expect(preflight.metadataHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(preflight.pendingServerChecks.length).toBeGreaterThan(0);
+  });
+
+  it("warns when the creator buy crosses Kong's warning line", async () => {
+    const preflight = await preflightLaunch({
+      ...safeLaunch,
+      devBuyPct: 8,
+    });
+    expect(preflight.kind).toBe("WARN");
+    expect(
+      preflight.checks.find((check) => check.id === "dev_buy")?.outcome,
+    ).toBe("warn");
+  });
+
+  it("blocks protected identities, large creator buys, and rejected guardrails", async () => {
+    const preflight = await preflightLaunch({
+      ...safeLaunch,
+      name: "Ape Gate Official",
+      symbol: "APEGATE",
+      devBuyPct: 22,
+      guardrailsAccepted: false,
+    });
+    expect(preflight.kind).toBe("BLOCK");
+    expect(
+      preflight.checks.filter((check) => check.outcome === "fail").length,
+    ).toBeGreaterThanOrEqual(3);
   });
 });

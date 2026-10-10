@@ -28,6 +28,12 @@ const SERVICES = [
       "Solana RPC plus an optional independent risk report when you open a launch",
   },
   {
+    name: "Launch Bay",
+    state: "Prepare only",
+    detail:
+      "Local metadata and token draft, deterministic Kong preflight, and receipt preview; no upload, transaction build, or signature",
+  },
+  {
     name: "Trading and Vault",
     state: "Disabled",
     detail:

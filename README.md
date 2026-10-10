@@ -8,6 +8,7 @@ This Phase 0–1 release is deliberately read-only:
 
 - `/` — Gate-first product home
 - `/feed` — real launch discovery with a recorded real-tape fallback
+- `/launch` — Launch Bay local preparation and Kong preflight scaffold
 - `/status` — honest capability status
 - `/desk` — redirects to the Gate
 
@@ -15,6 +16,12 @@ The feed connects to the public Pump launch stream in the browser. Opening a
 launch asks Solana RPC for mint safety and an optional independent risk source
 for holder and creator context. Missing data forces `WAIT`; it never becomes a
 silent `PASS`.
+
+Launch Bay is approved and sequenced after the Gate. Its current Phase 1
+surface prepares metadata, token settings, clean-launch guardrails, and a local
+receipt preview. It cannot upload metadata or build, sign, or send a
+`create_v2` transaction; those controls stay locked until the trading and
+transaction-safety foundations are complete.
 
 ## Run locally
 
