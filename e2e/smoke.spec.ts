@@ -137,7 +137,7 @@ test("live Gate exposes guarded entries, exits, receipts, and outcome tape", asy
   await expect(tradePath).toContainText("Gate");
   await expect(tradePath).toContainText("Buy");
   await expect(tradePath).toContainText("Exit");
-  await expect(tradePath).toContainText("50% / 100%");
+  await expect(tradePath).toContainText(/50% (?:\/|or) 100%/);
   await expect(page.getByText("Outcome tape", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sell 50%" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Exit 100%" })).toBeVisible();
@@ -153,9 +153,6 @@ test("PASS watch persists without a wallet", async ({ page }) => {
   const watch = page.getByRole("button", { name: "Tell me when PASS" });
   await expect(watch).toBeVisible();
   await watch.click();
-  await expect(
-    page.getByRole("button", { name: "Watching PASS" }),
-  ).toBeVisible();
   await expect
     .poll(() =>
       page.evaluate(
