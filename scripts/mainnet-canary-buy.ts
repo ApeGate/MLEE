@@ -17,6 +17,8 @@ import {
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const TRADE_ENDPOINT = "https://pumpportal.fun/api/trade-local";
 const PRIORITY_FEE_SOL = 0.001;
+const SLIPPAGE_PCT = 5;
+const MAX_TIP_LAMPORTS = 100_000;
 
 type CliOptions = {
   mint: string;
@@ -377,7 +379,7 @@ async function main() {
       mint: options.mint,
       amount: options.amountSol,
       denominatedInSol: "true",
-      slippage: 5,
+      slippage: SLIPPAGE_PCT,
       priorityFee: PRIORITY_FEE_SOL,
       pool: "auto",
     }),
@@ -402,15 +404,32 @@ async function main() {
   if (feePayer !== signerAddress) {
     throw new Error("Transaction fee payer is not the canary wallet");
   }
-  assertManualBuyTransactionSafe({
+  const decodedInstructions = message.compiledInstructions.map((instruction) => {
+    const program = accountKeys.get(instruction.programIdIndex);
+    if (!program) throw new Error("Transaction contains an unresolved program");
+    return {
+      programId: program.toBase58(),
+      accountKeys: Array.from(instruction.accountKeyIndexes).map((index) => {
+        const key = accountKeys.get(index);
+        if (!key) throw new Error("Transaction contains an unresolved account");
+        return key.toBase58();
+      }),
+      dataHex: Buffer.from(instruction.data).toString("hex"),
+    };
+  });
+  const firewall = assertManualBuyTransactionSafe({
     feePayer,
     requiredSigners,
     addressLookupTableCount: message.addressTableLookups.length,
-    programIds: message.compiledInstructions.map((instruction) => {
-      const key = accountKeys.get(instruction.programIdIndex);
-      if (!key) throw new Error("Transaction contains an unresolved program");
-      return key.toBase58();
-    }),
+    expectedMint: options.mint,
+    maxTradeSpendLamports: Math.ceil(
+      options.amountSol * 1_000_000_000 * (1 + SLIPPAGE_PCT / 100),
+    ),
+    maxPriorityFeeLamports: Math.ceil(
+      PRIORITY_FEE_SOL * 1_000_000_000,
+    ),
+    maxTipLamports: MAX_TIP_LAMPORTS,
+    instructions: decodedInstructions,
   });
 
   const simulation = await connection.simulateTransaction(transaction, {
@@ -450,12 +469,15 @@ async function main() {
             factsHash: verdict.factsHash,
           },
           firewall: {
-            feePayer,
-            requiredSigners,
-            programIds: message.compiledInstructions.map((instruction) => {
-              const key = accountKeys.get(instruction.programIdIndex);
-              return key?.toBase58() ?? "unresolved";
-            }),
+            decodedSwap: firewall.decodedSwap,
+            fundedLamports: firewall.fundedLamports,
+            tippedLamports: firewall.tippedLamports,
+            priorityFeeLamports: firewall.priorityFeeLamports,
+            programIds: [
+              ...new Set(
+                decodedInstructions.map((instruction) => instruction.programId),
+              ),
+            ],
           },
         },
         null,
