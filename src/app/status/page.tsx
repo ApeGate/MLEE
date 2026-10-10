@@ -6,7 +6,7 @@ import { ArrowLeft, CheckCircle2, CircleDot, ServerCog } from "lucide-react";
 export const metadata: Metadata = {
   title: "System status",
   description:
-    "Apegate Phase 1 source and capability status. No made-up uptime claims.",
+    "Apegate live source and capability status. No made-up uptime claims.",
 };
 
 const SERVICES = [
@@ -24,9 +24,15 @@ const SERVICES = [
   },
   {
     name: "Mint safety",
-    state: "On demand",
+    state: "Live via Helius",
     detail:
-      "Solana RPC plus an optional independent risk report when you open a launch",
+      "Server-only Helius mainnet reads plus an independent risk report when you open a launch; the key never enters the browser",
+  },
+  {
+    name: "Wallet authentication",
+    state: "Operational",
+    detail:
+      "Privy authenticates external Solana wallets only; embedded and smart wallet creation remain off",
   },
   {
     name: "Launch Bay",
@@ -62,9 +68,9 @@ const SERVICES = [
   },
   {
     name: "Real trading and Vault",
-    state: "Disabled",
+    state: "Canary gated",
     detail:
-      "No real transaction can be built or sent. Manual signing is the future default; Privy is scaffolded only",
+      "An operator-only manual buy canary enforces fresh Gate and timing checks, one expected signer, program allowlists, and simulation; browser sends and Vault automation stay off",
   },
 ] as const;
 
@@ -109,7 +115,7 @@ export default function StatusPage() {
         <section className="mt-10 overflow-hidden rounded-2xl border border-[#31291f] bg-[#0d0b09]">
           <div className="flex items-center gap-3 border-b border-[#31291f] p-4">
             <ServerCog className="size-4 text-signal" />
-            <h2 className="text-sm font-bold">Phase 1 capability status</h2>
+            <h2 className="text-sm font-bold">Capability status</h2>
           </div>
           <div className="divide-y divide-[#272119]">
             {SERVICES.map((service) => (
@@ -130,7 +136,8 @@ export default function StatusPage() {
                       : service.state === "Pre-launch" ||
                           service.state === "Parked" ||
                           service.state === "Preview only" ||
-                          service.state === "Limited"
+                          service.state === "Limited" ||
+                          service.state === "Canary gated"
                         ? "border-wait/25 bg-wait/6 text-wait"
                       : "border-pass/25 bg-pass/6 text-pass"
                   }`}
@@ -139,7 +146,8 @@ export default function StatusPage() {
                   service.state === "Pre-launch" ||
                   service.state === "Parked" ||
                   service.state === "Preview only" ||
-                  service.state === "Limited" ? (
+                  service.state === "Limited" ||
+                  service.state === "Canary gated" ? (
                     <CircleDot className="size-2.5" />
                   ) : (
                     <CheckCircle2 className="size-2.5" />
