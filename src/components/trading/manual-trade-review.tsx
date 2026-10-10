@@ -66,6 +66,13 @@ export function ManualTradeReviewDialog({
   }, [intent, onDecision]);
 
   if (!intent) return null;
+  const reviewFacts = [
+    { label: "Mint", value: intent.mint },
+    { label: "Signing wallet", value: intent.wallet },
+    ...intent.facts.filter(
+      (fact) => fact.label !== "Mint" && fact.label !== "Signing wallet",
+    ),
+  ];
 
   return (
     <div
@@ -117,7 +124,7 @@ export function ManualTradeReviewDialog({
 
         <div className="p-5">
           <div className="space-y-2 rounded-xl border border-[#272119] bg-[#090806] p-3">
-            {intent.facts.map((fact) => (
+            {reviewFacts.map((fact) => (
               <div
                 key={fact.label}
                 className="grid grid-cols-[0.7fr_1.3fr] gap-3 border-b border-[#211c16] py-2 text-[9px] last:border-0"
