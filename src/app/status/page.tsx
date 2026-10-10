@@ -137,8 +137,7 @@ export default function StatusPage() {
                     service.state === "Pre-launch" ||
                           service.state === "Parked" ||
                           service.state === "Preview only" ||
-                          service.state === "Limited" ||
-                          service.state === "Canary gated"
+                          service.state === "Limited"
                         ? "border-wait/25 bg-wait/6 text-wait"
                       : "border-pass/25 bg-pass/6 text-pass"
                   }`}
@@ -146,8 +145,7 @@ export default function StatusPage() {
                   {service.state === "Pre-launch" ||
                   service.state === "Parked" ||
                   service.state === "Preview only" ||
-                  service.state === "Limited" ||
-                  service.state === "Canary gated" ? (
+                  service.state === "Limited" ? (
                     <CircleDot className="size-2.5" />
                   ) : (
                     <CheckCircle2 className="size-2.5" />

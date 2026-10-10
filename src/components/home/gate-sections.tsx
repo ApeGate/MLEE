@@ -436,7 +436,6 @@ export function GateSections() {
 
           <div className="mt-10 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {CREW.map((ape, index) => {
-              const Icon = ape.icon;
               return (
                 <article
                   key={ape.name}
@@ -444,24 +443,13 @@ export function GateSections() {
                 >
                   <div className="grid grid-cols-[112px_1fr] sm:grid-cols-[132px_1fr]">
                     <div className="relative min-h-48 overflow-hidden bg-[#090806]">
-                      {ape.image ? (
-                        <Image
-                          src={ape.image}
-                          alt={`${ape.name}, Apegate ${ape.role}`}
-                          fill
-                          sizes="150px"
-                          className="object-cover transition-transform duration-700 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div
-                          className="absolute inset-0 flex items-center justify-center"
-                          style={{
-                            background: `radial-gradient(circle at 50% 38%, ${ape.color}33, transparent 38%), #090806`,
-                          }}
-                        >
-                          <Icon className="size-10" style={{ color: ape.color }} />
-                        </div>
-                      )}
+                      <Image
+                        src={ape.image}
+                        alt={`${ape.name}, Apegate ${ape.role}`}
+                        fill
+                        sizes="150px"
+                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
                       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#12100c] to-transparent" />
                     </div>
                     <div className="flex min-w-0 flex-col p-4">

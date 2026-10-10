@@ -154,7 +154,6 @@ export default function CrewPage() {
       <section className="px-5 pb-20 sm:px-8 sm:pb-28">
         <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-2">
           {CREW.map((ape, index) => {
-            const Icon = ape.icon;
             return (
               <article
                 key={ape.name}
@@ -162,27 +161,13 @@ export default function CrewPage() {
               >
                 <div className="grid min-h-full sm:grid-cols-[190px_1fr]">
                   <div className="relative min-h-64 overflow-hidden border-b border-[#302a20] bg-[#090806] sm:min-h-full sm:border-b-0 sm:border-r">
-                    {ape.image ? (
-                      <Image
-                        src={ape.image}
-                        alt={`${ape.name}, Apegate ${ape.role}`}
-                        fill
-                        sizes="190px"
-                        className="object-cover transition-transform duration-700 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div
-                        className="absolute inset-0 flex items-center justify-center"
-                        style={{
-                          background: `radial-gradient(circle at 50% 40%, ${ape.color}35, transparent 34%), #090806`,
-                        }}
-                      >
-                        <Icon
-                          className="size-16 opacity-85"
-                          style={{ color: ape.color }}
-                        />
-                      </div>
-                    )}
+                    <Image
+                      src={ape.image}
+                      alt={`${ape.name}, Apegate ${ape.role}`}
+                      fill
+                      sizes="190px"
+                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
                     <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#090806] to-transparent" />
                     <span
                       className="absolute bottom-4 left-4 rounded-full border bg-[#090806]/85 px-2.5 py-1 font-mono text-[7px] font-bold uppercase tracking-[0.14em] backdrop-blur"

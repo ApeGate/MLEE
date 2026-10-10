@@ -67,23 +67,26 @@ export function TokenLogo({
   eager?: boolean;
 }) {
   const directImage = useMemo(() => allowedImage(imageUrl), [imageUrl]);
-  const [resolved, setResolved] = useState<string | null>(directImage);
-  const [failed, setFailed] = useState(false);
+  const requestKey = `${mint}:${uri ?? ""}`;
+  const [loaded, setLoaded] = useState<{
+    key: string;
+    image: string | null;
+  } | null>(null);
+  const [failedSource, setFailedSource] = useState<string | null>(null);
+  const resolved =
+    directImage ?? (loaded?.key === requestKey ? loaded.image : null);
+  const failed = Boolean(resolved && failedSource === resolved);
 
   useEffect(() => {
-    setFailed(false);
-    if (directImage) {
-      setResolved(directImage);
-      return;
-    }
+    if (directImage) return;
     let cancelled = false;
     void requestImage(mint, uri).then((image) => {
-      if (!cancelled) setResolved(image);
+      if (!cancelled) setLoaded({ key: requestKey, image });
     });
     return () => {
       cancelled = true;
     };
-  }, [directImage, mint, uri]);
+  }, [directImage, mint, requestKey, uri]);
 
   const dimensions = {
     sm: "size-8 rounded-lg text-[9px]",
@@ -112,7 +115,7 @@ export function TokenLogo({
           loading={eager ? "eager" : "lazy"}
           decoding="async"
           referrerPolicy="no-referrer"
-          onError={() => setFailed(true)}
+          onError={() => setFailedSource(resolved)}
           className="absolute inset-0 size-full object-cover"
         />
       ) : null}

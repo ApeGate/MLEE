@@ -6,10 +6,10 @@ import { inspectManualBuyTransaction } from "@/lib/manual-buy-transaction";
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const TRADE_ENDPOINT = "https://pumpportal.fun/api/trade-local";
 const MIN_BUY_SOL = 0.01;
-const MAX_BUY_SOL = 0.25;
+const MAX_BUY_SOL = 0.05;
+const MAX_TRANSACTION_BYTES = 64 * 1024;
 const PRIORITY_FEE_SOL = 0.0005;
 const MAX_TIP_LAMPORTS = 100_000;
-const MAX_TRANSACTION_BYTES = 64 * 1024;
 
 type PrepareBody = {
   publicKey?: unknown;
