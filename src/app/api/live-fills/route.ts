@@ -6,6 +6,37 @@ import {
 } from "@/lib/public-canary-fills";
 
 export const dynamic = "force-dynamic";
+const MAX_RPC_BYTES = 2 * 1024 * 1024;
+
+async function readBoundedJson(response: Response) {
+  if (!response.ok || !response.body) {
+    throw new Error(`RPC returned ${response.status}`);
+  }
+  const declared = Number(response.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declared) && declared > MAX_RPC_BYTES) {
+    throw new Error("RPC returned an oversized response");
+  }
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_RPC_BYTES) {
+      await reader.cancel();
+      throw new Error("RPC response exceeded the size limit");
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
+}
 
 async function readTransaction(endpoint: string, signature: string) {
   const response = await fetch(endpoint, {
@@ -27,8 +58,7 @@ async function readTransaction(endpoint: string, signature: string) {
     signal: AbortSignal.timeout(8_000),
     cache: "no-store",
   });
-  if (!response.ok) throw new Error(`RPC returned ${response.status}`);
-  const body = (await response.json()) as {
+  const body = (await readBoundedJson(response)) as {
     result?: unknown;
     error?: { message?: string };
   };

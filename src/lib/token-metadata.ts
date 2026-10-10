@@ -1,3 +1,5 @@
+import { fetchPublicText } from "./safe-remote-text";
+
 const MAX_METADATA_BYTES = 256 * 1024;
 
 export type TokenMetadata = {
@@ -134,12 +136,21 @@ function parseMetadata(
 }
 
 async function fetchMetadataUri(uri: string) {
-  const response = await fetch(uri, {
-    headers: { accept: "application/json" },
-    redirect: "follow",
-    signal: AbortSignal.timeout(3_500),
+  const response = await fetchPublicText(uri, {
+    timeoutMs: 3_500,
+    maxBytes: MAX_METADATA_BYTES,
+    redirects: 2,
+    accept: "application/json, text/json;q=0.9, */*;q=0.1",
   });
-  return parseMetadata(await readBoundedJson(response), response.url || uri, "metadata");
+  const value: unknown = JSON.parse(response.text);
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Metadata response is not an object");
+  }
+  return parseMetadata(
+    value as Record<string, unknown>,
+    response.url.toString(),
+    "metadata",
+  );
 }
 
 async function fetchPumpMetadata(mint: string) {
