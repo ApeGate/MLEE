@@ -7,11 +7,11 @@ import {
   launchToFacts,
   type GateVerdict,
   type LaunchFacts,
-  type RawLaunch,
   type Source,
 } from "../../packages/core/src";
 import tape from "../../fixtures/tapes/pump-launches.json";
 import { isBrandSafeLaunchLabel } from "./brand-safety";
+import { parsePumpLaunch, parsePumpTrade } from "./pump-stream";
 
 export type FeedLaunch = {
   facts: LaunchFacts;
@@ -22,19 +22,6 @@ export type FeedLaunch = {
 type FeedStatus = "connecting" | "live" | "replay" | "error";
 const OFFICIAL_APEGATE_MINT =
   process.env.NEXT_PUBLIC_APEGATE_TOKEN_MINT ?? null;
-
-function isLaunch(value: unknown): value is RawLaunch {
-  if (!value || typeof value !== "object") return false;
-  const launch = value as Partial<RawLaunch>;
-  return Boolean(
-    launch.mint &&
-      launch.signature &&
-      launch.traderPublicKey &&
-      launch.symbol &&
-      launch.name &&
-      typeof launch.marketCapSol === "number",
-  );
-}
 
 async function buildReplay(): Promise<FeedLaunch[]> {
   const recordedAt = Date.parse(tape.recordedAt);
@@ -140,13 +127,13 @@ export function useLaunchFeed() {
         return;
       }
 
+      const launch = parsePumpLaunch(payload);
       if (
-        isLaunch(payload) &&
-        payload.txType === "create" &&
-        isBrandSafeLaunchLabel(payload.name, payload.symbol)
+        launch &&
+        isBrandSafeLaunchLabel(launch.name, launch.symbol)
       ) {
         const observedAt = Date.now();
-        const facts = launchToFacts(payload, observedAt);
+        const facts = launchToFacts(launch, observedAt);
         setLastMessageAt(observedAt);
         setStatus("live");
         createQueue = createQueue
@@ -159,7 +146,7 @@ export function useLaunchFeed() {
                   .filter(
                     (launch) =>
                       launch.source === "live" &&
-                      launch.facts.mint !== payload.mint,
+                      launch.facts.mint !== facts.mint,
                   )
                   .map((launch) => launch.facts),
               ],
@@ -193,21 +180,14 @@ export function useLaunchFeed() {
         socket.send(
           JSON.stringify({
             method: "subscribeTokenTrade",
-            keys: [payload.mint],
+            keys: [facts.mint],
           }),
         );
         return;
       }
 
-      const trade = payload as {
-        mint?: string;
-        txType?: string;
-        marketCapSol?: number;
-      };
-      if (
-        trade.mint &&
-        (trade.txType === "buy" || trade.txType === "sell")
-      ) {
+      const trade = parsePumpTrade(payload);
+      if (trade) {
         const observedAt = Date.now();
         setLastMessageAt(observedAt);
         setLaunches((current) => {
