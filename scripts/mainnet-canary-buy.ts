@@ -56,7 +56,7 @@ type RiskReport = {
   topHolders?: RiskHolder[];
   graphInsidersDetected?: number;
   insiderNetworks?: unknown[];
-  creatorTokens?: unknown[];
+  creatorTokens?: unknown[] | null;
   totalMarketLiquidity?: number;
   risks?: Array<{
     name: string;
@@ -292,10 +292,12 @@ async function main() {
   const holderFacts = concentration(report);
   const currentMarketCapSol = marketCapSol(pair);
   const recentTrades = countRecentTrades(pair);
+  const creatorTokens = report.creatorTokens;
   const launchFlowResolved =
     report.graphInsidersDetected === 0 &&
     (report.insiderNetworks?.length ?? 0) === 0;
-  const creatorHistoryResolved = Array.isArray(report.creatorTokens);
+  const creatorHistoryResolved =
+    creatorTokens === null || Array.isArray(creatorTokens);
   const canonicalMarketResolved =
     pair.dexId === "pumpswap" &&
     (pair.liquidity?.usd ?? 0) >= 50_000 &&
@@ -321,7 +323,8 @@ async function main() {
     rugScore: report.score_normalised ?? null,
     launchSecondBuyout: launchFlowResolved ? false : null,
     deployerPulledPool:
-      creatorHistoryResolved && report.creatorTokens?.length === 0
+      creatorHistoryResolved &&
+      (creatorTokens === null || creatorTokens?.length === 0)
         ? false
         : null,
     manufacturedCap: canonicalMarketResolved ? false : null,
