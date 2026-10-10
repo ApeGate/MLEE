@@ -8,10 +8,12 @@
   "routes": [
     {
       "pattern": "apegate.io",
+      "zone_name": "apegate.io",
       "custom_domain": true
     },
     {
       "pattern": "www.apegate.io",
+      "zone_name": "apegate.io",
       "custom_domain": true
     }
   ],

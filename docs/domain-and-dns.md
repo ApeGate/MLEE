@@ -31,8 +31,16 @@ The committed Wrangler configuration is:
 ```jsonc
 {
   "routes": [
-    { "pattern": "apegate.io", "custom_domain": true },
-    { "pattern": "www.apegate.io", "custom_domain": true }
+    {
+      "pattern": "apegate.io",
+      "zone_name": "apegate.io",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.apegate.io",
+      "zone_name": "apegate.io",
+      "custom_domain": true
+    }
   ]
 }
 ```
