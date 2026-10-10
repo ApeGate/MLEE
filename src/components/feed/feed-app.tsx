@@ -813,7 +813,7 @@ export function FeedApp() {
       </div>
 
       <main className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 sm:py-6">
-        <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="mb-5 grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
           <Metric
             label="Launches on desk"
             value={String(launches.length)}
@@ -2108,15 +2108,19 @@ function Metric({
   icon: ReactNode;
 }) {
   return (
-    <article className="rounded-2xl border border-[#31291f] bg-[linear-gradient(135deg,rgb(255_255_255_/_3%),transparent_45%),#0d0b09] p-4">
+    <article className="rounded-2xl border border-[#31291f] bg-[linear-gradient(135deg,rgb(255_255_255_/_3%),transparent_45%),#0d0b09] p-3 sm:p-4">
       <div className="flex items-start justify-between">
         <span className="text-signal">{icon}</span>
         <SourceBadge source={source} compact />
       </div>
-      <p className="mt-4 text-2xl font-extrabold tracking-[-0.04em]">{value}</p>
+      <p className="mt-3 text-xl font-extrabold tracking-[-0.04em] sm:mt-4 sm:text-2xl">
+        {value}
+      </p>
       <div className="mt-1 flex items-baseline justify-between gap-3">
-        <p className="text-[10px] font-bold">{label}</p>
-        <p className="text-right text-[9px] text-[#5f584f]">{note}</p>
+        <p className="text-[9px] font-bold sm:text-[10px]">{label}</p>
+        <p className="hidden text-right text-[9px] text-[#5f584f] sm:block">
+          {note}
+        </p>
       </div>
     </article>
   );
