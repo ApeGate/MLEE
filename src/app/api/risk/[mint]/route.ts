@@ -290,11 +290,13 @@ export async function GET(
     creator: creator ?? null,
     rpcSource: rpc?.source ?? null,
   });
+  const graphInsidersDetected = report?.graphInsidersDetected;
+  const insiderNetworks = report?.insiderNetworks;
   const insiderGraphResolved =
-    typeof report?.graphInsidersDetected === "number" &&
-    Array.isArray(report.insiderNetworks);
+    typeof graphInsidersDetected === "number" &&
+    Array.isArray(insiderNetworks);
   const launchSecondBuyout = insiderGraphResolved
-    ? report.graphInsidersDetected > 0 || report.insiderNetworks!.length > 0
+    ? graphInsidersDetected > 0 || insiderNetworks.length > 0
     : null;
   const creatorHistoryResolved = Array.isArray(report?.creatorTokens);
   const liquidityPullRisk = report?.risks?.some((risk) => {
