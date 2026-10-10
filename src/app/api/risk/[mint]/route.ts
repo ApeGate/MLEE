@@ -224,8 +224,7 @@ export async function GET(
     : (rpc?.topHolders ?? []);
   const creator = report?.creator;
   const devPct = creator
-    ? userHolders.find((holder) => holder.owner === creator)?.pct ??
-      0
+    ? userHolders.find((holder) => holder.owner === creator)?.pct ?? null
     : null;
   const top10Pct =
     userHolders.length > 0
@@ -286,14 +285,11 @@ export async function GET(
           .slice(0, 8) ?? [],
       sources: {
         mintSafety: rpc ? rpc.source : report ? "external risk scan" : null,
-        concentration: report
-          ? useReportHolders
-            ? "external risk scan"
-            : rpc?.topHolders.length
-              ? rpc.source
-              : null
-          : rpc?.topHolders.length
-            ? rpc.source
+        concentration:
+          userHolders.length > 0
+            ? useReportHolders
+              ? "external risk scan"
+              : rpc?.source ?? null
             : null,
       },
     },
