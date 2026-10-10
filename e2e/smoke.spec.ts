@@ -60,6 +60,20 @@ test("manual trade APIs reject malformed identifiers", async ({ page }) => {
   expect(status.status()).toBe(400);
 });
 
+test("live Gate exposes guarded entries, exits, receipts, and outcome tape", async ({
+  page,
+}) => {
+  await page.goto("/feed");
+  await expect(
+    page.getByRole("heading", { name: /new launches at the gate/i }),
+  ).toBeVisible();
+  await expect(page.getByText("Outcome tape", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sell 50%" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Exit 100%" })).toBeVisible();
+  await expect(page.getByText(/exits never require a PASS/i)).toBeVisible();
+  await expect(page.getByText(/decision receipts · local tape/i)).toBeVisible();
+});
+
 test("paper desk writes an explicitly simulated fill", async ({ page }) => {
   await page.goto("/paper");
   await expect(page.getByText("Caesar's paper desk")).toBeVisible();

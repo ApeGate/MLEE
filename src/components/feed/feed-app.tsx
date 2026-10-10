@@ -42,9 +42,11 @@ import {
 } from "../../../packages/core/src";
 import { cn } from "@/lib/utils";
 import { useLaunchFeed, type FeedLaunch } from "@/lib/use-launch-feed";
+import { useOutcomeTape } from "@/lib/use-outcome-tape";
 import { useReceipts } from "@/lib/use-receipts";
 import { TokenLogo } from "@/components/token/token-logo";
 import { inspectManualBuyTransaction } from "@/lib/manual-buy-transaction";
+import { inspectManualSellTransaction } from "@/lib/manual-sell-transaction";
 
 type RiskPayload = {
   mintAuthority?: string | null;
@@ -128,6 +130,7 @@ async function waitForManualTradeConfirmation(signature: string) {
 export function FeedApp() {
   const { launches, status, lastMessageAt, retry, updateLaunch } =
     useLaunchFeed();
+  const outcomeTape = useOutcomeTape(launches);
   const {
     receipts,
     verified,
@@ -413,6 +416,7 @@ export function FeedApp() {
         body: JSON.stringify({
           publicKey: activeWallet.address,
           mint: launch.facts.mint,
+          side: "buy",
           amountSol,
           slippagePct: MANUAL_BUY_SLIPPAGE_PCT,
         }),
@@ -497,6 +501,7 @@ export function FeedApp() {
         mint: launch.facts.mint,
         symbol: launch.facts.symbol,
         wallet: activeWallet.address,
+        side: "BUY",
         amountSol,
         signature,
         factsHash: launch.verdict.factsHash,
@@ -511,6 +516,137 @@ export function FeedApp() {
         error instanceof Error
           ? error.message
           : "The wallet did not send the transaction",
+      );
+    }
+  }
+
+  async function executeManualSell(launch: FeedLaunch, percent: number) {
+    setTradeMessage(null);
+    if (!activeWallet) {
+      setWalletOpen(true);
+      return;
+    }
+
+    try {
+      setTradeState("preparing");
+      const response = await fetch("/api/trade/prepare", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          publicKey: activeWallet.address,
+          mint: launch.facts.mint,
+          side: "sell",
+          percent,
+          slippagePct: MANUAL_BUY_SLIPPAGE_PCT,
+        }),
+      });
+      const payload = (await response.json()) as
+        | {
+            transaction: string;
+            firewall: {
+              decodedSwap: string;
+              soldTokenBaseUnits: string;
+              minOutputLamports: string;
+              fundedLamports: number;
+              tippedLamports: number;
+              priorityFeeLamports: number;
+            };
+            intent: {
+              maxSellTokenBaseUnits: string;
+              minimumOutputLamports: string;
+              maxAccountFundingLamports: number;
+            };
+            quote: {
+              expectedLamports: number;
+              minimumOutputLamports: number;
+              source: string;
+            };
+            expiresAt: number;
+          }
+        | { error?: string };
+      if (!response.ok || !("transaction" in payload)) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "A guarded exit could not be prepared",
+        );
+      }
+      if (Date.now() > payload.expiresAt) {
+        throw new Error("The prepared exit expired before approval");
+      }
+      const bytes = Uint8Array.from(
+        window.atob(payload.transaction),
+        (character) => character.charCodeAt(0),
+      );
+      const transaction = VersionedTransaction.deserialize(bytes);
+      const inspection = inspectManualSellTransaction(transaction, {
+        expectedSigner: activeWallet.address,
+        expectedMint: launch.facts.mint,
+        maxSellTokenBaseUnits: payload.intent.maxSellTokenBaseUnits,
+        minimumOutputLamports: payload.intent.minimumOutputLamports,
+        maxAccountFundingLamports:
+          payload.intent.maxAccountFundingLamports,
+        priorityFeeSol: MANUAL_BUY_PRIORITY_FEE_SOL,
+        maxTipLamports: MANUAL_BUY_MAX_TIP_LAMPORTS,
+      });
+      if (
+        inspection.decodedSwap !== payload.firewall.decodedSwap ||
+        inspection.soldTokenBaseUnits !==
+          payload.firewall.soldTokenBaseUnits ||
+        inspection.minOutputLamports !==
+          payload.firewall.minOutputLamports ||
+        inspection.fundedLamports !== payload.firewall.fundedLamports ||
+        inspection.tippedLamports !== payload.firewall.tippedLamports ||
+        inspection.priorityFeeLamports !==
+          payload.firewall.priorityFeeLamports
+      ) {
+        throw new Error("Browser and server exit summaries do not match");
+      }
+
+      setTradeState("signing");
+      setTradeMessage(
+        `Exit ${percent}% of $${launch.facts.symbol}. Independent floor ${(payload.quote.minimumOutputLamports / 1_000_000_000).toFixed(6)} SOL · check the mint in your wallet.`,
+      );
+      const result = await activeWallet.signAndSendTransaction({
+        transaction: bytes,
+        chain: "solana:mainnet",
+        options: {
+          commitment: "confirmed",
+          skipPreflight: false,
+          maxRetries: 2,
+        },
+      });
+      const signature = bs58.encode(result.signature);
+      setTradeState("sent");
+      setTradeMessage(`Exit submitted · ${signature} · waiting for confirmation`);
+      const confirmation = await waitForManualTradeConfirmation(signature);
+      if (confirmation.state === "failed") {
+        throw new Error(`Exit landed but failed · ${signature}`);
+      }
+      if (confirmation.state !== "confirmed") {
+        setTradeMessage(
+          `Exit submitted · confirmation still pending · ${signature}`,
+        );
+        return;
+      }
+      await addManualFill({
+        mint: launch.facts.mint,
+        symbol: launch.facts.symbol,
+        wallet: activeWallet.address,
+        side: "SELL",
+        percent,
+        signature,
+        factsHash: launch.verdict.factsHash,
+        slot: confirmation.slot,
+      });
+      setTradeState("sent");
+      setTradeMessage(`Exit confirmed · ${signature}`);
+    } catch (error) {
+      setTradeState("error");
+      setTradeMessage(
+        error instanceof Error
+          ? error.message
+          : "The wallet did not send the exit",
       );
     }
   }
@@ -607,7 +743,7 @@ export function FeedApp() {
       </div>
 
       <main className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 sm:py-6">
-        <section className="mb-5 grid gap-3 sm:grid-cols-3">
+        <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Metric
             label="Launches on desk"
             value={String(launches.length)}
@@ -630,6 +766,13 @@ export function FeedApp() {
             note={`${receipts.length} local decisions`}
             source="LOCAL"
             icon={<Fingerprint className="size-4" />}
+          />
+          <Metric
+            label="Outcome tape"
+            value={String(outcomeTape.entries.length)}
+            note={`${outcomeTape.checkpointCount} raw checkpoints`}
+            source="LOCAL"
+            icon={<Activity className="size-4" />}
           />
         </section>
 
@@ -719,6 +862,7 @@ export function FeedApp() {
                 tradeState={tradeState}
                 tradeMessage={tradeMessage}
                 onTrade={(amountSol) => void executeManualBuy(selected, amountSol)}
+                onExit={(percent) => void executeManualSell(selected, percent)}
               />
             ) : (
               <div className="flex min-h-[560px] items-center justify-center p-8 text-center">
@@ -835,6 +979,7 @@ function CoinPanel({
   tradeState,
   tradeMessage,
   onTrade,
+  onExit,
 }: {
   launch: FeedLaunch;
   profile: Profile;
@@ -848,6 +993,7 @@ function CoinPanel({
   tradeState: "idle" | "preparing" | "signing" | "sent" | "error";
   tradeMessage: string | null;
   onTrade: (amountSol: number) => void;
+  onExit: (percent: number) => void;
 }) {
   const { facts, verdict, source } = launch;
   const [tradeSize, setTradeSize] = useState(0.02);
@@ -1127,10 +1273,29 @@ function CoinPanel({
             decoded; bonding-curve signing stays locked until its v3 decoder
             passes canaries.
           </p>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            {[50, 100].map((percent) => (
+              <button
+                key={percent}
+                type="button"
+                disabled={tradePending}
+                onClick={() =>
+                  walletAddress ? onExit(percent) : onWallet()
+                }
+                className="rounded-lg border border-block/25 bg-block/6 px-2 py-2.5 text-[10px] font-extrabold text-[#ff8f7b] enabled:hover:border-block/55 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {percent === 100 ? "Exit 100%" : "Sell 50%"}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-[7px] leading-relaxed text-[#4f4941]">
+            Exits never require a PASS. PumpSwap bytes are decoded before your
+            wallet opens; a missing position fails closed.
+          </p>
           <button
             type="button"
             onClick={onWallet}
-            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#3a3328] px-3 py-2.5 text-xs font-bold hover:border-ape-cornelius/50"
+            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#3a3328] px-3 py-2.5 text-xs font-bold hover:border-ape-cornelius/50"
           >
             <WalletCards className="size-3.5 text-ape-cornelius" />
             {walletAddress ? short(walletAddress) : "Connect for manual signing"}
@@ -1498,7 +1663,9 @@ function ReceiptTape({
                     : receipt.kind === "paper_fill"
                       ? `${String(receipt.outputs.side)} $${String(receipt.outputs.symbol)} · PAPER`
                       : receipt.kind === "manual_fill"
-                        ? `${String(receipt.outputs.side)} $${String(receipt.outputs.symbol)} · ${String(receipt.outputs.amountSol)} SOL`
+                        ? receipt.outputs.side === "SELL"
+                          ? `SELL $${String(receipt.outputs.symbol)} · ${String(receipt.outputs.percent)}%`
+                          : `BUY $${String(receipt.outputs.symbol)} · ${String(receipt.outputs.amountSol)} SOL`
                       : receipt.kind === "plan_change"
                         ? `${String(receipt.outputs.name)} · plan saved`
                         : receipt.kind === "vault_preview"
@@ -1511,6 +1678,17 @@ function ReceiptTape({
                     PREV {receipt.prev ?? "GENESIS"}
                   </p>
                 </div>
+                {receipt.kind === "manual_fill" &&
+                typeof receipt.outputs.signature === "string" ? (
+                  <a
+                    href={`https://solscan.io/tx/${receipt.outputs.signature}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-flex items-center gap-1 text-[9px] font-bold text-signal hover:text-[#ff9b7d]"
+                  >
+                    Open live fill <ExternalLink className="size-2.5" />
+                  </a>
+                ) : null}
                 <p className="mt-2 text-[9px] text-[#6f685f]">
                   {formatClock(receipt.at.ts)} · stored in this browser only
                 </p>

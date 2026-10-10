@@ -67,13 +67,13 @@ const SERVICES = [
     name: "Lab and Rafiki",
     state: "Limited",
     detail:
-      "Deterministic fixture replay and hash-verified receipt explanations are live; accuracy metrics wait for outcome labels and AI falls back when Gateway credentials are absent",
+      "Live creates now start a browser-local raw outcome tape with first-seen, +30 minute, and +24 hour checkpoints; performance labels and accuracy metrics remain unavailable until durable price evidence lands",
   },
   {
     name: "Real trading and Vault",
     state: "Canary gated",
     detail:
-      "PumpSwap buys decode actual bytes in the server and browser before a wallet prompt; bonding-curve sends and Vault automation stay locked until equivalent decoders pass canaries",
+      "PumpSwap buys and exits decode actual bytes in the server and browser before a wallet prompt and write linked live-fill receipts; bonding-curve sends and Vault automation stay locked until equivalent decoders pass canaries",
   },
 ] as const;
 
