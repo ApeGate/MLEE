@@ -447,7 +447,7 @@ function Live({
               <EmptyState
                 compact
                 title="NO POSITIONS"
-                body="Fills land here after Desk buys."
+                body="Desk fills appear here."
               />
             ) : (
               <ul>
