@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { configuredSolanaRpc } from "@/lib/solana-rpc";
+import { selectHolderEvidence } from "@/lib/holder-evidence";
 
 type RugHolder = {
   owner: string;
@@ -209,29 +210,15 @@ export async function GET(
   }
 
   const known = report?.knownAccounts ?? {};
-  const reportHolders = report?.topHolders ?? [];
-  const useReportHolders = reportHolders.length > 0;
-  const userHolders = useReportHolders
-    ? reportHolders.filter((holder) => {
-        const type = known[holder.owner]?.type;
-        return (
-          holder.owner !== bondingCurve &&
-          type !== "AMM" &&
-          type !== "LOCKER" &&
-          type !== "PROGRAM"
-        );
-      })
-    : (rpc?.topHolders ?? []);
   const creator = report?.creator;
-  const devPct = creator
-    ? userHolders.find((holder) => holder.owner === creator)?.pct ?? null
-    : null;
-  const top10Pct =
-    userHolders.length > 0
-      ? userHolders
-          .slice(0, 10)
-          .reduce((sum, holder) => sum + holder.pct, 0)
-      : null;
+  const holderEvidence = selectHolderEvidence({
+    reportHolders: report?.topHolders ?? [],
+    rpcHolders: rpc?.topHolders ?? [],
+    knownAccounts: known,
+    bondingCurve,
+    creator: creator ?? null,
+    rpcSource: rpc?.source ?? null,
+  });
 
   return NextResponse.json(
     {
@@ -247,8 +234,8 @@ export async function GET(
           : report
             ? report.freezeAuthority
             : undefined,
-      devPct,
-      top10Pct: report ? top10Pct : null,
+      devPct: holderEvidence.devPct,
+      top10Pct: holderEvidence.top10Pct,
       rugScore: report?.score_normalised ?? null,
       rugged: report?.rugged ?? null,
       creator: report?.creator ?? null,
@@ -266,7 +253,7 @@ export async function GET(
       totalHolders: report?.totalHolders ?? null,
       graphInsidersDetected: report?.graphInsidersDetected ?? null,
       detectedAt: report?.detectedAt ?? null,
-      topHolders: userHolders.slice(0, 20).map((holder) => ({
+      topHolders: holderEvidence.holders.slice(0, 20).map((holder) => ({
           owner: holder.owner,
           pct: holder.pct,
           insider: "insider" in holder ? Boolean(holder.insider) : false,
@@ -285,12 +272,7 @@ export async function GET(
           .slice(0, 8) ?? [],
       sources: {
         mintSafety: rpc ? rpc.source : report ? "external risk scan" : null,
-        concentration:
-          userHolders.length > 0
-            ? useReportHolders
-              ? "external risk scan"
-              : rpc?.source ?? null
-            : null,
+        concentration: holderEvidence.source,
       },
     },
     {
