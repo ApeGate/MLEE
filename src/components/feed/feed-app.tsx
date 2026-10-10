@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   Check,
   CircleDot,
+  Coins,
   Copy,
   ExternalLink,
   Fingerprint,
@@ -77,6 +78,25 @@ type MetaPayload = {
   telegramPresent: boolean;
 };
 
+type WalletPosition = {
+  mint: string;
+  rawAmount: string;
+  decimals: number;
+  uiAmount: string;
+  tokenProgram: string;
+  name: string | null;
+  symbol: string | null;
+  image: string | null;
+};
+
+type WalletPositionsPayload = {
+  source: string;
+  positions: WalletPosition[];
+  total: number;
+  hasMore: boolean;
+  observedAt: number;
+};
+
 const FILTERS = ["ALL", "PASS", "WARN", "BLOCK", "WAIT"] as const;
 const PROFILES: Profile[] = ["strict", "standard", "loose"];
 const OFFICIAL_APEGATE_MINT =
@@ -138,6 +158,12 @@ export function FeedApp() {
     "idle" | "preparing" | "signing" | "sent" | "error"
   >("idle");
   const [tradeMessage, setTradeMessage] = useState<string | null>(null);
+  const [positionState, setPositionState] = useState<
+    "idle" | "loading" | "ready" | "error"
+  >("idle");
+  const [positionData, setPositionData] =
+    useState<WalletPositionsPayload | null>(null);
+  const [positionError, setPositionError] = useState<string | null>(null);
   const recordedWallet = useRef<string | null>(null);
   const activeWallet = wallets[0] ?? null;
   const walletAddress = wallets[0]?.address ?? null;
@@ -147,6 +173,49 @@ export function FeedApp() {
     recordedWallet.current = walletAddress;
     void addWalletConnect(walletAddress);
   }, [addWalletConnect, walletAddress]);
+
+  const refreshPositions = useCallback(async (owner?: string | null) => {
+    if (!owner) return;
+    setPositionState("loading");
+    setPositionError(null);
+    try {
+      const response = await fetch(
+        `/api/wallet/positions?owner=${encodeURIComponent(owner)}`,
+        { cache: "no-store" },
+      );
+      const payload = (await response.json()) as
+        | WalletPositionsPayload
+        | { error?: string };
+      if (!response.ok || !("positions" in payload)) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "Wallet positions are unavailable",
+        );
+      }
+      setPositionData(payload);
+      setPositionState("ready");
+    } catch (error) {
+      setPositionState("error");
+      setPositionError(
+        error instanceof Error
+          ? error.message
+          : "Wallet positions are unavailable",
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!walletAddress) {
+      queueMicrotask(() => {
+        setPositionData(null);
+        setPositionState("idle");
+        setPositionError(null);
+      });
+      return;
+    }
+    void refreshPositions(walletAddress);
+  }, [refreshPositions, walletAddress]);
 
   const selected =
     launches.find((launch) => launch.facts.mint === selectedMint) ??
@@ -433,6 +502,7 @@ export function FeedApp() {
         factsHash: launch.verdict.factsHash,
         slot: confirmation.slot,
       });
+      await refreshPositions(activeWallet.address);
       setTradeState("sent");
       setTradeMessage(`Confirmed · ${signature}`);
     } catch (error) {
@@ -665,6 +735,15 @@ export function FeedApp() {
             )}
           </section>
         </div>
+
+        <WalletPositions
+          walletAddress={walletAddress}
+          state={positionState}
+          data={positionData}
+          error={positionError}
+          onConnect={() => setWalletOpen(true)}
+          onRefresh={() => void refreshPositions(walletAddress)}
+        />
 
         <ReceiptTape receipts={receipts} verified={verified} onClear={clear} />
       </main>
@@ -1191,6 +1270,170 @@ function WalletPanel({
   );
 }
 
+function WalletPositions({
+  walletAddress,
+  state,
+  data,
+  error,
+  onConnect,
+  onRefresh,
+}: {
+  walletAddress: string | null;
+  state: "idle" | "loading" | "ready" | "error";
+  data: WalletPositionsPayload | null;
+  error: string | null;
+  onConnect: () => void;
+  onRefresh: () => void;
+}) {
+  return (
+    <section className="mt-4 overflow-hidden rounded-2xl border border-[#31291f] bg-[#0d0b09]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#31291f] px-4 py-3.5">
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 items-center justify-center rounded-xl border border-ape-caesar/25 bg-ape-caesar/8 text-ape-caesar">
+            <Coins className="size-4" />
+          </span>
+          <div>
+            <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-ape-caesar">
+              Caesar · wallet positions
+            </p>
+            <p className="mt-1 text-xs text-[#91897e]">
+              Confirmed on-chain balances · custody stays in your wallet
+            </p>
+          </div>
+        </div>
+        {walletAddress ? (
+          <div className="flex items-center gap-2">
+            {data ? (
+              <SourceBadge source={data.source} compact />
+            ) : null}
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={state === "loading"}
+              className="inline-flex size-8 items-center justify-center rounded-lg border border-[#31291f] text-[#766f65] hover:border-ape-caesar/40 hover:text-ape-caesar disabled:cursor-wait"
+              aria-label="Refresh wallet positions"
+            >
+              <RefreshCw
+                className={cn(
+                  "size-3.5",
+                  state === "loading" && "animate-spin",
+                )}
+              />
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      {!walletAddress ? (
+        <div className="flex flex-col items-center px-5 py-10 text-center">
+          <WalletCards className="size-6 text-[#554f47]" />
+          <p className="mt-3 text-sm font-bold">Connect to read your positions</p>
+          <p className="mt-1 max-w-md text-[10px] leading-relaxed text-[#6f685f]">
+            Apegate reads public SPL and Token-2022 balances. It never needs
+            custody or a seed phrase.
+          </p>
+          <button
+            type="button"
+            onClick={onConnect}
+            className="mt-4 rounded-lg border border-ape-caesar/35 bg-ape-caesar/8 px-4 py-2 text-xs font-bold text-ape-caesar hover:border-ape-caesar/60"
+          >
+            Connect Solana wallet
+          </button>
+        </div>
+      ) : state === "loading" && !data ? (
+        <div className="grid gap-px bg-[#272119] sm:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2].map((item) => (
+            <div key={item} className="flex animate-pulse gap-3 bg-[#0d0b09] p-4">
+              <span className="size-10 rounded-xl bg-[#211b14]" />
+              <span className="flex-1">
+                <span className="block h-3 w-24 rounded bg-[#211b14]" />
+                <span className="mt-2 block h-2 w-36 rounded bg-[#17130e]" />
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : state === "error" && !data ? (
+        <div className="flex flex-col items-center px-5 py-10 text-center">
+          <AlertTriangle className="size-5 text-warn" />
+          <p className="mt-2 text-sm font-bold">Position read timed out</p>
+          <p className="mt-1 text-[10px] text-[#6f685f]">
+            {error ?? "The Solana RPC did not return a safe response."}
+          </p>
+          <button
+            type="button"
+            onClick={onRefresh}
+            className="mt-3 text-[10px] font-bold text-signal hover:text-[#ff9b7d]"
+          >
+            Retry confirmed read
+          </button>
+        </div>
+      ) : data?.positions.length ? (
+        <>
+          <div className="max-h-[420px] divide-y divide-[#272119] overflow-y-auto sm:grid sm:grid-cols-2 sm:divide-y-0 xl:grid-cols-3">
+            {data.positions.map((position) => (
+              <article
+                key={position.mint}
+                className="flex min-w-0 items-center gap-3 border-[#272119] p-4 sm:border-b sm:[&:nth-child(odd)]:border-r xl:[&:nth-child(odd)]:border-r-0 xl:[&:not(:nth-child(3n))]:border-r"
+              >
+                <TokenLogo
+                  mint={position.mint}
+                  symbol={position.symbol ?? "COIN"}
+                  imageUrl={position.image}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="truncate text-sm font-extrabold">
+                      {position.symbol ? `$${position.symbol}` : short(position.mint)}
+                    </p>
+                    <p
+                      className="max-w-[55%] truncate font-mono text-[10px] font-bold tabular-nums text-[#ded7cb]"
+                      title={position.uiAmount}
+                    >
+                      {formatTokenBalance(position.uiAmount)}
+                    </p>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <p className="truncate text-[9px] text-[#6f685f]">
+                      {position.name ?? "Metadata resolving"}
+                    </p>
+                    <a
+                      href={`https://solscan.io/token/${position.mint}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex shrink-0 items-center gap-1 text-[8px] font-bold text-[#766f65] hover:text-signal"
+                    >
+                      Evidence <ExternalLink className="size-2.5" />
+                    </a>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#31291f] px-4 py-2.5 font-mono text-[8px] text-[#5f584f]">
+            <span>
+              {data.total} non-zero position{data.total === 1 ? "" : "s"} ·{" "}
+              {formatClock(data.observedAt)}
+            </span>
+            <span>
+              {data.hasMore
+                ? `Showing first ${data.positions.length} · largest balances first`
+                : "SPL + Token-2022 · confirmed"}
+            </span>
+          </div>
+        </>
+      ) : (
+        <div className="px-5 py-10 text-center">
+          <Coins className="mx-auto size-5 text-[#554f47]" />
+          <p className="mt-2 text-sm font-bold">No token positions found</p>
+          <p className="mt-1 text-[10px] text-[#6f685f]">
+            This wallet has no confirmed non-zero SPL or Token-2022 balances.
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ReceiptTape({
   receipts,
   verified,
@@ -1570,6 +1813,13 @@ function SourceBadge({
 
 function short(value: string) {
   return `${value.slice(0, 4)}…${value.slice(-4)}`;
+}
+
+function formatTokenBalance(value: string) {
+  const [integer = "0", fraction = ""] = value.split(".");
+  const grouped = BigInt(integer || "0").toLocaleString("en-US");
+  const visibleFraction = fraction.slice(0, 4).replace(/0+$/, "");
+  return visibleFraction ? `${grouped}.${visibleFraction}` : grouped;
 }
 
 function formatClock(value: number) {
