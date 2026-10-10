@@ -4,6 +4,24 @@
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-10-10",
   "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "apegate.io",
+      "zone_name": "apegate.io",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.apegate.io",
+      "zone_name": "apegate.io",
+      "custom_domain": true
+    }
+  ],
+  "vars": {
+    "NEXT_PUBLIC_SITE_URL": "https://apegate.io",
+    "NEXT_PUBLIC_PRIVY_APP_ID": "cmv1sxfv2009t0gk1a6hwqhdb",
+    "PRIVY_APP_ID": "cmv1sxfv2009t0gk1a6hwqhdb"
+  },
   "secrets": {
     "required": [
       "PRIVY_APP_SECRET",
