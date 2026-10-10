@@ -141,16 +141,41 @@ test("live Gate exposes guarded entries, exits, receipts, and outcome tape", asy
 
 test("PASS watch persists without a wallet", async ({ page }) => {
   await page.goto("/feed");
+  const selectedMint = await page.locator("code").first().textContent();
+  expect(selectedMint).toBeTruthy();
   const watch = page.getByRole("button", { name: "Tell me when PASS" });
   await expect(watch).toBeVisible();
   await watch.click();
   await expect(
     page.getByRole("button", { name: "Watching PASS" }),
   ).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (mint) =>
+          (
+            JSON.parse(
+              window.localStorage.getItem("apegate.pass-watch.v1") ?? "[]",
+            ) as string[]
+          ).includes(mint),
+        selectedMint!,
+      ),
+    )
+    .toBe(true);
   await page.reload();
-  await expect(
-    page.getByRole("button", { name: "Watching PASS" }),
-  ).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (mint) =>
+          (
+            JSON.parse(
+              window.localStorage.getItem("apegate.pass-watch.v1") ?? "[]",
+            ) as string[]
+          ).includes(mint),
+        selectedMint!,
+      ),
+    )
+    .toBe(true);
 });
 
 test("paper desk writes an explicitly simulated fill", async ({ page }) => {
