@@ -20,10 +20,14 @@ import {
 } from "lucide-react";
 import {
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+import { usePrivy } from "@privy-io/react-auth";
+import { useWallets as useSolanaWallets } from "@privy-io/react-auth/solana";
 import {
   estimateFees,
   evaluateGate,
@@ -53,12 +57,6 @@ type RiskPayload = {
   };
 };
 
-type BrowserWallet = {
-  isPhantom?: boolean;
-  publicKey?: { toString(): string };
-  connect(): Promise<{ publicKey: { toString(): string } }>;
-};
-
 const FILTERS = ["ALL", "PASS", "WARN", "BLOCK", "WAIT"] as const;
 const PROFILES: Profile[] = ["strict", "standard", "loose"];
 const FEE_PREVIEW = estimateFees(0.25, 125, 0.000_01);
@@ -70,6 +68,14 @@ export function FeedApp() {
     useLaunchFeed();
   const { receipts, verified, addVerdict, addWalletConnect, clear } =
     useReceipts();
+  const {
+    ready: privyReady,
+    authenticated,
+    login,
+    logout,
+    error: privyError,
+  } = usePrivy();
+  const { ready: walletsReady, wallets } = useSolanaWallets();
   const [selectedMint, setSelectedMint] = useState<string | null>(null);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("ALL");
   const [query, setQuery] = useState("");
@@ -78,9 +84,16 @@ export function FeedApp() {
     "idle" | "loading" | "ready" | "error"
   >("idle");
   const [walletOpen, setWalletOpen] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [walletError, setWalletError] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<string | null>(null);
+  const recordedWallet = useRef<string | null>(null);
+  const walletAddress = wallets[0]?.address ?? null;
+
+  useEffect(() => {
+    if (!walletAddress || recordedWallet.current === walletAddress) return;
+    recordedWallet.current = walletAddress;
+    void addWalletConnect(walletAddress);
+  }, [addWalletConnect, walletAddress]);
 
   const selected =
     launches.find((launch) => launch.facts.mint === selectedMint) ??
@@ -168,23 +181,19 @@ export function FeedApp() {
     await addVerdict(selected.facts, verdict, selected.source);
   }
 
-  async function connectWallet() {
+  function connectWallet() {
     setWalletError(null);
-    const wallet = (window as unknown as { solana?: BrowserWallet }).solana;
-    if (!wallet) {
-      setWalletError(
-        "No compatible Solana wallet was found. Install one, then retry. Apegate never asks for your seed phrase.",
-      );
+    if (!privyReady) {
+      setWalletError("Privy is still loading. Try again in a moment.");
       return;
     }
-    try {
-      const result = await wallet.connect();
-      const address = result.publicKey.toString();
-      setWalletAddress(address);
-      await addWalletConnect(address);
-    } catch {
-      setWalletError("You declined in your wallet. Nothing was sent.");
-    }
+    login({ loginMethods: ["wallet"], walletChainType: "solana-only" });
+  }
+
+  async function disconnectWallet() {
+    setWalletError(null);
+    recordedWallet.current = null;
+    await logout();
   }
 
   async function copy(value: string, key: string) {
@@ -418,8 +427,13 @@ export function FeedApp() {
         <WalletPanel
           address={walletAddress}
           error={walletError}
+          privyError={privyError?.message ?? null}
+          privyReady={privyReady}
+          authenticated={authenticated}
+          walletsReady={walletsReady}
           onClose={() => setWalletOpen(false)}
-          onConnect={() => void connectWallet()}
+          onConnect={connectWallet}
+          onDisconnect={() => void disconnectWallet()}
         />
       ) : null}
     </div>
@@ -701,15 +715,24 @@ function CoinPanel({
 function WalletPanel({
   address,
   error,
+  privyError,
+  privyReady,
+  authenticated,
+  walletsReady,
   onClose,
   onConnect,
+  onDisconnect,
 }: {
   address: string | null;
   error: string | null;
+  privyError: string | null;
+  privyReady: boolean;
+  authenticated: boolean;
+  walletsReady: boolean;
   onClose: () => void;
   onConnect: () => void;
+  onDisconnect: () => void;
 }) {
-  const privyConfigured = Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID);
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-5">
       <button
@@ -752,18 +775,32 @@ function WalletPanel({
           <button
             type="button"
             onClick={onConnect}
-            className="mt-4 w-full rounded-xl bg-[#f4efe5] px-4 py-3 text-sm font-extrabold text-[#090806] hover:bg-white"
+            disabled={!privyReady || Boolean(address)}
+            className="mt-4 w-full rounded-xl bg-[#f4efe5] px-4 py-3 text-sm font-extrabold text-[#090806] hover:bg-white disabled:cursor-default disabled:opacity-70"
           >
-            {address ? `Connected · ${short(address)}` : "Connect Solana wallet"}
+            {!privyReady
+              ? "Loading secure wallet login"
+              : address
+                ? `Connected · ${short(address)}`
+                : "Connect Solana wallet"}
           </button>
-          {error ? (
+          {address ? (
+            <button
+              type="button"
+              onClick={onDisconnect}
+              className="mt-2 w-full px-4 py-2 text-[10px] font-bold text-[#766f65] hover:text-[#f4efe5]"
+            >
+              Disconnect this session
+            </button>
+          ) : null}
+          {error || privyError ? (
             <p className="mt-3 text-[10px] leading-relaxed text-block">
-              {error}
+              {error ?? "Privy could not initialize. Check the allowed domains."}
             </p>
           ) : null}
           <p className="mt-3 text-[9px] leading-relaxed text-[#6f685f]">
-            Connect only. No message or transaction is signed. Never enter a
-            seed phrase into Apegate.
+            Privy authenticates the external Solana wallet. No transaction is
+            created or sent. Never enter a seed phrase into Apegate.
           </p>
         </div>
 
@@ -785,8 +822,10 @@ function WalletPanel({
             </div>
           </div>
           <div className="mt-3 rounded-lg border border-[#272119] px-3 py-2 text-[9px] text-[#6f685f]">
-            Privy client config: {privyConfigured ? "detected" : "not set"} ·
-            server authorization still required · no Vault can be created
+            Privy client: {privyReady ? "ready" : "loading"} · Solana wallets:{" "}
+            {walletsReady ? "ready" : "loading"} · session:{" "}
+            {authenticated ? "authenticated" : "signed out"} · Vault
+            authorization remains locked
           </div>
           <button
             type="button"

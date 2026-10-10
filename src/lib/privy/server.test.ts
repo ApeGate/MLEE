@@ -15,8 +15,13 @@ const COMPLETE_ENV = {
 };
 
 describe("Privy server adapter", () => {
-  it("builds the SDK client without making a network request", () => {
-    expect(getPrivyClient(COMPLETE_ENV)).toBeDefined();
+  it("builds the SDK client without a Vault authorization key or network request", () => {
+    expect(
+      getPrivyClient({
+        PRIVY_APP_ID: "app_test",
+        PRIVY_APP_SECRET: "secret_test",
+      }),
+    ).toBeDefined();
   });
 
   it("keeps the authorization key in the server authorization context", () => {
@@ -29,8 +34,16 @@ describe("Privy server adapter", () => {
     expect(() =>
       getPrivyClient({
         PRIVY_APP_ID: "app_test",
+      }),
+    ).toThrow("Privy server client credentials are incomplete");
+  });
+
+  it("requires the separate authorization key only for Vault signatures", () => {
+    expect(() =>
+      getPrivyAuthorizationContext({
+        PRIVY_APP_ID: "app_test",
         PRIVY_APP_SECRET: "secret_test",
       }),
-    ).toThrow("Privy Vault server credentials are incomplete");
+    ).toThrow("Privy Vault authorization key is not configured");
   });
 });

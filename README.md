@@ -107,12 +107,16 @@ reads. `RUGCHECK_API_KEY` is optional.
 
 ## Wallet and Vault status
 
-Wallet connect is a connect-only path for the future manual-sign flow. No
-transaction can be built, signed, or sent. Manual signing is the default.
+Wallet login uses Privy with external Solana wallets only. The provider shows
+Solana wallets, uses wallet login, and explicitly disables automatic Ethereum
+or Solana embedded-wallet creation. It authenticates the wallet session but
+does not build or send a transaction. Manual signing remains the default.
 
-Privy Vault is wired to the Worker-compatible `@privy-io/node` server SDK, but
-remains deliberately non-operational. `/api/vault/status` reports
-configuration booleans only; it never returns credential values or calls a
+Privy Vault is also wired to the Worker-compatible `@privy-io/node` server SDK.
+The App ID and App Secret are enough to initialize that client. The separate
+authorization private key is required only for future delegated Vault actions.
+`/api/vault/status` reports configuration booleans and local client
+initialization only; it never returns credential values or calls a
 wallet-mutation endpoint.
 
 Copy these exact values into `.env.local`:
@@ -122,11 +126,12 @@ Copy these exact values into `.env.local`:
 - `PRIVY_APP_SECRET`
 - `PRIVY_AUTHORIZATION_PRIVATE_KEY`
 
-`NEXT_PUBLIC_PRIVY_APP_ID` and `PRIVY_APP_ID` are the same App ID from the
-Privy dashboard, copied into browser and server scopes. The authorization
+`NEXT_PUBLIC_PRIVY_APP_ID` and `PRIVY_APP_ID` are the same public App ID from
+the Privy dashboard, copied into browser and server scopes. The authorization
 private key must be base64-encoded PKCS8 with no PEM headers. The App Secret
 and authorization private key are server-only and must never use a
-`NEXT_PUBLIC_` name.
+`NEXT_PUBLIC_` name. The public App IDs are declared in `wrangler.jsonc`; the
+App Secret must be an encrypted Worker secret.
 
 For Cloudflare, set both App ID variables in the build environment and store
 the sensitive values as encrypted Worker secrets:
@@ -136,11 +141,21 @@ npx wrangler secret put PRIVY_APP_SECRET
 npx wrangler secret put PRIVY_AUTHORIZATION_PRIVATE_KEY
 ```
 
-Add `http://localhost:43127` as a Privy allowed origin for local integration.
-Add `https://apegate.io` when DNS is active; domain setup does not block the
-current build. Credentials only make the SDK ready: wallet creation remains
-hard-disabled pending the policy signer, transaction firewall, mainnet
-canaries, revoke tests, and external security review.
+Privy dashboard checklist:
+
+1. Under **App settings → Domains**, temporarily allow
+   `http://127.0.0.1:43127` and `http://localhost:43127`.
+2. Add `https://apegate.io` after DNS is active, then remove production-app
+   localhost access when development no longer needs it.
+3. Keep wallet login and external Solana wallets enabled.
+4. Keep smart/embedded wallets off. The application also enforces
+   `createOnLogin: "off"` for both chains.
+5. Generate an authorization private key only when delegated Vault work starts.
+
+Domain setup does not block the current build. Credentials only make the SDK
+ready: Vault creation remains hard-disabled pending the policy signer,
+transaction firewall, mainnet canaries, revoke tests, and external security
+review.
 
 ## Quality checks
 

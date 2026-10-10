@@ -23,8 +23,10 @@ describe("readPrivyVaultConfig", () => {
       appIdsMatch: false,
       appSecretConfigured: true,
       authorizationKeyConfigured: false,
+      clientConfigured: true,
       credentialsConfigured: false,
       readyForIntegration: false,
+      readyForVaultAuthorization: false,
     });
     expect(JSON.stringify(readiness)).not.toContain("secret_should_not_escape");
     expect(JSON.stringify(readiness)).not.toContain("app_browser");
@@ -38,11 +40,26 @@ describe("readPrivyVaultConfig", () => {
       appIdsMatch: true,
       appSecretConfigured: true,
       authorizationKeyConfigured: true,
+      clientConfigured: true,
       credentialsConfigured: true,
       readyForIntegration: true,
+      readyForVaultAuthorization: true,
       executionEnabled: false,
       externalSecurityReviewComplete: false,
     });
+  });
+
+  it("separates client readiness from Vault authorization readiness", () => {
+    const readiness = readPrivyVaultConfig({
+      NEXT_PUBLIC_PRIVY_APP_ID: "app_test",
+      PRIVY_APP_ID: "app_test",
+      PRIVY_APP_SECRET: "secret_test",
+    });
+
+    expect(readiness.clientConfigured).toBe(true);
+    expect(readiness.readyForIntegration).toBe(true);
+    expect(readiness.readyForVaultAuthorization).toBe(false);
+    expect(readiness.executionEnabled).toBe(false);
   });
 
   it("treats whitespace-only values as missing", () => {

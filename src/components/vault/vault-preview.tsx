@@ -175,6 +175,12 @@ export function VaultPreview({
                 missingCopy="Add secret"
               />
               <StatusLine
+                label="Privy server client"
+                ready={readiness.clientConfigured}
+                readyCopy="Ready"
+                missingCopy="Needs ID + secret"
+              />
+              <StatusLine
                 label="Authorization key"
                 ready={readiness.authorizationKeyConfigured}
                 readyCopy="Configured"

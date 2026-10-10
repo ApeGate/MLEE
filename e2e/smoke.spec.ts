@@ -71,6 +71,7 @@ test("Vault creates only a disabled policy preview", async ({ page }) => {
   expect(status.sdkInstalled).toBe(true);
   expect(status.executionEnabled).toBe(false);
   expect(status.externalSecurityReviewComplete).toBe(false);
+  expect(status.clientInitialized).toBe(status.clientConfigured);
   expect(status).not.toHaveProperty("appSecret");
   expect(status).not.toHaveProperty("authorizationPrivateKey");
 
