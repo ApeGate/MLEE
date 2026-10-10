@@ -12,6 +12,8 @@ the local PAPER loop are exercised:
 - `/paper` — local 10 SOL practice portfolio with modeled buys and exits
 - `/plans` — bounded lifecycle plan drafts and recorded-tape eligibility rehearsal
 - `/vault` — hashed Privy policy preview; signer creation remains locked
+- `/lab` — deterministic Gate replay with unsupported metrics left blank
+- `/rafiki` — explain-only receipt Q&A with deterministic fallback
 - `/coin/{mint}` — public, on-demand mint and holder dossier
 - `/crew` — all six jobs with explicit permissions and hard boundaries
 - `/token` — official $APEGATE status and contract-address registry
@@ -74,6 +76,21 @@ withdrawals fixed to the owner wallet. The preview can write a receipt, but
 Vault creation, funding, policy signing, and automation are hard-disabled
 regardless of credential presence. They remain blocked on the transaction
 firewall, mainnet canaries, revoke tests, and an external security review.
+
+## Lab and Rafiki
+
+Zira's Lab recomputes the recorded fixture through the shared core and produces
+a deterministic replay hash plus verdict counts. It does not publish
+precision, recall, win rate, expectancy, or drawdown without production outcome
+labels and calibrated canary data.
+
+Rafiki accepts only hash-verified local receipts. Without AI credentials it
+uses a deterministic explanation from receipt fields. With `AI_GATEWAY_URL`,
+`AI_GATEWAY_TOKEN`, and `RAFIKI_MODEL`, the server can request an explain-only
+narrative through Cloudflare AI Gateway's OpenAI-compatible endpoint. Numeric
+facts remain deterministic; responses containing digits or trading language
+are rejected back to the local fallback. `RAFIKI_PROVIDER_API_KEY` is optional
+when the selected Gateway model needs a dynamic provider key.
 
 ## Run locally
 

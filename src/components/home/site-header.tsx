@@ -54,6 +54,12 @@ export function SiteHeader() {
             Plans
           </Link>
           <Link
+            href="/lab"
+            className="hidden text-[#a79f92] transition-colors hover:text-[#f4efe5] xl:inline"
+          >
+            Lab
+          </Link>
+          <Link
             href="/launch"
             className="hidden text-[#a79f92] transition-colors hover:text-[#f4efe5] xl:inline"
           >

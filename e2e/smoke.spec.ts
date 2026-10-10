@@ -71,3 +71,28 @@ test("Vault creates only a disabled policy preview", async ({ page }) => {
     page.getByRole("button", { name: "Create Vault locked" }),
   ).toBeDisabled();
 });
+
+test("Lab replay leaves unsupported accuracy metrics blank", async ({ page }) => {
+  await page.goto("/lab");
+  await expect(
+    page.getByRole("heading", { name: /show the gaps\. not a fake score\./i }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Run deterministic replay" })
+    .click();
+  await expect(page.getByText("Replay hash")).toBeVisible();
+  await expect(page.getByText("Unavailable").first()).toBeVisible();
+});
+
+test("Rafiki requires a verified receipt and stays explain-only", async ({
+  page,
+}) => {
+  await page.goto("/rafiki");
+  await expect(
+    page.getByRole("heading", { name: /ask why\. never what to buy\./i }),
+  ).toBeVisible();
+  await expect(page.getByText("No receipt to explain.")).toBeVisible();
+  await expect(
+    page.getByText(/Cannot trade, size, approve, or change exits/i),
+  ).toBeVisible();
+});

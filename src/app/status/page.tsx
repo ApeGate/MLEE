@@ -55,6 +55,12 @@ const SERVICES = [
       "Immutable local plan rehearsal and hashed Vault policy previews are live; PlanRunner, signer creation, funding, and automation stay disabled",
   },
   {
+    name: "Lab and Rafiki",
+    state: "Limited",
+    detail:
+      "Deterministic fixture replay and hash-verified receipt explanations are live; accuracy metrics wait for outcome labels and AI falls back when Gateway credentials are absent",
+  },
+  {
     name: "Real trading and Vault",
     state: "Disabled",
     detail:
@@ -122,14 +128,16 @@ export default function StatusPage() {
                     service.state === "Disabled"
                       ? "border-[#6f685f]/25 text-[#6f685f]"
                       : service.state === "Pre-launch" ||
-                          service.state === "Preview only"
+                          service.state === "Preview only" ||
+                          service.state === "Limited"
                         ? "border-wait/25 bg-wait/6 text-wait"
                       : "border-pass/25 bg-pass/6 text-pass"
                   }`}
                 >
                   {service.state === "Disabled" ||
                   service.state === "Pre-launch" ||
-                  service.state === "Preview only" ? (
+                  service.state === "Preview only" ||
+                  service.state === "Limited" ? (
                     <CircleDot className="size-2.5" />
                   ) : (
                     <CheckCircle2 className="size-2.5" />

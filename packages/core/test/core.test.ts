@@ -3,6 +3,7 @@ import {
   APEGATE_FEE_BPS,
   applyPaperBuy,
   applyPaperSell,
+  buildLabReport,
   canonicalize,
   createPlanSpec,
   createPaperPortfolio,
@@ -10,8 +11,10 @@ import {
   createVaultPolicyPreview,
   estimateFees,
   evaluateGate,
+  explainReceiptDeterministically,
   hashCanonical,
   isOfficialApegateMint,
+  isSafeRafikiNarrative,
   officialTokenManifestHash,
   paperPositionValue,
   preflightLaunch,
@@ -315,6 +318,46 @@ describe("plans and Vault previews", () => {
         now,
       ),
     ).rejects.toThrow(/Daily cap/);
+  });
+});
+
+describe("Lab replay and Rafiki boundaries", () => {
+  it("produces the same limited Lab report for the same tape", async () => {
+    const verdict = await evaluateGate(safeFacts, "standard", now);
+    const samples = [{ facts: safeFacts, verdict }];
+    const first = await buildLabReport(samples);
+    const second = await buildLabReport(samples);
+
+    expect(first.replayHash).toBe(second.replayHash);
+    expect(first.sampleSize).toBe(1);
+    expect(first.outcomesAvailable).toBe(false);
+    expect(first.precision).toBeNull();
+    expect(first.missingInputs.length).toBeGreaterThan(0);
+  });
+
+  it("explains only receipt facts and rejects unsafe AI narrative", async () => {
+    const receipt = await createReceipt({
+      kind: "paper_fill",
+      actor: "caesar",
+      subject: { mint: safeFacts.mint },
+      at: { ts: now },
+      inputs: { params: { model: "market-cap-estimate-v1" } },
+      outputs: {
+        side: "BUY",
+        symbol: safeFacts.symbol,
+        quoteAmountSol: 0.1,
+        feeSol: 0.00175,
+      },
+      evidence: [],
+      source: "paper",
+      prev: null,
+    });
+    const explanation = explainReceiptDeterministically(receipt);
+    expect(explanation.headline).toContain("fill explained");
+    expect(explanation.explanation).toContain("simulated");
+    expect(isSafeRafikiNarrative("The receipt records a warning.")).toBe(true);
+    expect(isSafeRafikiNarrative("Buy now at 0.1 SOL.")).toBe(false);
+    expect(isSafeRafikiNarrative("Increase the position size.")).toBe(false);
   });
 });
 
