@@ -34,6 +34,7 @@ import {
   assertManualBuyTransactionSafe,
   estimateFees,
   evaluateGate,
+  indexSessionLaunches,
   type GateTiming,
   type GateVerdict,
   type Profile,
@@ -60,6 +61,20 @@ type RiskPayload = {
     mintSafety: string | null;
     concentration: string | null;
   };
+};
+
+type MetaPayload = {
+  websiteUrl: string | null;
+  websiteHost: string | null;
+  websiteReachable: boolean | null;
+  websiteMentionsToken: boolean | null;
+  websiteMatchesX: boolean | null;
+  websiteTemplateHash: string | null;
+  domainRegisteredAt: string | null;
+  domainAgeDays: number | null;
+  xLinkType: "profile" | "community" | "post" | "none";
+  xHandle: string | null;
+  telegramPresent: boolean;
 };
 
 const FILTERS = ["ALL", "PASS", "WARN", "BLOCK", "WAIT"] as const;
@@ -136,21 +151,76 @@ export function FeedApp() {
         const curve = launch.facts.bondingCurve
           ? `?curve=${encodeURIComponent(launch.facts.bondingCurve)}`
           : "";
-        const response = await fetch(
-          `/api/risk/${launch.facts.mint}${curve}`,
-        );
-        if (!response.ok) throw new Error("Risk sources unavailable");
-        const risk = (await response.json()) as RiskPayload;
-        const facts = {
+        const metadataQuery = `?uri=${encodeURIComponent(launch.facts.uri)}`;
+        const [riskResult, metaResult] = await Promise.allSettled([
+          fetch(`/api/risk/${launch.facts.mint}${curve}`).then(
+            async (response) => {
+              if (!response.ok) throw new Error("Risk sources unavailable");
+              return (await response.json()) as RiskPayload;
+            },
+          ),
+          fetch(`/api/meta/${launch.facts.mint}${metadataQuery}`).then(
+            async (response) => {
+              if (!response.ok) throw new Error("Metadata unavailable");
+              return (await response.json()) as MetaPayload;
+            },
+          ),
+        ]);
+        if (
+          riskResult.status === "rejected" &&
+          metaResult.status === "rejected"
+        ) {
+          throw new Error("Launch evidence is unavailable");
+        }
+        const risk =
+          riskResult.status === "fulfilled" ? riskResult.value : null;
+        const metadata =
+          metaResult.status === "fulfilled" ? metaResult.value : null;
+        const rawFacts = {
           ...launch.facts,
           observedAt: Date.now(),
-          mintAuthority: risk.mintAuthority,
-          freezeAuthority: risk.freezeAuthority,
-          devPct: risk.devPct,
-          top10Pct: risk.top10Pct,
-          rugScore: risk.rugScore,
-          rugRisks: risk.rugRisks,
+          ...(risk
+            ? {
+                mintAuthority: risk.mintAuthority,
+                freezeAuthority: risk.freezeAuthority,
+                devPct: risk.devPct,
+                top10Pct: risk.top10Pct,
+                rugScore: risk.rugScore,
+                rugRisks: risk.rugRisks,
+              }
+            : {}),
+          ...(metadata
+            ? {
+                websiteUrl: metadata.websiteUrl,
+                websiteHost: metadata.websiteHost,
+                websiteReachable: metadata.websiteReachable,
+                websiteMentionsToken: metadata.websiteMentionsToken,
+                websiteMatchesX: metadata.websiteMatchesX,
+                websiteTemplateHash: metadata.websiteTemplateHash,
+                domainRegisteredAt: metadata.domainRegisteredAt,
+                domainAgeDays: metadata.domainAgeDays,
+                xLinkType: metadata.xLinkType,
+                xHandle: metadata.xHandle,
+                telegramPresent: metadata.telegramPresent,
+              }
+            : {}),
         };
+        const sourceFacts = launches
+          .filter((item) => item.source === launch.source)
+          .map((item) =>
+            item.facts.mint === rawFacts.mint ? rawFacts : item.facts,
+          );
+        const indexed = indexSessionLaunches(
+          sourceFacts,
+          launch.source === "live"
+            ? Date.now()
+            : sourceFacts.reduce(
+                (latest, item) => Math.max(latest, item.createdAt),
+                rawFacts.createdAt,
+              ),
+        );
+        const facts =
+          indexed.find((item) => item.mint === rawFacts.mint) ?? rawFacts;
         const verdict = await evaluateGate(facts, nextProfile, Date.now(), {
           officialApegateMint: OFFICIAL_APEGATE_MINT,
         });
@@ -160,13 +230,13 @@ export function FeedApp() {
           verdict,
         }));
         await addVerdict(facts, verdict, launch.source);
-        setRiskState("ready");
+        setRiskState(risk ? "ready" : "error");
       } catch {
         await addVerdict(launch.facts, launch.verdict, launch.source);
         setRiskState("error");
       }
     },
-    [addVerdict, profile, updateLaunch],
+    [addVerdict, launches, profile, updateLaunch],
   );
 
   async function selectLaunch(launch: FeedLaunch) {
@@ -1260,6 +1330,34 @@ function LaunchSignalChips({
       ) : null}
       {clones && facts.cloneLeaderMint === facts.mint ? (
         <SignalChip label="MC leader" tone="neutral" />
+      ) : null}
+      {facts.websiteReachable === true ? (
+        <SignalChip
+          label={
+            facts.websiteMentionsToken && facts.websiteMatchesX
+              ? "Website checked"
+              : "Website live"
+          }
+          tone={
+            facts.websiteMentionsToken && facts.websiteMatchesX
+              ? "pass"
+              : "neutral"
+          }
+        />
+      ) : facts.websiteReachable === false ? (
+        <SignalChip label="Website down" tone="warn" />
+      ) : null}
+      {facts.xLinkType && facts.xLinkType !== "none" ? (
+        <SignalChip
+          label={`X ${facts.xLinkType}`}
+          tone={facts.xLinkType === "profile" ? "pass" : "warn"}
+        />
+      ) : null}
+      {(facts.websiteTemplateReuse24h ?? 0) >= 3 ? (
+        <SignalChip
+          label={`${facts.websiteTemplateReuse24h} site matches`}
+          tone="warn"
+        />
       ) : null}
       {facts.launchIndexScope === "session" ? (
         <SignalChip

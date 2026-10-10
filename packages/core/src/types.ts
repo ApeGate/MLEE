@@ -72,7 +72,11 @@ export interface LaunchFacts {
   websiteReachable?: boolean | null;
   websiteMentionsToken?: boolean | null;
   websiteMatchesX?: boolean | null;
+  websiteHost?: string | null;
+  websiteTemplateHash?: string | null;
   websiteTemplateReuse24h?: number | null;
+  domainRegisteredAt?: string | null;
+  domainAgeDays?: number | null;
   xLinkType?: XLinkType | null;
   xHandle?: string | null;
   xReuseCount24h?: number | null;

@@ -116,6 +116,36 @@ describe("rolling session launch index", () => {
     });
   });
 
+  it("counts reused website, X, and image evidence inside 24 hours", () => {
+    const indexed = indexSessionLaunches(
+      [
+        launch("mint-a", {
+          websiteTemplateHash: "template",
+          xHandle: "FrogOrigin",
+          imageHash: "image",
+        }),
+        launch("mint-b", {
+          websiteTemplateHash: "template",
+          xHandle: "frogorigin",
+          imageHash: "image",
+        }),
+        launch("mint-old", {
+          createdAt: asOf - 25 * 60 * 60_000,
+          websiteTemplateHash: "template",
+          xHandle: "FrogOrigin",
+          imageHash: "image",
+        }),
+      ],
+      asOf,
+    );
+
+    expect(indexed[0]).toMatchObject({
+      websiteTemplateReuse24h: 2,
+      xReuseCount24h: 2,
+      imageCloneCount24h: 2,
+    });
+  });
+
   it("keeps output stable and leaves source facts untouched", () => {
     const source = [
       launch("mint-a", { name: "Clone", symbol: "ONE" }),
