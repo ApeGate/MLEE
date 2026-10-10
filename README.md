@@ -100,7 +100,10 @@ npm run dev
 Open [http://127.0.0.1:43127](http://127.0.0.1:43127). Credentials are optional
 for local use: the feed falls back to `fixtures/tapes/pump-launches.json`, a
 recorded set of real create events. Set `HELIUS_RPC_URL` for dependable mint
-reads. `RUGCHECK_API_KEY` is optional.
+reads. `SOLANA_RPC_URL` is the provider-neutral server-only override and takes
+precedence; `HELIUS_API_KEY` can derive the Helius endpoint when neither URL is
+set. None of these values enter the browser bundle. `RUGCHECK_API_KEY` is
+optional.
 
 ## Wallet and Vault status
 

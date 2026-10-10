@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { configuredSolanaRpc } from "@/lib/solana-rpc";
 
 type RugHolder = {
   owner: string;
@@ -42,10 +43,9 @@ type RugReport = {
 };
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-const PUBLIC_RPC = "https://api.mainnet-beta.solana.com";
 
 async function readMintFromRpc(mint: string) {
-  const endpoint = process.env.HELIUS_RPC_URL ?? PUBLIC_RPC;
+  const { endpoint, source } = configuredSolanaRpc();
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -77,6 +77,7 @@ async function readMintFromRpc(mint: string) {
   return {
     mintAuthority: info.mintAuthority ?? null,
     freezeAuthority: info.freezeAuthority ?? null,
+    source,
   };
 }
 
@@ -196,7 +197,7 @@ export async function GET(
           ?.filter((risk) => risk.level === "warn" || risk.level === "danger")
           .slice(0, 8) ?? [],
       sources: {
-        mintSafety: rpc ? "Solana RPC" : report ? "external risk scan" : null,
+        mintSafety: rpc ? rpc.source : report ? "external risk scan" : null,
         concentration: report ? "external risk scan" : null,
       },
     },

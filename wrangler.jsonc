@@ -9,7 +9,12 @@
     "PRIVY_APP_ID": "cmv1sxfv2009t0gk1a6hwqhdb"
   },
   "secrets": {
-    "required": ["PRIVY_APP_SECRET"]
+    "required": [
+      "PRIVY_APP_SECRET",
+      "HELIUS_API_KEY",
+      "HELIUS_RPC_URL",
+      "SOLANA_RPC_URL"
+    ]
   },
   "assets": {
     "directory": ".open-next/assets",
