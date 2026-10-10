@@ -209,8 +209,10 @@ export async function GET(
   }
 
   const known = report?.knownAccounts ?? {};
-  const userHolders = report
-    ? (report.topHolders ?? []).filter((holder) => {
+  const reportHolders = report?.topHolders ?? [];
+  const useReportHolders = reportHolders.length > 0;
+  const userHolders = useReportHolders
+    ? reportHolders.filter((holder) => {
         const type = known[holder.owner]?.type;
         return (
           holder.owner !== bondingCurve &&
@@ -226,7 +228,7 @@ export async function GET(
       0
     : null;
   const top10Pct =
-    report || rpc?.topHolders.length
+    userHolders.length > 0
       ? userHolders
           .slice(0, 10)
           .reduce((sum, holder) => sum + holder.pct, 0)
@@ -285,7 +287,11 @@ export async function GET(
       sources: {
         mintSafety: rpc ? rpc.source : report ? "external risk scan" : null,
         concentration: report
-          ? "external risk scan"
+          ? useReportHolders
+            ? "external risk scan"
+            : rpc?.topHolders.length
+              ? rpc.source
+              : null
           : rpc?.topHolders.length
             ? rpc.source
             : null,
