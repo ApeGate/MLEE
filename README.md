@@ -1,8 +1,8 @@
-# Relay
+# CLEAT
 
-Relay runs a Solana strategy: Scout filters coins, Watch waits for entries, Desk buys and exits within your rules.
+CLEAT runs a Solana strategy: Scout filters coins, Watch waits for entries, Desk buys and exits within your rules.
 
-Simulated market desk for local use — no wallet required.
+Simulated market desk — no wallet required.
 
 ## Run
 

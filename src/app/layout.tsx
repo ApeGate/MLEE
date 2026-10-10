@@ -9,9 +9,9 @@ const mono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Relay — Solana strategy desk",
+  title: "CLEAT — Solana strategy desk",
   description:
-    "Relay runs a Solana strategy: Scout filters coins, Watch waits for entries, Desk buys and exits within your rules.",
+    "CLEAT runs a Solana strategy: Scout filters coins, Watch waits for entries, Desk buys and exits within your rules.",
 };
 
 export default function RootLayout({
