@@ -72,6 +72,16 @@ type LoadState =
   | { kind: "ready"; data: RiskPayload }
   | { kind: "error"; message: string };
 
+function isRiskPayload(value: unknown): value is RiskPayload {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "sources" in value &&
+      "topHolders" in value &&
+      "creatorHistory" in value,
+  );
+}
+
 const OFFICIAL_APEGATE_MINT =
   process.env.NEXT_PUBLIC_APEGATE_TOKEN_MINT ?? null;
 
@@ -97,13 +107,12 @@ export function CoinDossier({
         const response = await fetch(`/api/risk/${encodeURIComponent(mint)}${curve}`, {
           signal: controller.signal,
         });
-        const payload = (await response.json()) as
-          | RiskPayload
-          | { error?: string };
-        if (!response.ok || "error" in payload) {
+        const payload: unknown = await response.json();
+        if (!response.ok || !isRiskPayload(payload)) {
+          const errorPayload = payload as { error?: unknown };
           throw new Error(
-            "error" in payload && payload.error
-              ? payload.error
+            typeof errorPayload.error === "string"
+              ? errorPayload.error
               : "Live dossier sources are unavailable",
           );
         }
