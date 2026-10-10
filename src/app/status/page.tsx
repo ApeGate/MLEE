@@ -131,9 +131,7 @@ export default function StatusPage() {
                 </div>
                 <span
                   className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 font-mono text-[7px] font-bold uppercase ${
-                    service.state === "Disabled"
-                      ? "border-[#6f685f]/25 text-[#6f685f]"
-                      : service.state === "Pre-launch" ||
+                    service.state === "Pre-launch" ||
                           service.state === "Parked" ||
                           service.state === "Preview only" ||
                           service.state === "Limited" ||
@@ -142,8 +140,7 @@ export default function StatusPage() {
                       : "border-pass/25 bg-pass/6 text-pass"
                   }`}
                 >
-                  {service.state === "Disabled" ||
-                  service.state === "Pre-launch" ||
+                  {service.state === "Pre-launch" ||
                   service.state === "Parked" ||
                   service.state === "Preview only" ||
                   service.state === "Limited" ||
