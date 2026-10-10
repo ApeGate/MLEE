@@ -5,8 +5,10 @@ launches: facts go in, Kong runs deterministic checks, and a tamper-evident
 decision receipt comes out.
 
 This release prepares a guarded PumpSwap browser-buy path through Privy external
-Solana wallets alongside the local PAPER loop. The actual transaction bytes are
-decoded in both the server and browser before a wallet prompt can open.
+Solana wallets alongside the local PAPER loop. Connected wallets can also exit
+any detected PumpSwap position directly from the wallet-position list, not only
+the currently selected feed launch. The actual transaction bytes are decoded
+in both the server and browser before a wallet prompt can open.
 Bonding-curve sends remain locked while the official Pump v3 decoder is built:
 
 - `/` — Gate-first product home
@@ -26,6 +28,10 @@ The feed connects to the public Pump launch stream in the browser. Opening a
 launch asks Solana RPC for mint safety and an optional independent risk source
 for holder and creator context. Missing data forces `WAIT`; it never becomes a
 silent `PASS`.
+
+The live desk also publishes the operator canary buys and exit. `/api/live-fills`
+re-reads each transaction from mainnet and checks its signature, slot, QA
+wallet, mint, SOL delta, and token delta before the UI labels it confirmed.
 
 ## Domain
 

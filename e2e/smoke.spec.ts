@@ -63,6 +63,37 @@ test("manual trade APIs reject malformed identifiers", async ({ page }) => {
 test("live Gate exposes guarded entries, exits, receipts, and outcome tape", async ({
   page,
 }) => {
+  await page.route("**/api/live-fills", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        verified: true,
+        source: "Helius mainnet RPC",
+        wallet: "6hwUCrUfQwVNNUScKshSvksJK7rNC2JphioJztjdEEcr",
+        checkedAt: Date.now(),
+        fills: [
+          {
+            signature:
+              "ciaZk9YFsrb34vadVU7itnnqFMTdCVwbDQBHquDDsNhFDZ6bADeCoxqEdWMiy7mQxLJKLAeUy7oGnwBLsahq3AT",
+            mint: "BQAeeSowpwEx8Km8GcporcbuLKq4a7EQceH3F2qZpump",
+            symbol: "BQA",
+            side: "SELL",
+            wallet: "6hwUCrUfQwVNNUScKshSvksJK7rNC2JphioJztjdEEcr",
+            slot: 455149851,
+            blockTime: 1760000000,
+            solDelta: 0.004821792,
+            tokenDelta: -122.964775,
+            feeSol: 0.001005,
+            receiptHash:
+              "bb768c382b0ad9cd283a831f4bf78fe4ef9263c6157c9333ca1c9b22d5ecfb63",
+            confirmed: true,
+            solscan:
+              "https://solscan.io/tx/ciaZk9YFsrb34vadVU7itnnqFMTdCVwbDQBHquDDsNhFDZ6bADeCoxqEdWMiy7mQxLJKLAeUy7oGnwBLsahq3AT",
+          },
+        ],
+      }),
+    });
+  });
   await page.goto("/feed");
   await expect(
     page.getByRole("heading", { name: /new launches at the gate/i }),
@@ -71,6 +102,9 @@ test("live Gate exposes guarded entries, exits, receipts, and outcome tape", asy
   await expect(page.getByRole("button", { name: "Sell 50%" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Exit 100%" })).toBeVisible();
   await expect(page.getByText(/exits never require a PASS/i)).toBeVisible();
+  await expect(page.getByText("Mainnet fill receipts")).toBeVisible();
+  await expect(page.getByText("1 confirmed")).toBeVisible();
+  await expect(page.getByRole("link", { name: /open on solscan/i })).toBeVisible();
   await expect(page.getByText(/decision receipts · local tape/i)).toBeVisible();
 });
 
