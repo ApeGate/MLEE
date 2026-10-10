@@ -20,6 +20,7 @@ const MAX_TIP_LAMPORTS = 100_000;
 type CliOptions = {
   mint: string;
   percent: number;
+  minimumOutputLamports: string;
   confirmed: boolean;
   dryRun: boolean;
 };
@@ -31,15 +32,26 @@ function parseOptions(argv: string[]): CliOptions {
   };
   const mint = valueAfter("--mint") ?? "";
   const percent = Number(valueAfter("--percent") ?? "100");
+  const minimumOutputLamports =
+    valueAfter("--minimum-output-lamports") ?? "";
   if (!BASE58.test(mint)) {
     throw new Error("Pass a valid Solana mint with --mint");
   }
   if (!Number.isInteger(percent)) {
     throw new Error("Canary exit percent must be a whole number");
   }
+  if (
+    !/^\d+$/.test(minimumOutputLamports) ||
+    BigInt(minimumOutputLamports) <= BigInt(0)
+  ) {
+    throw new Error(
+      "Pass an independently calculated positive --minimum-output-lamports floor",
+    );
+  }
   return {
     mint,
     percent,
+    minimumOutputLamports,
     confirmed: argv.includes("--confirm-mainnet"),
     dryRun: argv.includes("--dry-run"),
   };
@@ -224,7 +236,7 @@ async function main() {
     addressLookupTableCount: message.addressTableLookups.length,
     expectedMint: options.mint,
     maxSellTokenBaseUnits: maxSellTokenBaseUnits.toString(),
-    minimumOutputLamports: "1",
+    minimumOutputLamports: options.minimumOutputLamports,
     maxAccountFundingLamports: 0,
     maxPriorityFeeLamports: Math.ceil(
       PRIORITY_FEE_SOL * 1_000_000_000,

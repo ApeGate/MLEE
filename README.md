@@ -148,12 +148,20 @@ npm run canary:buy -- \
 # Explicit real send after the dry run passes:
 npm run canary:buy -- \
   --mint <PUMP_MINT> --amount 0.01 --confirm-mainnet
+
+# Exit an existing PumpSwap position. The minimum output must come from an
+# independent current quote, never from the transaction builder being checked:
+npm run canary:sell -- \
+  --mint <PUMP_MINT> --percent 100 \
+  --minimum-output-lamports <MIN_SOL_LAMPORTS> --dry-run
 ```
 
 Set `CANARY_EXPECTED_PUBKEY` in the uncommitted `.env.local`. Dry-run mode
 does not read a private key and cannot sign or send. A real canary additionally
 requires `CANARY_WALLET_SECRET_PATH`; the script then prints a hash-chained
 `manual_fill` receipt after confirmation and never prints key material.
+The sell canary also requires an operator-supplied minimum SOL output and
+rejects any prepared swap whose on-chain minimum is lower.
 Bonding-curve browser sends remain locked until their Pump v3 bytes have
 equivalent instruction-level decoding; an allowlisted program ID alone is not
 treated as sufficient authorization.
