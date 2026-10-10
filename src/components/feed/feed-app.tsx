@@ -103,7 +103,12 @@ export function FeedApp() {
     async (launch: FeedLaunch, nextProfile: Profile = profile) => {
       setRiskState("loading");
       try {
-        const response = await fetch(`/api/risk/${launch.facts.mint}`);
+        const curve = launch.facts.bondingCurve
+          ? `?curve=${encodeURIComponent(launch.facts.bondingCurve)}`
+          : "";
+        const response = await fetch(
+          `/api/risk/${launch.facts.mint}${curve}`,
+        );
         if (!response.ok) throw new Error("Risk sources unavailable");
         const risk = (await response.json()) as RiskPayload;
         const facts = {

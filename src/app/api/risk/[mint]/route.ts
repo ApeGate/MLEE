@@ -76,13 +76,16 @@ async function readRiskReport(mint: string): Promise<RugReport> {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ mint: string }> },
 ) {
   const { mint } = await context.params;
   if (!BASE58.test(mint)) {
     return NextResponse.json({ error: "Invalid Solana mint" }, { status: 400 });
   }
+  const requestedCurve = new URL(request.url).searchParams.get("curve");
+  const bondingCurve =
+    requestedCurve && BASE58.test(requestedCurve) ? requestedCurve : null;
 
   const [rpcResult, reportResult] = await Promise.allSettled([
     readMintFromRpc(mint),
@@ -105,7 +108,12 @@ export async function GET(
   const known = report?.knownAccounts ?? {};
   const userHolders = (report?.topHolders ?? []).filter((holder) => {
     const type = known[holder.owner]?.type;
-    return type !== "AMM" && type !== "LOCKER" && type !== "PROGRAM";
+    return (
+      holder.owner !== bondingCurve &&
+      type !== "AMM" &&
+      type !== "LOCKER" &&
+      type !== "PROGRAM"
+    );
   });
   const creator = report?.creator;
   const devPct = creator
@@ -119,9 +127,17 @@ export async function GET(
   return NextResponse.json(
     {
       mintAuthority:
-        rpc?.mintAuthority ?? report?.mintAuthority ?? undefined,
+        rpc
+          ? rpc.mintAuthority
+          : report
+            ? report.mintAuthority
+            : undefined,
       freezeAuthority:
-        rpc?.freezeAuthority ?? report?.freezeAuthority ?? undefined,
+        rpc
+          ? rpc.freezeAuthority
+          : report
+            ? report.freezeAuthority
+            : undefined,
       devPct,
       top10Pct: report ? top10Pct : null,
       rugScore: report?.score_normalised ?? null,

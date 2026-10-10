@@ -11,6 +11,7 @@ export function launchToFacts(
     name: launch.name,
     symbol: launch.symbol,
     creator: launch.traderPublicKey,
+    bondingCurve: launch.bondingCurveKey,
     uri: launch.uri,
     createdAt,
     observedAt,

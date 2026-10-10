@@ -23,6 +23,7 @@ export interface LaunchFacts {
   name: string;
   symbol: string;
   creator: string;
+  bondingCurve?: string;
   uri: string;
   createdAt: number;
   observedAt: number;
