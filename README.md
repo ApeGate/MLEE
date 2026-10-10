@@ -4,8 +4,9 @@
 launches: facts go in, Kong runs deterministic checks, and a tamper-evident
 decision receipt comes out.
 
-This release keeps every real-money path disabled while live intelligence and
-the local PAPER loop are exercised:
+This release keeps browser real-money paths disabled while live intelligence
+and the local PAPER loop are exercised. An operator-only, locally signed
+mainnet canary is enabled behind explicit safeguards:
 
 - `/` — Gate-first product home
 - `/feed` — real launch discovery with a recorded real-tape fallback
@@ -30,7 +31,7 @@ silent `PASS`.
 The go-to-market token route is staged without inventing a contract address.
 Until `NEXT_PUBLIC_APEGATE_TOKEN_MINT` contains a confirmed Solana mint,
 `/token` says **NOT PUBLISHED** and no buy link is rendered. Kong
-`gate-1.1.0` hard-blocks names and tickers that resemble Apegate—including
+`gate-1.2.0` hard-blocks names and tickers that resemble Apegate—including
 spacing and leetspeak variants—unless the mint exactly matches that configured
 address.
 
@@ -178,6 +179,6 @@ npm run cf-typegen
 ```
 
 The pure TypeScript core in `packages/core` owns canonical JSON, SHA-256 receipt
-chains, `gate-1.1.0`, and the locked 0.5% Apegate fee. Cloudflare deployment is
+chains, `gate-1.2.0`, and the locked 0.5% Apegate fee. Cloudflare deployment is
 pinned to OpenNext via `open-next.config.ts` and `wrangler.jsonc`, with logs and
 traces enabled.
