@@ -8,9 +8,11 @@ custom hostnames answer successfully.
 ## Current hosting: Cloudflare Worker
 
 The application is deployed as the `apegate-web` Worker. The zone delegates to
-Cloudflare nameservers, and this repository declares both production hostnames
-as Worker Custom Domains. Cloudflare creates their DNS records and edge
-certificates automatically.
+Cloudflare nameservers, but the Cloudflare account currently authenticated for
+Worker deploys cannot see the `apegate.io` zone. Cloudflare returned `10083`
+when the custom domains were attached. Add the zone to the same account as the
+Worker, or deploy the Worker from the account that owns the zone, before
+enabling the route block below.
 
 Prerequisites:
 
@@ -20,13 +22,13 @@ Prerequisites:
 3. Remove conflicting A, AAAA, or CNAME records for a hostname before attaching
    it as a Worker Custom Domain.
 
-The two exact hostnames are visible under **Workers & Pages → apegate-web →
-Settings → Domains & Routes** after deployment:
+Once the zone and Worker share an account, add the two exact hostnames under
+**Workers & Pages → apegate-web → Settings → Domains & Routes**:
 
 - `apegate.io`
 - `www.apegate.io`
 
-The committed Wrangler configuration is:
+The ready-to-enable Wrangler configuration is:
 
 ```jsonc
 {
@@ -45,8 +47,11 @@ The committed Wrangler configuration is:
 }
 ```
 
-Deploying that configuration creates the required records and certificates.
-Do not add a manual A, AAAA, or CNAME for these Worker Custom Domains.
+Do not commit that block until the zone is visible to the deploy account:
+leaving an unavailable Custom Domain in `wrangler.jsonc` makes otherwise
+healthy Worker deploys report a partial trigger failure. Once enabled,
+Cloudflare creates the required records and certificates. Do not add a manual
+A, AAAA, or CNAME for these Worker Custom Domains.
 
 The canonical host is the apex. Once both hostnames are healthy, a Cloudflare
 Single Redirect may send `https://www.apegate.io/*` to
