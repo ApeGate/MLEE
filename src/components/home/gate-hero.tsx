@@ -84,8 +84,8 @@ export function GateHero() {
           </div>
           <p className="mt-4 max-w-lg text-xs leading-relaxed text-[#766f65]">
             Read-only intelligence is live when the public stream is reachable.
-            Fresh PASS entries can open a guarded Privy wallet signature; PAPER
-            mode and recorded tape stay available without a wallet.
+            Guarded PumpSwap entries can open a Privy wallet signature;
+            bonding-curve entries stay PAPER-only until their decoder ships.
           </p>
         </div>
 
