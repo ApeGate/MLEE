@@ -395,11 +395,19 @@ export function GateSections() {
                 <span className="text-stroke">Your signature.</span>
               </h2>
               <p className="mt-6 max-w-xl text-sm leading-relaxed text-[#91897e]">
-                Wallet connect is available now for the manual path, but no
-                transaction builder is enabled in this read-only release.
-                Privy Vault support is prepared as a clearly disabled scaffold
-                until policy signing, keys, and safety canaries are ready.
+                Practice against live or recorded launches in PAPER mode.
+                Wallet connect is available for the future manual path, but no
+                real transaction builder is enabled. Privy Vault support stays
+                visibly disabled until policy signing, keys, and safety canaries
+                are ready.
               </p>
+              <Link
+                href="/paper"
+                className="mt-6 inline-flex items-center gap-2 rounded-full border border-[#c7ff45]/30 bg-[#c7ff45]/7 px-4 py-2.5 text-xs font-bold text-[#c7ff45] hover:border-[#c7ff45]/55"
+              >
+                Open PAPER desk
+                <ArrowRight className="size-3.5" />
+              </Link>
               <div className="mt-6 rounded-xl border border-[#302a20] bg-[#12100c] p-4 text-xs leading-relaxed text-[#a79f92]">
                 <strong className="text-[#f4efe5]">Worst case today:</strong>{" "}
                 Apegate can read a public wallet address after you connect. It
@@ -632,7 +640,7 @@ export function GateSections() {
             </span>
           </div>
           <p>
-            Read-only intelligence · Trading disabled · Not financial advice
+            Live intelligence · PAPER simulation · Real trading disabled
           </p>
         </footer>
       </section>

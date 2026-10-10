@@ -73,7 +73,13 @@ export interface GateVerdict {
 export interface Receipt {
   id: string;
   v: 1;
-  kind: "verdict" | "connect" | "block" | "vault_preview";
+  kind:
+    | "verdict"
+    | "connect"
+    | "block"
+    | "paper_fill"
+    | "plan_change"
+    | "vault_preview";
   actor: ApeId | "user" | "system";
   subject: { mint?: string; wallet?: string };
   at: { ts: number; slot?: number };

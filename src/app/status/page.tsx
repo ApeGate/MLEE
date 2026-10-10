@@ -43,10 +43,16 @@ const SERVICES = [
       "Official token page is ready; Kong hard-blocks protected identity variants unless the exact configured mint matches",
   },
   {
-    name: "Trading and Vault",
+    name: "Paper trading",
+    state: "Operational",
+    detail:
+      "Local 10 SOL practice portfolio, deterministic estimated quotes, itemized 0.5% fee, modeled exits, and hash-chained PAPER fill receipts",
+  },
+  {
+    name: "Real trading and Vault",
     state: "Disabled",
     detail:
-      "Phase 1 is read-only. Manual signing is the future default; Privy is scaffolded only",
+      "No real transaction can be built or sent. Manual signing is the future default; Privy is scaffolded only",
   },
 ] as const;
 

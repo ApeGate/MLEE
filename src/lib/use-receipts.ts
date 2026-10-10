@@ -6,6 +6,8 @@ import {
   verifyReceiptChain,
   type GateVerdict,
   type LaunchFacts,
+  type PaperFill,
+  type PaperQuote,
   type Receipt,
   type Source,
 } from "../../packages/core/src";
@@ -101,6 +103,45 @@ export function useReceipts() {
     [receipts],
   );
 
+  const addPaperFill = useCallback(
+    async (fill: PaperFill, quote: PaperQuote) => {
+      const previous = receipts.at(-1)?.hash ?? null;
+      const receipt = await createReceipt({
+        kind: "paper_fill",
+        actor: "caesar",
+        subject: { mint: fill.mint },
+        at: { ts: fill.at },
+        inputs: {
+          params: {
+            side: fill.side,
+            model: fill.model,
+            slippageBps: quote.slippageBps,
+          },
+        },
+        outputs: {
+          symbol: fill.symbol,
+          side: fill.side,
+          tokens: fill.tokens,
+          quoteAmountSol: fill.quoteAmountSol,
+          feeSol: fill.feeSol,
+          executionPriceSol: fill.executionPriceSol,
+          realizedPnlSol: fill.realizedPnlSol,
+        },
+        evidence: [
+          {
+            kind: "account",
+            ref: fill.mint,
+            note: "Paper fill used the selected launch snapshot",
+          },
+        ],
+        source: "paper",
+        prev: previous,
+      });
+      setReceipts((current) => [...current, receipt].slice(-100));
+    },
+    [receipts],
+  );
+
   const clear = useCallback(() => setReceipts([]), []);
 
   return {
@@ -108,6 +149,7 @@ export function useReceipts() {
     verified,
     addVerdict,
     addWalletConnect,
+    addPaperFill,
     clear,
   };
 }

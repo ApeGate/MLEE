@@ -228,6 +228,12 @@ export function FeedApp() {
           </div>
           <div className="flex items-center gap-2">
             <SourceBadge source={status === "live" ? "LIVE" : "REPLAY"} />
+            <Link
+              href="/paper"
+              className="hidden h-9 items-center rounded-full border border-[#c7ff45]/25 bg-[#c7ff45]/6 px-3 text-xs font-bold text-[#c7ff45] hover:border-[#c7ff45]/50 sm:inline-flex"
+            >
+              Paper desk
+            </Link>
             <button
               type="button"
               onClick={() => setWalletOpen(true)}
@@ -856,6 +862,8 @@ function ReceiptTape({
                 <p className="mt-2 text-xs font-bold">
                   {receipt.kind === "verdict"
                     ? `${String(receipt.outputs.verdict)} · score ${String(receipt.outputs.score)}`
+                    : receipt.kind === "paper_fill"
+                      ? `${String(receipt.outputs.side)} $${String(receipt.outputs.symbol)} · PAPER`
                     : "Manual wallet connected"}
                 </p>
                 <div className="mt-3 space-y-1 font-mono text-[8px] text-[#5f584f]">

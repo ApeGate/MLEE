@@ -4,10 +4,12 @@
 launches: facts go in, Kong runs deterministic checks, and a tamper-evident
 decision receipt comes out.
 
-This Phase 0–1 release is deliberately read-only:
+This release keeps every real-money path disabled while live intelligence and
+the local PAPER loop are exercised:
 
 - `/` — Gate-first product home
 - `/feed` — real launch discovery with a recorded real-tape fallback
+- `/paper` — local 10 SOL practice portfolio with modeled buys and exits
 - `/coin/{mint}` — public, on-demand mint and holder dossier
 - `/crew` — all six jobs with explicit permissions and hard boundaries
 - `/token` — official $APEGATE status and contract-address registry
@@ -43,6 +45,19 @@ surface prepares metadata, token settings, clean-launch guardrails, and a local
 receipt preview. It cannot upload metadata or build, sign, or send a
 `create_v2` transaction; those controls stay locked until the trading and
 transaction-safety foundations are complete.
+
+## PAPER mode
+
+The paper desk consumes the same live/replay launch feed and Kong verdicts as
+the Gate. Quotes use a deterministic `market-cap-estimate-v1` model with
+explicit price impact, user slippage, a 1.25% protocol estimate, and the locked
+0.5% Apegate fee. Buys, partial exits, positions, and fills stay in local
+browser storage; every fill also writes a hash-chained `PAPER` receipt.
+
+This is intentionally not presented as a real fill model: it does not claim
+reserve-curve parity, landing, MEV, or wallet execution. `BLOCK` disables paper
+entry; `WARN` and `WAIT` require an explicit acknowledgement and can never
+bypass Kong for future real trading.
 
 ## Run locally
 

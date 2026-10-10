@@ -1,14 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
   APEGATE_FEE_BPS,
+  applyPaperBuy,
+  applyPaperSell,
   canonicalize,
+  createPaperPortfolio,
   createReceipt,
   estimateFees,
   evaluateGate,
   hashCanonical,
   isOfficialApegateMint,
   officialTokenManifestHash,
+  paperPositionValue,
   preflightLaunch,
+  quotePaperBuy,
+  quotePaperSell,
   resemblesApegateIdentity,
   verifyReceipt,
   verifyReceiptChain,
@@ -187,6 +193,57 @@ describe("fees", () => {
       networkEstimate: 0.001,
       total: 1.0185,
     });
+  });
+});
+
+describe("paper trading engine", () => {
+  it("quotes the locked fee and applies a deterministic paper buy", () => {
+    const quote = quotePaperBuy(safeFacts, 0.25, 800);
+    const first = applyPaperBuy(createPaperPortfolio(10), quote, now);
+
+    expect(quote.model).toBe("market-cap-estimate-v1");
+    expect(quote.fees.apegateFee).toBe(0.00125);
+    expect(quote.minimumTokens).toBeLessThan(quote.tokenAmount);
+    expect(first.portfolio.cashSol).toBeCloseTo(10 - quote.totalSol, 12);
+    expect(first.portfolio.positions[0]?.tokens).toBeCloseTo(
+      quote.tokenAmount,
+      8,
+    );
+    expect(first.fill.source).toBe("paper");
+  });
+
+  it("marks and sells a paper position without exceeding its size", () => {
+    const buy = quotePaperBuy(safeFacts, 0.5);
+    const opened = applyPaperBuy(createPaperPortfolio(2), buy, now).portfolio;
+    const position = opened.positions[0]!;
+    expect(paperPositionValue(position, safeFacts.marketCapSol)).toBeGreaterThan(
+      0,
+    );
+
+    const sell = quotePaperSell(
+      { ...safeFacts, marketCapSol: safeFacts.marketCapSol * 1.5 },
+      position.tokens / 2,
+    );
+    const closed = applyPaperSell(opened, sell, now + 1_000);
+    expect(closed.portfolio.positions[0]?.tokens).toBeCloseTo(
+      position.tokens / 2,
+      8,
+    );
+    expect(closed.fill.realizedPnlSol).toBeGreaterThan(0);
+    expect(() =>
+      applyPaperSell(
+        closed.portfolio,
+        { ...sell, tokenAmount: position.tokens },
+        now + 2_000,
+      ),
+    ).toThrow(/below the quoted token amount/);
+  });
+
+  it("rejects an over-cap paper buy", () => {
+    const quote = quotePaperBuy(safeFacts, 1);
+    expect(() =>
+      applyPaperBuy(createPaperPortfolio(0.25), quote, now),
+    ).toThrow(/below the quoted total/);
   });
 });
 

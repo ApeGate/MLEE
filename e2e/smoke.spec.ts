@@ -37,3 +37,15 @@ test("coin dossier has an honest unavailable state", async ({ page }) => {
   await expect(page.getByText("Live dossier unavailable.")).toBeVisible();
   await expect(page.getByText(/will not turn missing reads into a PASS/i)).toBeVisible();
 });
+
+test("paper desk writes an explicitly simulated fill", async ({ page }) => {
+  await page.goto("/paper");
+  await expect(page.getByText("Caesar's paper desk")).toBeVisible();
+  await expect(page.getByText("Simulation is not execution.")).toBeVisible();
+  const acknowledgement = page.getByRole("checkbox");
+  if (await acknowledgement.isVisible()) {
+    await acknowledgement.check();
+  }
+  await page.getByRole("button", { name: /PAPER buy 0\.1 SOL/i }).click();
+  await expect(page.getByText(/PAPER fill/i).first()).toBeVisible();
+});

@@ -30,6 +30,12 @@ export function SiteHeader() {
             Live gate
           </Link>
           <Link
+            href="/paper"
+            className="hidden text-[#a79f92] transition-colors hover:text-[#f4efe5] md:inline"
+          >
+            Paper
+          </Link>
+          <Link
             href="/crew"
             className="hidden text-[#a79f92] transition-colors hover:text-[#f4efe5] sm:inline"
           >

@@ -77,7 +77,8 @@ export function GateHero() {
           </div>
           <p className="mt-4 max-w-lg text-xs leading-relaxed text-[#766f65]">
             Read-only intelligence is live when the public stream is reachable.
-            Trading is disabled. Recorded tape takes over if the stream drops.
+            Real trading is disabled; PAPER mode is available. Recorded tape
+            takes over if the stream drops.
           </p>
         </div>
 
