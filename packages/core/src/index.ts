@@ -10,5 +10,6 @@ export * from "./paper";
 export * from "./plans";
 export * from "./rafiki";
 export * from "./receipts";
+export * from "./trench-checks";
 export * from "./types";
 export * from "./vault";

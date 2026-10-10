@@ -97,7 +97,7 @@ export function GateHero() {
                 <div>
                   <p className="text-xs font-bold">Kong&apos;s Gate</p>
                   <p className="font-mono text-[7px] uppercase tracking-[0.14em] text-[#6f685f]">
-                    gate-1.1.0 · standard
+                    gate-1.2.0 · standard
                   </p>
                 </div>
               </div>
