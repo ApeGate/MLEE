@@ -209,15 +209,17 @@ export function FeedApp() {
   }, []);
 
   useEffect(() => {
-    if (!walletAddress) {
-      queueMicrotask(() => {
+    const refreshTimer = window.setTimeout(() => {
+      if (!walletAddress) {
         setPositionData(null);
         setPositionState("idle");
         setPositionError(null);
-      });
-      return;
-    }
-    void refreshPositions(walletAddress);
+        return;
+      }
+      void refreshPositions(walletAddress);
+    }, 0);
+
+    return () => window.clearTimeout(refreshTimer);
   }, [refreshPositions, walletAddress]);
 
   const selected =
