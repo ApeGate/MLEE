@@ -251,6 +251,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .animate-spin,
   .agent-float,
   .agent-glow,
   .live-dot,
