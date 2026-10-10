@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   title: "System status",
   description:
     "Apegate live source and capability status. No made-up uptime claims.",
+  alternates: {
+    canonical: "https://apegate.io/status",
+  },
 };
 
 const SERVICES = [

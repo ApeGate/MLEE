@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   title: "Privy Vault preview",
   description:
     "Preview Apegate's bounded Privy Vault policy without creating a signer or moving funds.",
+  alternates: {
+    canonical: "https://apegate.io/vault",
+  },
 };
 
 export const dynamic = "force-dynamic";

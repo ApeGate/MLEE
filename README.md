@@ -26,6 +26,16 @@ launch asks Solana RPC for mint safety and an optional independent risk source
 for holder and creator context. Missing data forces `WAIT`; it never becomes a
 silent `PASS`.
 
+## Domain
+
+`apegate.io` is owned and is the canonical production domain. The current
+Cloudflare Worker remains available while its custom-domain DNS and certificate
+propagate; domain readiness never blocks the locally signed mainnet canary.
+
+See [`docs/domain-and-dns.md`](docs/domain-and-dns.md) for the exact Workers
+Custom Domain setup, the Pages alternative, apex and `www` DNS records, redirect
+options, verification commands, and Privy Allowed Domains.
+
 ## Official $APEGATE token
 
 The go-to-market token route is staged without inventing a contract address.
@@ -158,19 +168,19 @@ npx wrangler secret put PRIVY_AUTHORIZATION_PRIVATE_KEY
 
 Privy dashboard checklist:
 
-1. Under **App settings → Domains**, temporarily allow
-   `http://127.0.0.1:43127` and `http://localhost:43127`.
-2. Add `https://apegate.io` after DNS is active, then remove production-app
-   localhost access when development no longer needs it.
+1. Under **App settings → Domains**, allow `https://apegate.io` and
+   `https://www.apegate.io`.
+2. Keep `http://127.0.0.1:43127` and `http://localhost:43127` for local
+   development.
 3. Keep wallet login and external Solana wallets enabled.
-4. Keep smart/embedded wallets off. The application also enforces
+4. Keep smart and embedded wallets off. The application also enforces
    `createOnLogin: "off"` for both chains.
 5. Generate an authorization private key only when delegated Vault work starts.
 
-Domain setup does not block the current build. Credentials only make the SDK
-ready: Vault creation remains hard-disabled pending the policy signer,
-transaction firewall, mainnet canaries, revoke tests, and external security
-review.
+DNS setup and propagation do not block the current build or live canary.
+Credentials only make the SDK ready: Vault creation remains hard-disabled
+pending the policy signer, transaction firewall, mainnet canaries, revoke
+tests, and external security review.
 
 ## Quality checks
 
