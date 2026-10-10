@@ -55,6 +55,11 @@ export function authorizeMainnetCanaryBuy(
   if (input.verdict.kind !== "PASS") {
     throw new Error(`Kong must PASS the mint; got ${input.verdict.kind}`);
   }
+  if (!input.verdict.timing.entryAllowed) {
+    throw new Error(
+      `Cheeta must allow the entry; got ${input.verdict.timing.label}`,
+    );
+  }
   if (input.now > input.verdict.freshUntil) {
     throw new Error("Kong verdict expired before transaction authorization");
   }
