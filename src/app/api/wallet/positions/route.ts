@@ -112,7 +112,7 @@ export async function GET(request: Request) {
   const { endpoint, source } = configuredSolanaRpc();
   try {
     const programResponses = await Promise.all(
-      [TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID].map(async (programId) => ({
+      ([TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID] as const).map(async (programId) => ({
         programId,
         body: await rpc(
           endpoint,
