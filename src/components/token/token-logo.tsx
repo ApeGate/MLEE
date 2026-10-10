@@ -4,6 +4,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import {
+  tokenLogoBatchKey,
+  type TokenLogoBatchItem,
+} from "@/lib/token-logo-batch";
 
 type MetadataResponse = {
   image: string | null;
@@ -19,6 +23,13 @@ type ResolvedMetadata = {
 
 const resolvedMetadata = new Map<string, ResolvedMetadata>();
 const pendingMetadata = new Map<string, Promise<ResolvedMetadata>>();
+const queuedMetadata = new Map<
+  string,
+  TokenLogoBatchItem & {
+    resolve: (metadata: ResolvedMetadata) => void;
+  }
+>();
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
 function allowedImage(value?: string | null) {
   if (!value) return null;
@@ -32,35 +43,33 @@ function allowedImage(value?: string | null) {
   }
 }
 
-function requestMetadata(mint: string, uri?: string | null) {
-  const key = `${mint}:${uri ?? ""}`;
-  if (resolvedMetadata.has(key)) {
-    return Promise.resolve(resolvedMetadata.get(key)!);
-  }
-  const existing = pendingMetadata.get(key);
-  if (existing) return existing;
+function normalizedMetadata(payload: MetadataResponse): ResolvedMetadata {
+  return {
+    image: allowedImage(payload.image),
+    name:
+      typeof payload.name === "string" && payload.name.trim()
+        ? payload.name.trim()
+        : null,
+    symbol:
+      typeof payload.symbol === "string" && payload.symbol.trim()
+        ? payload.symbol.trim()
+        : null,
+  };
+}
 
+function requestMetadataIndividually(mint: string, uri?: string | null) {
   const query = new URLSearchParams({ logo: "1" });
   if (uri) query.set("uri", uri);
-  const request = fetch(
+  return fetch(
     `/api/meta/${encodeURIComponent(mint)}?${query.toString()}`,
   )
     .then(async (response) => {
       if (!response.ok) {
         return { image: null, name: null, symbol: null };
       }
-      const payload = (await response.json()) as MetadataResponse;
-      return {
-        image: allowedImage(payload.image),
-        name:
-          typeof payload.name === "string" && payload.name.trim()
-            ? payload.name.trim()
-            : null,
-        symbol:
-          typeof payload.symbol === "string" && payload.symbol.trim()
-            ? payload.symbol.trim()
-            : null,
-      };
+      return normalizedMetadata(
+        (await response.json()) as MetadataResponse,
+      );
     })
     .catch(
       (): ResolvedMetadata => ({
@@ -68,12 +77,74 @@ function requestMetadata(mint: string, uri?: string | null) {
         name: null,
         symbol: null,
       }),
-    )
-    .then((metadata) => {
-      resolvedMetadata.set(key, metadata);
-      pendingMetadata.delete(key);
-      return metadata;
+    );
+}
+
+async function flushMetadataQueue() {
+  flushTimer = null;
+  const batch = [...queuedMetadata.entries()];
+  queuedMetadata.clear();
+  if (!batch.length) return;
+
+  try {
+    const response = await fetch("/api/meta/batch", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        items: batch.map(([, item]) => ({
+          mint: item.mint,
+          uri: item.uri,
+        })),
+      }),
     });
+    if (!response.ok) throw new Error("Token logo batch failed");
+    const payload = (await response.json()) as {
+      items?: Array<TokenLogoBatchItem & MetadataResponse>;
+    };
+    const byKey = new Map(
+      (payload.items ?? []).map((item) => [
+        tokenLogoBatchKey(item),
+        normalizedMetadata(item),
+      ]),
+    );
+    await Promise.all(
+      batch.map(async ([key, item]) => {
+        item.resolve(
+          byKey.get(key) ??
+            (await requestMetadataIndividually(item.mint, item.uri)),
+        );
+      }),
+    );
+  } catch {
+    await Promise.all(
+      batch.map(async ([, item]) => {
+        item.resolve(
+          await requestMetadataIndividually(item.mint, item.uri),
+        );
+      }),
+    );
+  }
+}
+
+function requestMetadata(mint: string, uri?: string | null) {
+  const item = { mint, uri: uri ?? null };
+  const key = tokenLogoBatchKey(item);
+  if (resolvedMetadata.has(key)) {
+    return Promise.resolve(resolvedMetadata.get(key)!);
+  }
+  const existing = pendingMetadata.get(key);
+  if (existing) return existing;
+
+  const request = new Promise<ResolvedMetadata>((resolve) => {
+    queuedMetadata.set(key, { ...item, resolve });
+    if (flushTimer === null) {
+      flushTimer = setTimeout(() => void flushMetadataQueue(), 12);
+    }
+  }).then((metadata) => {
+    resolvedMetadata.set(key, metadata);
+    pendingMetadata.delete(key);
+    return metadata;
+  });
   pendingMetadata.set(key, request);
   return request;
 }
@@ -102,7 +173,7 @@ export function TokenLogo({
   useEffect(() => {
     onMetadataRef.current = onMetadata;
   }, [onMetadata]);
-  const requestKey = `${mint}:${uri ?? ""}`;
+  const requestKey = tokenLogoBatchKey({ mint, uri: uri ?? null });
   const [loaded, setLoaded] = useState<{
     key: string;
     metadata: ResolvedMetadata;
