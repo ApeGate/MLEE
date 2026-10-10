@@ -123,6 +123,7 @@ export function useGateAlerts(launches: readonly FeedLaunch[]) {
     alerts,
     watched,
     watchedCount: watchedMints.length,
+    hydrated,
     toggleWatch,
     dismiss,
     enableDesktopNotifications,

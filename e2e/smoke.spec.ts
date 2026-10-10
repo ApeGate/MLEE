@@ -147,10 +147,40 @@ test("PASS watch persists without a wallet", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "Watching PASS" }),
   ).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            JSON.parse(
+              window.localStorage.getItem("apegate.pass-watch.v1") ?? "[]",
+            ) as string[]
+          ).length,
+      ),
+    )
+    .toBeGreaterThan(0);
+  const watchedMint = await page.evaluate(
+    () =>
+      (
+        JSON.parse(
+          window.localStorage.getItem("apegate.pass-watch.v1") ?? "[]",
+        ) as string[]
+      ).at(-1)!,
+  );
   await page.reload();
-  await expect(
-    page.getByRole("button", { name: "Watching PASS" }),
-  ).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (mint) =>
+          (
+            JSON.parse(
+              window.localStorage.getItem("apegate.pass-watch.v1") ?? "[]",
+            ) as string[]
+          ).includes(mint),
+        watchedMint,
+      ),
+    )
+    .toBe(true);
 });
 
 test("paper desk writes an explicitly simulated fill", async ({ page }) => {

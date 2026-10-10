@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createReceipt,
   verifyReceiptChain,
@@ -17,13 +17,39 @@ const STORAGE_KEY = "apegate.receipts.v1";
 export function useReceipts() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [verified, setVerified] = useState(true);
+  const receiptsRef = useRef<Receipt[]>([]);
+  const writeQueueRef = useRef<Promise<void>>(Promise.resolve());
+
+  const enqueueReceipt = useCallback(
+    (
+      build: (
+        current: readonly Receipt[],
+        previous: string | null,
+      ) => Promise<Receipt | null>,
+    ) => {
+      const operation = writeQueueRef.current.then(async () => {
+        const current = receiptsRef.current;
+        const receipt = await build(current, current.at(-1)?.hash ?? null);
+        if (!receipt) return;
+        const next = [...current, receipt].slice(-100);
+        receiptsRef.current = next;
+        setReceipts(next);
+      });
+      writeQueueRef.current = operation.catch(() => undefined);
+      return operation;
+    },
+    [],
+  );
 
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as Receipt[];
-        queueMicrotask(() => setReceipts(parsed));
+        queueMicrotask(() => {
+          receiptsRef.current = parsed;
+          setReceipts(parsed);
+        });
       }
     } catch {
       window.localStorage.removeItem(STORAGE_KEY);
@@ -41,105 +67,96 @@ export function useReceipts() {
       verdict: GateVerdict,
       source: Extract<Source, "live" | "replay">,
     ) => {
-      if (
-        receipts.some(
-          (receipt) =>
-            receipt.kind === "verdict" &&
-            receipt.inputs.factsHash === verdict.factsHash,
-        )
-      ) {
-        return;
-      }
-      const previous = receipts.at(-1)?.hash ?? null;
-      const receipt = await createReceipt({
-        kind: "verdict",
-        actor: "kong",
-        subject: { mint: facts.mint },
-        at: { ts: verdict.computedAt },
-        inputs: {
-          factsHash: verdict.factsHash,
-          rulesetVersion: verdict.rulesetVersion,
-          params: { profile: verdict.profile },
-        },
-        outputs: {
-          verdict: verdict.kind,
-          score: verdict.score,
-          reasons: verdict.topReasons,
-        },
-        evidence: verdict.checks.flatMap((check) => check.evidence).slice(0, 12),
-        source,
-        prev: previous,
-      });
-      setReceipts((current) => {
+      await enqueueReceipt(async (current, previous) => {
         if (
           current.some(
-            (item) => item.inputs.factsHash === verdict.factsHash,
+            (receipt) =>
+              receipt.kind === "verdict" &&
+              receipt.inputs.factsHash === verdict.factsHash,
           )
         ) {
-          return current;
+          return null;
         }
-        return [...current, receipt].slice(-100);
+        return createReceipt({
+          kind: "verdict",
+          actor: "kong",
+          subject: { mint: facts.mint },
+          at: { ts: verdict.computedAt },
+          inputs: {
+            factsHash: verdict.factsHash,
+            rulesetVersion: verdict.rulesetVersion,
+            params: { profile: verdict.profile },
+          },
+          outputs: {
+            verdict: verdict.kind,
+            score: verdict.score,
+            reasons: verdict.topReasons,
+          },
+          evidence: verdict.checks.flatMap((check) => check.evidence).slice(0, 12),
+          source,
+          prev: previous,
+        });
       });
     },
-    [receipts],
+    [enqueueReceipt],
   );
 
   const addWalletConnect = useCallback(
     async (wallet: string) => {
-      const previous = receipts.at(-1)?.hash ?? null;
-      const receipt = await createReceipt({
-        kind: "connect",
-        actor: "user",
-        subject: { wallet },
-        at: { ts: Date.now() },
-        inputs: { params: { signing: "manual" } },
-        outputs: { connected: true, custody: "user" },
-        evidence: [],
-        source: "live",
-        prev: previous,
+      await enqueueReceipt(async (_current, previous) => {
+        return createReceipt({
+          kind: "connect",
+          actor: "user",
+          subject: { wallet },
+          at: { ts: Date.now() },
+          inputs: { params: { signing: "manual" } },
+          outputs: { connected: true, custody: "user" },
+          evidence: [],
+          source: "live",
+          prev: previous,
+        });
       });
-      setReceipts((current) => [...current, receipt].slice(-100));
     },
-    [receipts],
+    [enqueueReceipt],
   );
 
   const addPaperFill = useCallback(
     async (fill: PaperFill, quote: PaperQuote) => {
-      const previous = receipts.at(-1)?.hash ?? null;
-      const receipt = await createReceipt({
-        kind: "paper_fill",
-        actor: "caesar",
-        subject: { mint: fill.mint },
-        at: { ts: fill.at },
-        inputs: {
-          params: {
+      await enqueueReceipt(async (_current, previous) => {
+        return createReceipt({
+          kind: "paper_fill",
+          actor: "caesar",
+          subject: { mint: fill.mint },
+          at: { ts: fill.at },
+          inputs: {
+            params: {
+              side: fill.side,
+              model: fill.model,
+              slippageBps: quote.slippageBps,
+            },
+          },
+          outputs: {
+            symbol: fill.symbol,
             side: fill.side,
-            model: fill.model,
-            slippageBps: quote.slippageBps,
+            tokens: fill.tokens,
+            quoteAmountSol: fill.quoteAmountSol,
+            feeSol: fill.feeSol,
+            executionPriceSol: fill.executionPriceSol,
+            realizedPnlSol: fill.realizedPnlSol,
           },
-        },
-        outputs: {
-          symbol: fill.symbol,
-          side: fill.side,
-          tokens: fill.tokens,
-          quoteAmountSol: fill.quoteAmountSol,
-          feeSol: fill.feeSol,
-          executionPriceSol: fill.executionPriceSol,
-          realizedPnlSol: fill.realizedPnlSol,
-        },
-        evidence: [
-          {
-            kind: "account",
-            ref: fill.mint,
-            note: "Paper fill used the selected launch snapshot",
-          },
-        ],
-        source: "paper",
-        prev: previous,
+          evidence: [
+            {
+              kind: "account",
+              ref: fill.mint,
+              note: "Paper fill used the selected launch snapshot",
+            },
+          ],
+          source: "paper",
+          prev: previous,
+        });
       });
-      setReceipts((current) => [...current, receipt].slice(-100));
     },
-    [receipts],
+    [enqueueReceipt],
   );
 
   const addManualFill = useCallback(
@@ -164,116 +181,123 @@ export function useReceipts() {
       factsHash?: string;
       slot: number | null;
     }) => {
-      const previous = receipts.at(-1)?.hash ?? null;
-      const receipt = await createReceipt({
-        kind: "manual_fill",
-        actor: "caesar",
-        subject: { mint, wallet },
-        at: { ts: Date.now(), ...(slot === null ? {} : { slot }) },
-        inputs: {
-          ...(factsHash ? { factsHash } : {}),
-          rulesetVersion: "gate-1.2.0",
-          params: {
+      await enqueueReceipt(async (current, previous) => {
+        if (
+          current.some(
+            (item) =>
+              item.kind === "manual_fill" &&
+              item.outputs.signature === signature,
+          )
+        ) {
+          return null;
+        }
+        return createReceipt({
+          kind: "manual_fill",
+          actor: "caesar",
+          subject: { mint, wallet },
+          at: { ts: Date.now(), ...(slot === null ? {} : { slot }) },
+          inputs: {
+            ...(factsHash ? { factsHash } : {}),
+            rulesetVersion: "gate-1.2.0",
+            params: {
+              side,
+              ...(amountSol === undefined ? {} : { amountSol }),
+              ...(percent === undefined ? {} : { percent }),
+              signing: "privy_external_wallet",
+            },
+          },
+          outputs: {
+            symbol,
             side,
             ...(amountSol === undefined ? {} : { amountSol }),
             ...(percent === undefined ? {} : { percent }),
-            signing: "privy_external_wallet",
+            signature,
+            confirmed: true,
+            confirmationSlot: slot,
+            custody: "user",
+            apegateFeeBps: 50,
+            apegateFeeCharged: false,
+            feeNote: "Guarded browser beta waiver",
           },
-        },
-        outputs: {
-          symbol,
-          side,
-          ...(amountSol === undefined ? {} : { amountSol }),
-          ...(percent === undefined ? {} : { percent }),
-          signature,
-          confirmed: true,
-          confirmationSlot: slot,
-          custody: "user",
-          apegateFeeBps: 50,
-          apegateFeeCharged: false,
-          feeNote: "Guarded browser beta waiver",
-        },
-        evidence: [
-          {
-            kind: "tx",
-            ref: signature,
-            note: "Confirmed user-approved Solana transaction",
-          },
-          {
-            kind: "url",
-            ref: `https://solscan.io/tx/${signature}`,
-            note: "Solscan transaction",
-          },
-        ],
-        source: "live",
-        prev: previous,
+          evidence: [
+            {
+              kind: "tx",
+              ref: signature,
+              note: "Confirmed user-approved Solana transaction",
+            },
+            {
+              kind: "url",
+              ref: `https://solscan.io/tx/${signature}`,
+              note: "Solscan transaction",
+            },
+          ],
+          source: "live",
+          prev: previous,
+        });
       });
-      setReceipts((current) =>
-        current.some(
-          (item) =>
-            item.kind === "manual_fill" &&
-            item.outputs.signature === signature,
-        )
-          ? current
-          : [...current, receipt].slice(-100),
-      );
     },
-    [receipts],
+    [enqueueReceipt],
   );
 
   const addPlanChange = useCallback(
     async (planHash: string, name: string, tapeFactsHash: string) => {
-      const previous = receipts.at(-1)?.hash ?? null;
-      const receipt = await createReceipt({
-        kind: "plan_change",
-        actor: "caesar",
-        subject: {},
-        at: { ts: Date.now() },
-        inputs: {
-          params: {
-            planHash,
-            tapeFactsHash,
-            immutable: true,
+      await enqueueReceipt(async (_current, previous) => {
+        return createReceipt({
+          kind: "plan_change",
+          actor: "caesar",
+          subject: {},
+          at: { ts: Date.now() },
+          inputs: {
+            params: {
+              planHash,
+              tapeFactsHash,
+              immutable: true,
+            },
           },
-        },
-        outputs: {
-          name,
-          saved: true,
-          executionEnabled: false,
-        },
-        evidence: [],
-        source: "replay",
-        prev: previous,
+          outputs: {
+            name,
+            saved: true,
+            executionEnabled: false,
+          },
+          evidence: [],
+          source: "replay",
+          prev: previous,
+        });
       });
-      setReceipts((current) => [...current, receipt].slice(-100));
     },
-    [receipts],
+    [enqueueReceipt],
   );
 
   const addVaultPreview = useCallback(
     async (policyHash: string, ownerWallet: string) => {
-      const previous = receipts.at(-1)?.hash ?? null;
-      const receipt = await createReceipt({
-        kind: "vault_preview",
-        actor: "cornelius",
-        subject: { wallet: ownerWallet },
-        at: { ts: Date.now() },
-        inputs: { params: { policyHash, provider: "privy" } },
-        outputs: {
-          previewed: true,
-          executionEnabled: false,
-          externalReviewComplete: false,
-        },
-        evidence: [],
-        source: "hypothetical",
-        prev: previous,
+      await enqueueReceipt(async (_current, previous) => {
+        return createReceipt({
+          kind: "vault_preview",
+          actor: "cornelius",
+          subject: { wallet: ownerWallet },
+          at: { ts: Date.now() },
+          inputs: { params: { policyHash, provider: "privy" } },
+          outputs: {
+            previewed: true,
+            executionEnabled: false,
+            externalReviewComplete: false,
+          },
+          evidence: [],
+          source: "hypothetical",
+          prev: previous,
+        });
       });
-      setReceipts((current) => [...current, receipt].slice(-100));
     },
-    [receipts],
+    [enqueueReceipt],
   );
 
-  const clear = useCallback(() => setReceipts([]), []);
+  const clear = useCallback(() => {
+    const operation = writeQueueRef.current.then(() => {
+      receiptsRef.current = [];
+      setReceipts([]);
+    });
+    writeQueueRef.current = operation.catch(() => undefined);
+  }, []);
 
   return {
     receipts,

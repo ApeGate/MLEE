@@ -80,4 +80,16 @@ describe("public canary fill verification", () => {
       "token delta does not match",
     );
   });
+
+  it("verifies the partial CATE exit receipt", () => {
+    const fill = PUBLIC_CANARY_FILLS[3]!;
+    const verified = verifyCanaryTransaction(fill, transactionFor(3));
+
+    expect(verified.side).toBe("SELL");
+    expect(verified.solDelta).toBe(0.004016847);
+    expect(verified.tokenDelta).toBe(-10.205276);
+    expect(verified.receiptHash).toBe(
+      "3bd91732c125823535d6b97df52422a8f73a7ab1a8437c35696746d1bcf81dc5",
+    );
+  });
 });

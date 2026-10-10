@@ -130,11 +130,12 @@ Keep these entries in **Privy → App settings → Domains**:
 
 - `https://apegate.io`
 - `https://www.apegate.io`
-- `http://127.0.0.1:43127`
 - `http://localhost:43127`
 
-The localhost entries are for development only. Never add wildcard production
-domains.
+Use `http://localhost:43127` for normal development. Privy treats
+`http://127.0.0.1:43127` as a separate origin, so add it explicitly only when
+the numeric loopback URL is required. Development entries are local only;
+never add wildcard production domains.
 
 ## Verification without blocking trading
 

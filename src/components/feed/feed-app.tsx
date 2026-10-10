@@ -48,6 +48,10 @@ import { useGateAlerts, type GatePassAlert } from "@/lib/use-gate-alerts";
 import { useOutcomeTape } from "@/lib/use-outcome-tape";
 import { useReceipts } from "@/lib/use-receipts";
 import { TokenLogo } from "@/components/token/token-logo";
+import {
+  ManualTradeReviewDialog,
+  useManualTradeReview,
+} from "@/components/trading/manual-trade-review";
 import { inspectManualBuyTransaction } from "@/lib/manual-buy-transaction";
 import { inspectManualSellTransaction } from "@/lib/manual-sell-transaction";
 import { isBrandSafeLaunchLabel } from "@/lib/brand-safety";
@@ -182,6 +186,7 @@ export function FeedApp() {
   const { launches, status, lastMessageAt, retry, updateLaunch } =
     useLaunchFeed();
   const gateAlerts = useGateAlerts(launches);
+  const manualTradeReview = useManualTradeReview();
   const outcomeTape = useOutcomeTape(launches);
   const {
     receipts,
@@ -595,6 +600,39 @@ export function FeedApp() {
         throw new Error("Browser and server firewall summaries do not match");
       }
 
+      const approved = await manualTradeReview.requestReview({
+        side: "BUY",
+        symbol: launch.facts.symbol,
+        mint: launch.facts.mint,
+        wallet: activeWallet.address,
+        summary: `Buy $${launch.facts.symbol} with ${amountSol.toFixed(2)} SOL`,
+        facts: [
+          { label: "Mint", value: launch.facts.mint },
+          { label: "Signing wallet", value: activeWallet.address },
+          { label: "Decoded route", value: inspection.decodedSwap },
+          {
+            label: "Wrapped SOL funding",
+            value: `${(inspection.fundedLamports / 1_000_000_000).toFixed(9)} SOL`,
+          },
+          {
+            label: "Priority fee",
+            value: `${(inspection.priorityFeeLamports / 1_000_000_000).toFixed(9)} SOL`,
+          },
+          {
+            label: "Builder tip",
+            value: `${(inspection.tippedLamports / 1_000_000_000).toFixed(9)} SOL`,
+          },
+          { label: "Apegate fee", value: "0.5% · beta waived" },
+        ],
+      });
+      if (!approved) {
+        setTradeState("idle");
+        setTradeMessage("Trade review cancelled. Nothing was sent.");
+        return;
+      }
+      if (Date.now() > payload.expiresAt) {
+        throw new Error("The reviewed transaction expired. Request a fresh quote.");
+      }
       setTradeState("signing");
       setTradeMessage(
         `Check ${amountSol.toFixed(2)} SOL, the mint, and fees in your wallet. Nothing sends without your approval.`,
@@ -729,6 +767,42 @@ export function FeedApp() {
         throw new Error("Browser and server exit summaries do not match");
       }
 
+      const approved = await manualTradeReview.requestReview({
+        side: "SELL",
+        symbol: target.symbol,
+        mint: target.mint,
+        wallet: activeWallet.address,
+        summary: `Exit ${percent}% of $${target.symbol}`,
+        facts: [
+          { label: "Mint", value: target.mint },
+          { label: "Signing wallet", value: activeWallet.address },
+          { label: "Decoded route", value: inspection.decodedSwap },
+          {
+            label: "Maximum tokens",
+            value: `${inspection.soldTokenBaseUnits} base units`,
+          },
+          {
+            label: "Independent floor",
+            value: `${(Number(inspection.minOutputLamports) / 1_000_000_000).toFixed(9)} SOL`,
+          },
+          {
+            label: "Priority fee",
+            value: `${(inspection.priorityFeeLamports / 1_000_000_000).toFixed(9)} SOL`,
+          },
+          {
+            label: "Builder tip",
+            value: `${(inspection.tippedLamports / 1_000_000_000).toFixed(9)} SOL`,
+          },
+        ],
+      });
+      if (!approved) {
+        setTradeState("idle");
+        setTradeMessage("Exit review cancelled. Nothing was sent.");
+        return;
+      }
+      if (Date.now() > payload.expiresAt) {
+        throw new Error("The reviewed exit expired. Request a fresh quote.");
+      }
       setTradeState("signing");
       setTradeMessage(
         `Exit ${percent}% of $${target.symbol}. Independent floor ${(payload.quote.minimumOutputLamports / 1_000_000_000).toFixed(6)} SOL · check the mint in your wallet.`,
@@ -1019,6 +1093,7 @@ export function FeedApp() {
                   ) ?? null
                 }
                 positionState={positionState}
+                watchReady={gateAlerts.hydrated}
                 watched={gateAlerts.watched.has(selected.facts.mint)}
                 onWatch={() => gateAlerts.toggleWatch(selected.facts.mint)}
                 onEnableNotifications={() =>
@@ -1091,6 +1166,10 @@ export function FeedApp() {
           onDisconnect={() => void disconnectWallet()}
         />
       ) : null}
+      <ManualTradeReviewDialog
+        intent={manualTradeReview.intent}
+        onDecision={manualTradeReview.decide}
+      />
     </div>
   );
 }
@@ -1166,6 +1245,7 @@ function CoinPanel({
   tradeMessage,
   walletPosition,
   positionState,
+  watchReady,
   watched,
   onWatch,
   onEnableNotifications,
@@ -1185,6 +1265,7 @@ function CoinPanel({
   tradeMessage: string | null;
   walletPosition: WalletPosition | null;
   positionState: "idle" | "loading" | "ready" | "error";
+  watchReady: boolean;
   watched: boolean;
   onWatch: () => void;
   onEnableNotifications: () => void;
@@ -1268,6 +1349,7 @@ function CoinPanel({
           </a>
           <button
             type="button"
+            disabled={!watchReady}
             onClick={() => {
               onWatch();
               if (!watched) onEnableNotifications();
@@ -1276,7 +1358,7 @@ function CoinPanel({
               "ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1.5 text-[9px] font-bold",
               watched
                 ? "border-pass/30 bg-pass/7 text-pass"
-                : "border-[#31291f] text-[#91897e] hover:border-ape-cheeta/40 hover:text-ape-cheeta",
+                : "border-[#31291f] text-[#91897e] enabled:hover:border-ape-cheeta/40 enabled:hover:text-ape-cheeta disabled:cursor-wait disabled:opacity-60",
             )}
             title="In-app while the Gate is open; desktop notification when allowed"
           >
@@ -1285,7 +1367,11 @@ function CoinPanel({
             ) : (
               <Bell className="size-2.5" />
             )}
-            {watched ? "Watching PASS" : "Tell me when PASS"}
+            {!watchReady
+              ? "Loading watch"
+              : watched
+                ? "Watching PASS"
+                : "Tell me when PASS"}
           </button>
           <Link
             href={`/coin/${facts.mint}${
@@ -1771,7 +1857,7 @@ function LiveFillTape() {
       </div>
 
       {state === "loading" && !data ? (
-        <div className="grid gap-px bg-[#272119] md:grid-cols-3">
+        <div className="grid gap-px bg-[#272119] md:grid-cols-2 xl:grid-cols-4">
           {[0, 1, 2].map((item) => (
             <div key={item} className="animate-pulse bg-[#0d0b09] p-4">
               <span className="block h-3 w-24 rounded bg-[#211b14]" />
@@ -1797,7 +1883,7 @@ function LiveFillTape() {
         </div>
       ) : data ? (
         <>
-          <div className="grid gap-px bg-[#272119] md:grid-cols-3">
+          <div className="grid gap-px bg-[#272119] md:grid-cols-2 xl:grid-cols-4">
             {data.fills.map((fill) => (
               <article key={fill.signature} className="min-w-0 bg-[#0d0b09] p-4">
                 <div className="flex items-center justify-between gap-2">
