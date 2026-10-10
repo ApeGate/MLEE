@@ -75,6 +75,22 @@ test("manual trade APIs reject malformed identifiers", async ({ page }) => {
   expect(positions.status()).toBe(400);
 });
 
+test("token logo batches reject malformed metadata work", async ({ page }) => {
+  const invalidMint = await page.request.post("/api/meta/batch", {
+    data: { items: [{ mint: "not-a-mint" }] },
+  });
+  expect(invalidMint.status()).toBe(400);
+
+  const oversized = await page.request.post("/api/meta/batch", {
+    data: {
+      items: Array.from({ length: 41 }, () => ({
+        mint: "BQAeeSowpwEx8Km8GcporcbuLKq4a7EQceH3F2qZpump",
+      })),
+    },
+  });
+  expect(oversized.status()).toBe(400);
+});
+
 test("live Gate exposes guarded entries, exits, receipts, and outcome tape", async ({
   page,
 }) => {
