@@ -26,6 +26,15 @@ describe("configuredSolanaRpc", () => {
     );
   });
 
+  it("labels a private Helius URL without returning its value as evidence", () => {
+    expect(
+      configuredSolanaRpc({
+        SOLANA_RPC_URL:
+          "https://mainnet.helius-rpc.com/?api-key=private-test-value",
+      }).source,
+    ).toBe("Helius mainnet RPC");
+  });
+
   it("uses a clearly labeled public fallback without credentials", () => {
     expect(configuredSolanaRpc({})).toEqual({
       endpoint: "https://api.mainnet-beta.solana.com",
