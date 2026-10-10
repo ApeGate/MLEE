@@ -596,14 +596,7 @@ function LaunchRow({
           <p className="truncate text-[10px] text-[#766f65]">
             {launch.facts.name}
           </p>
-          <div className="mt-1.5 flex items-center gap-1">
-            <TimingBadge timing={launch.verdict.timing} compact />
-            {launch.verdict.timing.insidersOut ? (
-              <span className="rounded border border-pass/20 bg-pass/7 px-1 py-px font-mono text-[6px] font-bold text-pass">
-                INSIDERS OUT
-              </span>
-            ) : null}
-          </div>
+          <LaunchSignalChips launch={launch} compact />
         </div>
       </div>
       <VerdictStamp verdict={launch.verdict} compact />
@@ -727,6 +720,7 @@ function CoinPanel({
             Public dossier <ExternalLink className="size-2.5" />
           </Link>
         </div>
+        <LaunchSignalChips launch={launch} />
       </div>
 
       <div className="grid grid-cols-3 border-b border-[#31291f]">
@@ -1222,6 +1216,83 @@ function Cell({ value, label }: { value: string; label: string }) {
       <p className="font-mono text-[10px] font-semibold">{value}</p>
       <p className="mt-0.5 text-[8px] text-[#554f47]">{label}</p>
     </div>
+  );
+}
+
+function LaunchSignalChips({
+  launch,
+  compact,
+}: {
+  launch: FeedLaunch;
+  compact?: boolean;
+}) {
+  const { facts, verdict } = launch;
+  const serial =
+    (facts.creatorLaunches1h ?? 0) > 1 ||
+    (facts.creatorLaunches24h ?? 0) > 1;
+  const clones = (facts.cloneCount1h ?? 0) > 1;
+
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-1",
+        compact ? "mt-1" : "mt-3",
+      )}
+    >
+      <SignalChip
+        label={verdict.timing.label}
+        tone={verdict.timing.entryAllowed ? "pass" : "wait"}
+      />
+      {verdict.timing.insidersOut ? (
+        <SignalChip label="Insiders out" tone="pass" />
+      ) : null}
+      {serial ? (
+        <SignalChip
+          label={`${facts.creatorLaunches1h ?? 0}/1h · ${facts.creatorLaunches24h ?? 0}/24h`}
+          tone="warn"
+        />
+      ) : null}
+      {clones ? (
+        <SignalChip
+          label={`Clone ${facts.cloneRank1h ?? "?"}/${facts.cloneCount1h}`}
+          tone="warn"
+        />
+      ) : null}
+      {clones && facts.cloneLeaderMint === facts.mint ? (
+        <SignalChip label="MC leader" tone="neutral" />
+      ) : null}
+      {facts.launchIndexScope === "session" ? (
+        <SignalChip
+          label={facts.launchIndexLabel ?? "This session"}
+          tone="neutral"
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function SignalChip({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: "pass" | "warn" | "wait" | "neutral";
+}) {
+  const colors = {
+    pass: "border-pass/25 bg-pass/7 text-pass",
+    warn: "border-warn/25 bg-warn/7 text-warn",
+    wait: "border-wait/25 bg-wait/7 text-wait",
+    neutral: "border-[#3a3328] bg-[#17130e] text-[#91897e]",
+  };
+  return (
+    <span
+      className={cn(
+        "rounded border px-1.5 py-0.5 font-mono text-[7px] font-bold uppercase tracking-[0.06em]",
+        colors[tone],
+      )}
+    >
+      {label}
+    </span>
   );
 }
 

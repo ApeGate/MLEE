@@ -9,6 +9,7 @@ import {
   assertManualBuyTransactionSafe,
   authorizeMainnetCanaryBuy,
   createReceipt,
+  deriveOpeningPriceHoldPct,
   evaluateGate,
   type LaunchFacts,
 } from "../packages/core/src/index";
@@ -16,11 +17,14 @@ import {
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const TRADE_ENDPOINT = "https://pumpportal.fun/api/trade-local";
 const PRIORITY_FEE_SOL = 0.001;
+const SLIPPAGE_PCT = 5;
+const MAX_TIP_LAMPORTS = 100_000;
 
 type CliOptions = {
   mint: string;
   amountSol: number;
   confirmed: boolean;
+  dryRun: boolean;
 };
 
 type DexPair = {
@@ -33,6 +37,7 @@ type DexPair = {
   fdv?: number;
   pairCreatedAt?: number;
   liquidity?: { usd?: number };
+  priceChange?: { h24?: number };
   txns?: Record<string, { buys?: number; sells?: number }>;
 };
 
@@ -80,6 +85,7 @@ function parseOptions(argv: string[]): CliOptions {
     mint,
     amountSol,
     confirmed: argv.includes("--confirm-mainnet"),
+    dryRun: argv.includes("--dry-run"),
   };
 }
 
@@ -263,28 +269,33 @@ async function sendAndConfirm(
 
 async function main() {
   const options = parseOptions(process.argv.slice(2));
-  if (!options.confirmed) {
+  if (!options.dryRun && !options.confirmed) {
     throw new Error("Refusing mainnet send without --confirm-mainnet");
+  }
+  if (options.dryRun && options.confirmed) {
+    throw new Error("Choose either --dry-run or --confirm-mainnet");
   }
 
   const rpcUrl = requiredEnv("HELIUS_RPC_URL");
   const expectedWallet = requiredEnv("CANARY_EXPECTED_PUBKEY");
-  const secretPath = requiredEnv("CANARY_WALLET_SECRET_PATH");
   const connection = new Connection(rpcUrl, "confirmed");
   const mint = new PublicKey(options.mint);
-  const signer = await loadKeypair(secretPath);
-  const signerAddress = signer.publicKey.toBase58();
+  const signer = options.dryRun
+    ? null
+    : await loadKeypair(requiredEnv("CANARY_WALLET_SECRET_PATH"));
+  const signerAddress = signer?.publicKey.toBase58() ?? expectedWallet;
   if (signerAddress !== expectedWallet) {
     throw new Error("Loaded wallet does not match CANARY_EXPECTED_PUBKEY");
   }
+  const signerPublicKey = new PublicKey(signerAddress);
 
   const [pair, report, authorities, balanceLamports, beforeTokens] =
     await Promise.all([
       readDexPair(options.mint),
       readRiskReport(options.mint),
       readMintAuthorities(connection, mint),
-      connection.getBalance(signer.publicKey, "confirmed"),
-      tokenBalance(connection, signer.publicKey, mint),
+      connection.getBalance(signerPublicKey, "confirmed"),
+      tokenBalance(connection, signerPublicKey, mint),
     ]);
   if (report.rugged) throw new Error("Risk source marks this mint rugged");
 
@@ -292,6 +303,11 @@ async function main() {
   const holderFacts = concentration(report);
   const currentMarketCapSol = marketCapSol(pair);
   const recentTrades = countRecentTrades(pair);
+  const openingPriceHoldPct = deriveOpeningPriceHoldPct({
+    pairCreatedAt: pair.pairCreatedAt,
+    priceChange24hPct: pair.priceChange?.h24,
+    observedAt,
+  });
   const creatorTokens = report.creatorTokens;
   const launchFlowResolved =
     report.graphInsidersDetected === 0 &&
@@ -329,8 +345,7 @@ async function main() {
         : null,
     manufacturedCap: canonicalMarketResolved ? false : null,
     graduatedAt: pair.pairCreatedAt,
-    openingPriceHoldPct:
-      currentMarketCapSol > 0 ? (currentMarketCapSol / 85) * 100 : null,
+    openingPriceHoldPct,
     rugRisks:
       report.risks
         ?.filter((risk) => risk.level === "warn" || risk.level === "danger")
@@ -364,7 +379,7 @@ async function main() {
       mint: options.mint,
       amount: options.amountSol,
       denominatedInSol: "true",
-      slippage: 5,
+      slippage: SLIPPAGE_PCT,
       priorityFee: PRIORITY_FEE_SOL,
       pool: "auto",
     }),
@@ -389,15 +404,32 @@ async function main() {
   if (feePayer !== signerAddress) {
     throw new Error("Transaction fee payer is not the canary wallet");
   }
-  assertManualBuyTransactionSafe({
+  const decodedInstructions = message.compiledInstructions.map((instruction) => {
+    const program = accountKeys.get(instruction.programIdIndex);
+    if (!program) throw new Error("Transaction contains an unresolved program");
+    return {
+      programId: program.toBase58(),
+      accountKeys: Array.from(instruction.accountKeyIndexes).map((index) => {
+        const key = accountKeys.get(index);
+        if (!key) throw new Error("Transaction contains an unresolved account");
+        return key.toBase58();
+      }),
+      dataHex: Buffer.from(instruction.data).toString("hex"),
+    };
+  });
+  const firewall = assertManualBuyTransactionSafe({
     feePayer,
     requiredSigners,
     addressLookupTableCount: message.addressTableLookups.length,
-    programIds: message.compiledInstructions.map((instruction) => {
-      const key = accountKeys.get(instruction.programIdIndex);
-      if (!key) throw new Error("Transaction contains an unresolved program");
-      return key.toBase58();
-    }),
+    expectedMint: options.mint,
+    maxTradeSpendLamports: Math.ceil(
+      options.amountSol * 1_000_000_000 * (1 + SLIPPAGE_PCT / 100),
+    ),
+    maxPriorityFeeLamports: Math.ceil(
+      PRIORITY_FEE_SOL * 1_000_000_000,
+    ),
+    maxTipLamports: MAX_TIP_LAMPORTS,
+    instructions: decodedInstructions,
   });
 
   const simulation = await connection.simulateTransaction(transaction, {
@@ -419,6 +451,42 @@ async function main() {
     verdict,
     now: Date.now(),
   });
+  if (options.dryRun) {
+    console.log(
+      JSON.stringify(
+        {
+          status: "simulation-passed",
+          sendEnabled: false,
+          mint: options.mint,
+          symbol: facts.symbol,
+          amountSol: options.amountSol,
+          signer: signerAddress,
+          gate: {
+            verdict: verdict.kind,
+            timing: verdict.timing.kind,
+            score: verdict.score,
+            rulesetVersion: verdict.rulesetVersion,
+            factsHash: verdict.factsHash,
+          },
+          firewall: {
+            decodedSwap: firewall.decodedSwap,
+            fundedLamports: firewall.fundedLamports,
+            tippedLamports: firewall.tippedLamports,
+            priorityFeeLamports: firewall.priorityFeeLamports,
+            programIds: [
+              ...new Set(
+                decodedInstructions.map((instruction) => instruction.programId),
+              ),
+            ],
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+  if (!signer) throw new Error("Canary signer was not loaded");
   transaction.sign([signer]);
   const signature = await sendAndConfirm(connection, transaction);
 

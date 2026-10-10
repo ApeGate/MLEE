@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   evaluateGate,
+  indexSessionLaunches,
   launchToFacts,
   type GateVerdict,
   type LaunchFacts,
@@ -37,13 +38,21 @@ function isLaunch(value: unknown): value is RawLaunch {
 
 async function buildReplay(): Promise<FeedLaunch[]> {
   const recordedAt = Date.parse(tape.recordedAt);
-  return Promise.all(
-    tape.launches.map(async (launch, index) => {
+  const facts = indexSessionLaunches(
+    tape.launches.map((launch, index) => {
       const createdAt = recordedAt + index * 1_400;
-      const facts = launchToFacts(launch, createdAt, createdAt);
+      return launchToFacts(launch, createdAt, createdAt);
+    }),
+  );
+  const replayAt = facts.reduce(
+    (latest, launch) => Math.max(latest, launch.createdAt),
+    recordedAt,
+  );
+  return Promise.all(
+    facts.map(async (launchFacts) => {
       return {
-        facts,
-        verdict: await evaluateGate(facts, "standard", createdAt, {
+        facts: launchFacts,
+        verdict: await evaluateGate(launchFacts, "standard", replayAt, {
           officialApegateMint: OFFICIAL_APEGATE_MINT,
         }),
         source: "replay" as const,
@@ -58,6 +67,7 @@ export function useLaunchFeed() {
   const [lastMessageAt, setLastMessageAt] = useState<number | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
   const socketRef = useRef<WebSocket | null>(null);
+  const launchesRef = useRef<FeedLaunch[]>([]);
 
   const retry = useCallback(() => {
     setStatus("connecting");
@@ -66,11 +76,13 @@ export function useLaunchFeed() {
 
   const updateLaunch = useCallback(
     (mint: string, updater: (launch: FeedLaunch) => FeedLaunch) => {
-      setLaunches((current) =>
-        current.map((launch) =>
+      setLaunches((current) => {
+        const next = current.map((launch) =>
           launch.facts.mint === mint ? updater(launch) : launch,
-        ),
-      );
+        );
+        launchesRef.current = next;
+        return next;
+      });
     },
     [],
   );
@@ -79,11 +91,13 @@ export function useLaunchFeed() {
     let disposed = false;
     void buildReplay().then((replay) => {
       if (disposed) return;
-      setLaunches((current) =>
-        current.some((launch) => launch.source === "live")
+      setLaunches((current) => {
+        const next = current.some((launch) => launch.source === "live")
           ? [...current, ...replay].slice(0, 60)
-          : replay,
-      );
+          : replay;
+        launchesRef.current = next;
+        return next;
+      });
       setStatus((current) => (current === "connecting" ? "replay" : current));
     });
 
@@ -92,6 +106,7 @@ export function useLaunchFeed() {
       "wss://pumpportal.fun/api/data";
     const socket = new WebSocket(endpoint);
     socketRef.current = socket;
+    let createQueue = Promise.resolve();
     const timeout = window.setTimeout(() => {
       if (socket.readyState !== WebSocket.OPEN) {
         socket.close();
@@ -134,17 +149,47 @@ export function useLaunchFeed() {
         const facts = launchToFacts(payload, observedAt);
         setLastMessageAt(observedAt);
         setStatus("live");
-        void evaluateGate(facts, "standard", observedAt, {
-          officialApegateMint: OFFICIAL_APEGATE_MINT,
-        }).then((verdict) => {
-          if (disposed) return;
-          setLaunches((current) => [
-            { facts, verdict, source: "live" as const },
-            ...current.filter(
-              (launch) => launch.facts.mint !== payload.mint,
-            ),
-          ].slice(0, 60));
-        });
+        createQueue = createQueue
+          .then(async () => {
+            const current = launchesRef.current;
+            const indexed = indexSessionLaunches(
+              [
+                facts,
+                ...current
+                  .filter(
+                    (launch) =>
+                      launch.source === "live" &&
+                      launch.facts.mint !== payload.mint,
+                  )
+                  .map((launch) => launch.facts),
+              ],
+              observedAt,
+            );
+            const live = await Promise.all(
+              indexed.map(async (indexedFacts) => ({
+                facts: indexedFacts,
+                verdict: await evaluateGate(
+                  indexedFacts,
+                  "standard",
+                  observedAt,
+                  { officialApegateMint: OFFICIAL_APEGATE_MINT },
+                ),
+                source: "live" as const,
+              })),
+            );
+            if (disposed) return;
+            setLaunches((latest) => {
+              const next = [
+                ...live,
+                ...latest.filter((launch) => launch.source === "replay"),
+              ].slice(0, 60);
+              launchesRef.current = next;
+              return next;
+            });
+          })
+          .catch(() => {
+            if (!disposed) setStatus("error");
+          });
         socket.send(
           JSON.stringify({
             method: "subscribeTokenTrade",
@@ -165,8 +210,8 @@ export function useLaunchFeed() {
       ) {
         const observedAt = Date.now();
         setLastMessageAt(observedAt);
-        setLaunches((current) =>
-          current.map((launch) => {
+        setLaunches((current) => {
+          const next = current.map((launch) => {
             if (launch.facts.mint !== trade.mint) return launch;
             const facts = {
               ...launch.facts,
@@ -189,8 +234,10 @@ export function useLaunchFeed() {
               }
             });
             return { ...launch, facts };
-          }),
-        );
+          });
+          launchesRef.current = next;
+          return next;
+        });
       }
     });
 

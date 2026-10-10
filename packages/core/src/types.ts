@@ -24,6 +24,7 @@ export type TimingKind =
   | "SECOND_LEG"
   | "RETEST"
   | "SURVIVOR";
+export type LaunchIndexScope = "session" | "durable";
 
 export interface Evidence {
   kind: "tx" | "account" | "url";
@@ -54,6 +55,8 @@ export interface LaunchFacts {
   creatorLaunches1h?: number | null;
   creatorLaunches24h?: number | null;
   creatorLaunches7d?: number | null;
+  launchIndexScope?: LaunchIndexScope | null;
+  launchIndexLabel?: string | null;
   creatorPriorOutcomes?: {
     launches: number;
     rugged: number;
