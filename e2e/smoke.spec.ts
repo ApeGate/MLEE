@@ -43,9 +43,8 @@ test("paper desk writes an explicitly simulated fill", async ({ page }) => {
   await expect(page.getByText("Caesar's paper desk")).toBeVisible();
   await expect(page.getByText("Simulation is not execution.")).toBeVisible();
   const acknowledgement = page.getByRole("checkbox");
-  if (await acknowledgement.isVisible()) {
-    await acknowledgement.check();
-  }
+  await acknowledgement.waitFor({ state: "visible" });
+  await acknowledgement.check();
   await page.getByRole("button", { name: /PAPER buy 0\.1 SOL/i }).click();
   await expect(page.getByText(/PAPER fill/i).first()).toBeVisible();
 });
