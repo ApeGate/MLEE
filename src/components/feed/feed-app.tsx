@@ -938,6 +938,12 @@ export function FeedApp() {
                 onWallet={() => setWalletOpen(true)}
                 tradeState={tradeState}
                 tradeMessage={tradeMessage}
+                walletPosition={
+                  positionData?.positions.find(
+                    (position) => position.mint === selected.facts.mint,
+                  ) ?? null
+                }
+                positionState={positionState}
                 watched={gateAlerts.watched.has(selected.facts.mint)}
                 onWatch={() => gateAlerts.toggleWatch(selected.facts.mint)}
                 onEnableNotifications={() =>
@@ -1083,6 +1089,8 @@ function CoinPanel({
   onWallet,
   tradeState,
   tradeMessage,
+  walletPosition,
+  positionState,
   watched,
   onWatch,
   onEnableNotifications,
@@ -1100,6 +1108,8 @@ function CoinPanel({
   onWallet: () => void;
   tradeState: "idle" | "preparing" | "signing" | "sent" | "error";
   tradeMessage: string | null;
+  walletPosition: WalletPosition | null;
+  positionState: "idle" | "loading" | "ready" | "error";
   watched: boolean;
   onWatch: () => void;
   onEnableNotifications: () => void;
@@ -1121,6 +1131,10 @@ function CoinPanel({
     verdict.timing.entryAllowed;
   const tradePending =
     tradeState === "preparing" || tradeState === "signing";
+  const exitCleared =
+    manualRouteSupported &&
+    walletPosition !== null &&
+    BigInt(walletPosition.rawAmount) > BigInt(0);
   return (
     <div>
       <div className="border-b border-[#31291f] p-4 sm:p-5">
@@ -1405,18 +1419,46 @@ function CoinPanel({
             decoded; bonding-curve signing stays locked until its v3 decoder
             passes canaries.
           </p>
+          {walletAddress ? (
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-[#272119] bg-[#090806] px-3 py-2">
+              <span className="font-mono text-[7px] font-bold uppercase tracking-[0.12em] text-[#5f584f]">
+                Wallet bag
+              </span>
+              <span className="truncate font-mono text-[9px] font-bold text-[#b6aea1]">
+                {positionState === "loading"
+                  ? "Reading confirmed balance…"
+                  : positionState === "error" && !walletPosition
+                    ? "Position read failed"
+                  : walletPosition
+                    ? `${formatTokenBalance(walletPosition.uiAmount)} $${facts.symbol}`
+                    : "No confirmed position"}
+              </span>
+            </div>
+          ) : null}
           <div className="mt-4 grid grid-cols-2 gap-2">
             {[50, 100].map((percent) => (
               <button
                 key={percent}
                 type="button"
-                disabled={tradePending}
+                disabled={
+                  tradePending || Boolean(walletAddress && !exitCleared)
+                }
                 onClick={() =>
                   walletAddress ? onExit(percent) : onWallet()
                 }
                 className="rounded-lg border border-block/25 bg-block/6 px-2 py-2.5 text-[10px] font-extrabold text-[#ff8f7b] enabled:hover:border-block/55 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {percent === 100 ? "Exit 100%" : "Sell 50%"}
+                {walletAddress && !manualRouteSupported
+                  ? "Curve exit locked"
+                  : walletAddress && positionState === "loading"
+                    ? "Reading position…"
+                    : walletAddress && positionState === "error"
+                      ? "Position read failed"
+                    : walletAddress && !walletPosition
+                      ? "No position"
+                      : percent === 100
+                        ? "Exit 100%"
+                        : "Sell 50%"}
               </button>
             ))}
           </div>
