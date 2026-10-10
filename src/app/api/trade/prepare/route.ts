@@ -5,6 +5,8 @@ import { inspectManualBuyTransaction } from "@/lib/manual-buy-transaction";
 import {
   calculateManualSellFloor,
   inspectManualSellTransaction,
+  selectIndependentPumpSwapPrice,
+  type IndependentPricePair,
 } from "@/lib/manual-sell-transaction";
 import { configuredSolanaRpc } from "@/lib/solana-rpc";
 
@@ -13,6 +15,8 @@ const TRADE_ENDPOINT = "https://pumpportal.fun/api/trade-local";
 const MIN_BUY_SOL = 0.01;
 const MAX_BUY_SOL = 0.05;
 const MAX_TRANSACTION_BYTES = 64 * 1024;
+const MAX_RPC_RESPONSE_BYTES = 2 * 1024 * 1024;
+const MAX_PRICE_RESPONSE_BYTES = 512 * 1024;
 const PRIORITY_FEE_SOL = 0.0005;
 const MAX_TIP_LAMPORTS = 100_000;
 
@@ -24,6 +28,40 @@ type PrepareBody = {
   percent?: unknown;
   slippagePct?: unknown;
 };
+
+async function readBoundedJson(
+  response: Response,
+  maxBytes: number,
+  label: string,
+) {
+  if (!response.ok || !response.body) {
+    throw new Error(`${label} returned ${response.status}`);
+  }
+  const declared = Number(response.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    throw new Error(`${label} returned an oversized response`);
+  }
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      throw new Error(`${label} response exceeded the size limit`);
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
+}
 
 async function readTokenPosition(owner: string, mint: string) {
   const { endpoint } = configuredSolanaRpc();
@@ -43,8 +81,11 @@ async function readTokenPosition(owner: string, mint: string) {
     signal: AbortSignal.timeout(4_000),
     cache: "no-store",
   });
-  if (!response.ok) throw new Error(`RPC returned ${response.status}`);
-  const body = (await response.json()) as {
+  const body = (await readBoundedJson(
+    response,
+    MAX_RPC_RESPONSE_BYTES,
+    "RPC",
+  )) as {
     result?: {
       value?: Array<{
         account?: {
@@ -88,38 +129,22 @@ async function readIndependentSellFloor(
     `https://api.dexscreener.com/latest/dex/tokens/${mint}`,
     { signal: AbortSignal.timeout(4_000), cache: "no-store" },
   );
-  if (!response.ok) throw new Error(`Price source returned ${response.status}`);
-  const body = (await response.json()) as {
-    pairs?: Array<{
-      chainId?: string;
-      dexId?: string;
-      priceNative?: string;
-      liquidity?: { usd?: number };
-    }>;
-  };
-  const pair = (body.pairs ?? [])
-    .filter(
-      (item) =>
-        item.chainId === "solana" &&
-        item.dexId === "pumpswap" &&
-        Number(item.priceNative) > 0,
-    )
-    .sort(
-      (left, right) =>
-        (right.liquidity?.usd ?? 0) - (left.liquidity?.usd ?? 0),
-    )[0];
-  const priceSol = Number(pair?.priceNative);
-  if (!(priceSol > 0) || !(tokenAmount > 0)) {
-    throw new Error("Independent PumpSwap exit price is unavailable");
-  }
+  const body = (await readBoundedJson(
+    response,
+    MAX_PRICE_RESPONSE_BYTES,
+    "Price source",
+  )) as { pairs?: IndependentPricePair[] };
+  const price = selectIndependentPumpSwapPrice(body.pairs ?? [], mint);
   const quote = calculateManualSellFloor({
     tokenAmount,
-    priceSol,
+    priceSol: price.priceSol,
     slippagePct,
   });
   return {
     ...quote,
     source: "DexScreener PumpSwap snapshot",
+    pairAddress: price.pairAddress,
+    liquidityUsd: price.liquidityUsd,
   };
 }
 

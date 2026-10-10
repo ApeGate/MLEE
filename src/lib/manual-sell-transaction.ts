@@ -5,6 +5,18 @@ import {
 } from "../../packages/core/src";
 
 const LAMPORTS_PER_SOL = 1_000_000_000;
+const WRAPPED_SOL_MINT = "So11111111111111111111111111111111111111112";
+const MIN_INDEPENDENT_LIQUIDITY_USD = 500;
+
+export type IndependentPricePair = {
+  chainId?: string;
+  dexId?: string;
+  pairAddress?: string;
+  priceNative?: string;
+  baseToken?: { address?: string };
+  quoteToken?: { address?: string };
+  liquidity?: { usd?: number };
+};
 
 export type ManualSellIntent = {
   expectedSigner: string;
@@ -46,6 +58,36 @@ export function calculateManualSellFloor(input: {
           oracleBuffer,
       ),
     ),
+  };
+}
+
+export function selectIndependentPumpSwapPrice(
+  pairs: readonly IndependentPricePair[],
+  mint: string,
+) {
+  const pair = pairs
+    .filter(
+      (item) =>
+        item.chainId === "solana" &&
+        item.dexId === "pumpswap" &&
+        item.baseToken?.address === mint &&
+        item.quoteToken?.address === WRAPPED_SOL_MINT &&
+        Number.isFinite(Number(item.priceNative)) &&
+        Number(item.priceNative) > 0 &&
+        Number.isFinite(item.liquidity?.usd) &&
+        (item.liquidity?.usd ?? 0) >= MIN_INDEPENDENT_LIQUIDITY_USD,
+    )
+    .sort(
+      (left, right) =>
+        (right.liquidity?.usd ?? 0) - (left.liquidity?.usd ?? 0),
+    )[0];
+  if (!pair) {
+    throw new Error("Independent PumpSwap exit price is unavailable");
+  }
+  return {
+    priceSol: Number(pair.priceNative),
+    pairAddress: pair.pairAddress ?? null,
+    liquidityUsd: pair.liquidity?.usd ?? 0,
   };
 }
 

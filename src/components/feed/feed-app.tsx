@@ -239,15 +239,17 @@ export function FeedApp() {
   }, []);
 
   useEffect(() => {
-    if (!walletAddress) {
-      queueMicrotask(() => {
+    const refreshTimer = window.setTimeout(() => {
+      if (!walletAddress) {
         setPositionData(null);
         setPositionState("idle");
         setPositionError(null);
-      });
-      return;
-    }
-    queueMicrotask(() => void refreshPositions(walletAddress));
+        return;
+      }
+      void refreshPositions(walletAddress);
+    }, 0);
+
+    return () => window.clearTimeout(refreshTimer);
   }, [refreshPositions, walletAddress]);
 
   const selected =
@@ -927,10 +929,10 @@ export function FeedApp() {
           state={positionState}
           data={positionData}
           error={positionError}
-          onConnect={() => setWalletOpen(true)}
-          onRefresh={() => void refreshPositions(walletAddress)}
           tradeState={tradeState}
           tradeMessage={tradeMessage}
+          onConnect={() => setWalletOpen(true)}
+          onRefresh={() => void refreshPositions(walletAddress)}
           onExit={(position, percent) =>
             void executeManualSell(
               {
@@ -1640,25 +1642,24 @@ function WalletPositions({
   state,
   data,
   error,
-  onConnect,
-  onRefresh,
   tradeState,
   tradeMessage,
+  onConnect,
+  onRefresh,
   onExit,
 }: {
   walletAddress: string | null;
   state: "idle" | "loading" | "ready" | "error";
   data: WalletPositionsPayload | null;
   error: string | null;
-  onConnect: () => void;
-  onRefresh: () => void;
   tradeState: "idle" | "preparing" | "signing" | "sent" | "error";
   tradeMessage: string | null;
+  onConnect: () => void;
+  onRefresh: () => void;
   onExit: (position: WalletPosition, percent: number) => void;
 }) {
   const tradePending =
     tradeState === "preparing" || tradeState === "signing";
-
   return (
     <section className="mt-4 overflow-hidden rounded-2xl border border-[#31291f] bg-[#0d0b09]">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#31291f] px-4 py-3.5">
@@ -1697,6 +1698,19 @@ function WalletPositions({
           </div>
         ) : null}
       </div>
+
+      {walletAddress && tradeMessage ? (
+        <div
+          className={cn(
+            "border-b border-[#31291f] px-4 py-2.5 font-mono text-[8px] leading-relaxed",
+            tradeState === "error"
+              ? "bg-block/6 text-block"
+              : "bg-ape-caesar/5 text-[#9eb673]",
+          )}
+        >
+          {tradeMessage}
+        </div>
+      ) : null}
 
       {!walletAddress ? (
         <div className="flex flex-col items-center px-5 py-10 text-center">
@@ -1810,17 +1824,6 @@ function WalletPositions({
                 : "SPL + Token-2022 · confirmed"}
             </span>
           </div>
-          {tradeMessage ? (
-            <p
-              className={cn(
-                "border-t border-[#31291f] px-4 py-2.5 text-[9px]",
-                tradeState === "error" ? "text-block" : "text-[#8da966]",
-              )}
-              role="status"
-            >
-              {tradeMessage}
-            </p>
-          ) : null}
         </>
       ) : (
         <div className="px-5 py-10 text-center">

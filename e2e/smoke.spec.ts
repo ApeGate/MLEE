@@ -58,6 +58,11 @@ test("manual trade APIs reject malformed identifiers", async ({ page }) => {
     "/api/trade/status?signature=not-a-signature",
   );
   expect(status.status()).toBe(400);
+
+  const positions = await page.request.get(
+    "/api/wallet/positions?owner=not-a-wallet",
+  );
+  expect(positions.status()).toBe(400);
 });
 
 test("live Gate exposes guarded entries, exits, receipts, and outcome tape", async ({
