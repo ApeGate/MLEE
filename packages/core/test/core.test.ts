@@ -291,13 +291,17 @@ describe("fees", () => {
 describe("manual mainnet canary boundaries", () => {
   it("authorizes only a fresh PASS inside the funded test range", async () => {
     const verdict = await evaluateGate(safeFacts, "standard", now);
+    const allowedVerdict = {
+      ...verdict,
+      timing: { ...verdict.timing, entryAllowed: true },
+    };
     expect(
       authorizeMainnetCanaryBuy({
         amountSol: 0.01,
         balanceSol: 0.1,
         expectedSigner: "wallet",
         actualSigner: "wallet",
-        verdict,
+        verdict: allowedVerdict,
         now,
       }),
     ).toMatchObject({
@@ -312,7 +316,7 @@ describe("manual mainnet canary boundaries", () => {
         balanceSol: 0.1,
         expectedSigner: "wallet",
         actualSigner: "wallet",
-        verdict,
+        verdict: allowedVerdict,
         now,
       }),
     ).toThrow(/between 0.01 and 0.05 SOL/);
@@ -322,10 +326,20 @@ describe("manual mainnet canary boundaries", () => {
         balanceSol: 0.1,
         expectedSigner: "wallet",
         actualSigner: "wallet",
-        verdict,
-        now: verdict.freshUntil + 1,
+        verdict: allowedVerdict,
+        now: allowedVerdict.freshUntil + 1,
       }),
     ).toThrow(/expired/);
+    expect(() =>
+      authorizeMainnetCanaryBuy({
+        amountSol: 0.01,
+        balanceSol: 0.1,
+        expectedSigner: "wallet",
+        actualSigner: "wallet",
+        verdict,
+        now,
+      }),
+    ).toThrow(/Cheeta must allow/);
   });
 
   it("rejects extra signers, lookup tables, and unapproved programs", () => {

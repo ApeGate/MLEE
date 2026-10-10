@@ -111,8 +111,9 @@ or Solana embedded-wallet creation. It authenticates the wallet session but
 does not build or send a transaction. Manual signing remains the default.
 
 The operator-only mainnet canary is separate from the browser app. It requires
-a fresh Kong `PASS`, a 0.01–0.05 SOL amount, the expected local signer, a
-single-signer transaction, approved Pump programs, and a successful simulation:
+a fresh Kong `PASS`, a Cheeta timing chip that permits entry, a 0.01–0.05 SOL
+amount, the expected local signer, a single-signer transaction, approved Pump
+programs, and a successful simulation:
 
 ```bash
 npm run canary:buy -- \

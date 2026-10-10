@@ -54,6 +54,10 @@ type RiskReport = {
   };
   knownAccounts?: Record<string, { type?: string }>;
   topHolders?: RiskHolder[];
+  graphInsidersDetected?: number;
+  insiderNetworks?: unknown[];
+  creatorTokens?: unknown[];
+  totalMarketLiquidity?: number;
   risks?: Array<{
     name: string;
     description: string;
@@ -286,6 +290,16 @@ async function main() {
 
   const observedAt = Date.now();
   const holderFacts = concentration(report);
+  const currentMarketCapSol = marketCapSol(pair);
+  const recentTrades = countRecentTrades(pair);
+  const launchFlowResolved =
+    report.graphInsidersDetected === 0 &&
+    (report.insiderNetworks?.length ?? 0) === 0;
+  const creatorHistoryResolved = Array.isArray(report.creatorTokens);
+  const canonicalMarketResolved =
+    pair.dexId === "pumpswap" &&
+    (pair.liquidity?.usd ?? 0) >= 50_000 &&
+    recentTrades >= 50;
   const facts: LaunchFacts = {
     mint: options.mint,
     signature: null,
@@ -295,16 +309,25 @@ async function main() {
     uri: report.tokenMeta?.uri ?? "",
     createdAt: pair.pairCreatedAt!,
     observedAt,
-    marketCapSol: marketCapSol(pair),
+    marketCapSol: currentMarketCapSol,
     initialBuySol: 0,
     isMayhem: false,
     pool: "pump-amm",
-    tradeCount: countRecentTrades(pair),
+    tradeCount: recentTrades,
     mintAuthority: authorities.mintAuthority,
     freezeAuthority: authorities.freezeAuthority,
     devPct: holderFacts.devPct,
     top10Pct: holderFacts.top10Pct,
     rugScore: report.score_normalised ?? null,
+    launchSecondBuyout: launchFlowResolved ? false : null,
+    deployerPulledPool:
+      creatorHistoryResolved && report.creatorTokens?.length === 0
+        ? false
+        : null,
+    manufacturedCap: canonicalMarketResolved ? false : null,
+    graduatedAt: pair.pairCreatedAt,
+    openingPriceHoldPct:
+      currentMarketCapSol > 0 ? (currentMarketCapSol / 85) * 100 : null,
     rugRisks:
       report.risks
         ?.filter((risk) => risk.level === "warn" || risk.level === "danger")
@@ -414,6 +437,7 @@ async function main() {
       signature,
       verdict: verdict.kind,
       score: verdict.score,
+      timing: verdict.timing.kind,
       tokenDelta: afterTokens - beforeTokens,
       balanceSol: newBalanceLamports / 1_000_000_000,
     },
@@ -446,6 +470,7 @@ async function main() {
           score: verdict.score,
           rulesetVersion: verdict.rulesetVersion,
           factsHash: verdict.factsHash,
+          timing: verdict.timing.kind,
         },
         tokenDelta: afterTokens - beforeTokens,
         newBalanceSol: newBalanceLamports / 1_000_000_000,
