@@ -62,6 +62,19 @@ export const PUBLIC_CANARY_FILLS = [
     tokenDecimals: 6,
     receiptHash: null,
   },
+  {
+    signature:
+      "TpxtDULWbTaodwSkd2X9Dp32quC7RxbW3hSLZZvmeiR99T9ufrjY6ZuoxkHyBRjLhQ3kvYsdSn7y31239BZ2RdL",
+    mint: "Ai66LHZG9MCzg1WKdawwqduVAXpNDUuV8M3uyq5ppump",
+    symbol: "CATE",
+    side: "SELL",
+    expectedSlot: 455_160_252,
+    expectedSolDeltaLamports: 4_016_847,
+    expectedTokenDeltaBaseUnits: "-10205276",
+    tokenDecimals: 6,
+    receiptHash:
+      "3bd91732c125823535d6b97df52422a8f73a7ab1a8437c35696746d1bcf81dc5",
+  },
 ] as const satisfies readonly CanaryFillEvidence[];
 
 type ParsedTokenBalance = {

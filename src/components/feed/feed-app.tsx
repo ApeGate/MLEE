@@ -1696,7 +1696,7 @@ function LiveFillTape() {
       </div>
 
       {state === "loading" && !data ? (
-        <div className="grid gap-px bg-[#272119] md:grid-cols-3">
+        <div className="grid gap-px bg-[#272119] md:grid-cols-2 xl:grid-cols-4">
           {[0, 1, 2].map((item) => (
             <div key={item} className="animate-pulse bg-[#0d0b09] p-4">
               <span className="block h-3 w-24 rounded bg-[#211b14]" />
@@ -1722,7 +1722,7 @@ function LiveFillTape() {
         </div>
       ) : data ? (
         <>
-          <div className="grid gap-px bg-[#272119] md:grid-cols-3">
+          <div className="grid gap-px bg-[#272119] md:grid-cols-2 xl:grid-cols-4">
             {data.fills.map((fill) => (
               <article key={fill.signature} className="min-w-0 bg-[#0d0b09] p-4">
                 <div className="flex items-center justify-between gap-2">
